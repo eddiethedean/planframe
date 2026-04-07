@@ -90,8 +90,8 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     for n in range(1, max_arity + 1):
         params = ", ".join([f"__c{i}: LiteralString" for i in range(1, n + 1)])
         a("    @overload")
-        a(f"    def drop(self, {params}) -> Self: ...")
-    a("    def drop(self, *columns: LiteralString) -> Self: ...")
+        a(f"    def drop(self, {params}, *, strict: bool = True) -> Self: ...")
+    a("    def drop(self, *columns: LiteralString, strict: bool = True) -> Self: ...")
     a("")
     a("    def drop_prefix(self, prefix: str) -> Self: ...")
     a("    def drop_suffix(self, suffix: str) -> Self: ...")

@@ -37,9 +37,15 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         self.calls.append(("select", columns))
         return [{k: row[k] for k in columns} for row in df]
 
-    def drop(self, df: list[dict[str, Any]], columns: tuple[str, ...]) -> list[dict[str, Any]]:
-        self.calls.append(("drop", columns))
-        drop_set = set(columns)
+    def drop(
+        self, df: list[dict[str, Any]], columns: tuple[str, ...], *, strict: bool = True
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("drop", (columns, strict)))
+        keys = set(df[0].keys()) if df else set()
+        if strict:
+            drop_set = set(columns)
+        else:
+            drop_set = set(columns) & keys
         return [{k: v for k, v in row.items() if k not in drop_set} for row in df]
 
     def rename(self, df: list[dict[str, Any]], mapping: dict[str, str]) -> list[dict[str, Any]]:
@@ -496,6 +502,33 @@ def test_schema_errors_select_drop_rename() -> None:
 
     with pytest.raises(PlanFrameSchemaError):
         pf.rename(missing="x")
+
+
+def test_drop_strict_false_ignores_unknown_columns() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)
+
+    out = pf.drop("only_if_present", strict=False)
+    assert out.schema().names() == ("id", "age")
+    assert adapter.calls == []
+
+    collected = out.collect()
+    assert collected == [{"id": 1, "age": 2}]
+    assert adapter.calls == [
+        ("drop", (("only_if_present",), False)),
+        ("collect", None),
+    ]
+
+
+def test_drop_strict_false_drops_present_and_ignores_missing() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)
+
+    out = pf.drop("age", "ghost", strict=False)
+    assert out.schema().names() == ("id",)
+    collected = out.collect()
+    assert collected == [{"id": 1}]
+    assert adapter.calls[0] == ("drop", (("age", "ghost"), False))
 
     # rename collision
     with pytest.raises(PlanFrameSchemaError):

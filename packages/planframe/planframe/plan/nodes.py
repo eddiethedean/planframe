@@ -25,6 +25,7 @@ class Select(PlanNode):
 class Drop(PlanNode):
     prev: PlanNode
     columns: tuple[str, ...]
+    strict: bool = True
 
 
 @dataclass(frozen=True, slots=True)

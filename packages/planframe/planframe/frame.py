@@ -102,7 +102,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if isinstance(node, Select):
             return self._adapter.select(self._eval(node.prev), node.columns)
         if isinstance(node, Drop):
-            return self._adapter.drop(self._eval(node.prev), node.columns)
+            return self._adapter.drop(
+                self._eval(node.prev), node.columns, strict=node.strict
+            )
         if isinstance(node, Rename):
             return self._adapter.rename(self._eval(node.prev), node.mapping)
         if isinstance(node, WithColumn):
@@ -314,11 +316,16 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def drop(self, *columns: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def drop(
+        self, *columns: str, strict: bool = True
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         cols = tuple(columns)
-        schema2 = self._schema.drop(cols)
+        schema2 = self._schema.drop(cols, strict=strict)
         return Frame(
-            _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Drop(self._plan, cols, strict=strict),
+            _schema=schema2,
         )
 
     def drop_prefix(self, prefix: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
