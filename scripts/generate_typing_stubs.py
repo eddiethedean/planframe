@@ -76,7 +76,13 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
         params = ", ".join([f"__c{i}: LiteralString" for i in range(1, n + 1)])
         a("    @overload")
         a(f"    def select(self, {params}) -> Self: ...")
+    a("    @overload")
     a("    def select(self, *columns: LiteralString) -> Self: ...")
+    a("    @overload")
+    a(
+        "    def select(self, *columns: LiteralString | tuple[str, Expr[Any]]) -> Self: ..."
+    )
+    a("    def select(self, *columns: Any) -> Self: ...")
     a("")
     a("    def select_prefix(self, prefix: str) -> Self: ...")
     a("    def select_suffix(self, suffix: str) -> Self: ...")

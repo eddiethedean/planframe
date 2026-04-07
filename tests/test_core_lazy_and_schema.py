@@ -7,15 +7,16 @@ from typing import Any, cast
 import pytest
 from pydantic import BaseModel
 
-from planframe.backend.adapter import BackendAdapter
+from planframe.backend.adapter import BackendAdapter, CompiledProjectItem
 from planframe.backend.errors import (
     PlanFrameBackendError,
     PlanFrameExpressionError,
     PlanFrameSchemaError,
 )
-from planframe.expr import Expr, add, col, eq, lit, over
+from planframe.expr import Expr, add, col, eq, lit, mul, over
 from planframe.frame import Frame
 from planframe.plan.join_options import JoinOptions
+from planframe.plan.nodes import Project
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,23 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
     def select(self, df: list[dict[str, Any]], columns: tuple[str, ...]) -> list[dict[str, Any]]:
         self.calls.append(("select", columns))
         return [{k: row[k] for k in columns} for row in df]
+
+    def project(
+        self,
+        df: list[dict[str, Any]],
+        items: tuple[CompiledProjectItem[object], ...],
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("project", tuple(items)))
+        out: list[dict[str, Any]] = []
+        for row in df:
+            row2: dict[str, Any] = {}
+            for it in items:
+                if it.from_column is not None:
+                    row2[it.name] = row[it.from_column]
+                else:
+                    row2[it.name] = "computed"
+            out.append(row2)
+        return out
 
     def drop(
         self, df: list[dict[str, Any]], columns: tuple[str, ...], *, strict: bool = True
@@ -554,6 +572,25 @@ def test_schema_errors_select_drop_rename() -> None:
 
     with pytest.raises(PlanFrameSchemaError):
         pf.rename(missing="x")
+
+
+def test_select_mixed_str_and_expr_single_project_node() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)
+    out = pf.select("id", ("doubled", mul(col("age"), lit(2))))
+    assert out.schema().names() == ("id", "doubled")
+    assert isinstance(out.plan(), Project)
+    assert adapter.calls == []
+    collected = out.collect()
+    assert collected == [{"id": 1, "doubled": "computed"}]
+    assert [c[0] for c in adapter.calls[:-1]] == ["compile_expr", "project"]
+
+
+def test_project_rejects_duplicate_output_names() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)
+    with pytest.raises(PlanFrameSchemaError, match="repeats output column"):
+        pf.select("id", ("id", lit(1)))
 
 
 def test_rename_strict_false_ignores_unknown_columns() -> None:
