@@ -1,6 +1,6 @@
- ## planframe-polars
- 
- Polars adapter package for PlanFrame. Import as `planframe_polars`.
+## planframe-polars
+
+Polars adapter package for PlanFrame. Import as `planframe_polars`.
 
 ### Usage
 
@@ -8,7 +8,7 @@
 import polars as pl
 from dataclasses import dataclass
 
-from planframe_polars import from_polars
+from planframe_polars import PolarsFrame
 
 
 @dataclass(frozen=True)
@@ -18,8 +18,15 @@ class UserSchema:
 
 
 lf = pl.DataFrame({"id": [1], "age": [2]}).lazy()
-pf = from_polars(lf, schema=UserSchema)
+class User(PolarsFrame):
+    id: int
+    age: int
+
+pf = User(lf)
 df = pf.select("id").collect()
+
+# Or construct from python data:
+pf2 = User({"id": [1], "age": [2]})
 ```
 
 ### Execution model
@@ -27,4 +34,10 @@ df = pf.select("id").collect()
 PlanFrame is always lazy:
 - Chaining methods (like `.select(...)`) does **not** run Polars operations.
 - `collect()` evaluates the full plan. If the source is a `polars.LazyFrame`, this naturally compiles into a single lazy query before collecting.
+
+### Notes (Polars-specific)
+
+- **Pivot**: `LazyFrame.pivot(...)` requires `on_columns` to be provided up-front (Polars must know the output schema prior to `collect()`). PlanFrame enforces this at execution time.
+- **concat_vertical**: implemented via `polars.concat(..., how="vertical")`.
+- **Join**: implemented via `LazyFrame.join(...)` / `DataFrame.join(...)` using the provided `on`, `how`, and `suffix`.
  

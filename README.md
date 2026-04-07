@@ -24,21 +24,17 @@ pip install -e packages/planframe-polars
 
 ```python
 import polars as pl
-from dataclasses import dataclass
 
 from planframe.expr import add, col, lit
-from planframe_polars import from_polars
+from planframe_polars import PolarsFrame
 
 
-@dataclass(frozen=True)
-class UserSchema:
+class User(PolarsFrame):
     id: int
     name: str
     age: int
 
-
-lf = pl.DataFrame({"id": [1], "name": ["a"], "age": [10]}).lazy()
-pf = from_polars(lf, schema=UserSchema)
+pf = User({"id": [1], "name": ["a"], "age": [10]})
 
 out = (
     pf.select("id", "name", "age")
@@ -50,10 +46,21 @@ Output = out.materialize_model("Output", kind="dataclass")
 df = out.collect()
 ```
 
-### API surface (MVP)
+### API surface
 
-- **Frames**: `Frame.source(...)` (via adapter helper like `from_polars(...)`), immutable chaining (lazy)
-- **Transforms**: `select`, `drop`, `rename`, `with_column`, `cast`, `filter`
+- **Frames**: `Frame.source(...)` (or backend frame constructors like `class User(PolarsFrame): ...; User(data)`), immutable chaining (lazy)
+- **Transforms**:
+  - **projection**: `select`, `drop`, `select_exclude`
+  - **column order**: `reorder_columns`, `select_first`, `select_last`, `move`
+  - **rename helpers**: `rename`, `rename_prefix`, `rename_suffix`, `rename_replace`
+  - **row ops**: `head`, `tail`, `limit`, `slice`
+  - **null helpers**: `drop_nulls`, `fill_null`
+  - **reshape**: `melt`, `pivot` (see note below)
+  - **set-like**: `concat_vertical`
+  - **dedupe**: `unique`, `duplicated`
+  - **joins**: `join`
+  - **grouping**: `group_by(...).agg(...)`
+  - **core**: `with_column`, `cast`, `filter`, `sort`
 - **Boundaries**:
   - `collect()` executes the accumulated plan using the adapter/backend
   - `materialize_model(kind="dataclass" | "pydantic")` materializes a Python model from the derived schema (no execution)
@@ -63,10 +70,11 @@ df = out.collect()
 - **Always lazy**: chaining operations does not touch backend data.
 - **Backend-independent**: even if a backend is naturally eager (e.g. pandas), PlanFrame still builds a plan and defers execution to `collect()`.
 
-### Safe subset (MVP)
+### Notes / constraints
 
-- **Supported**: `select`, `drop`, `rename`, `with_column`, `cast`, `filter`, `collect`, `materialize_model`
-- **Not supported (yet)**: joins, groupby/agg, arbitrary Python functions / `.apply(...)`
+- **Typing**: PlanFrame ships heavy `.pyi` stubs to encourage *literal* column names and provide better Pyright feedback. Re-generate with `python scripts/generate_typing_stubs.py` and validate drift with `python scripts/generate_typing_stubs.py --check`.
+- **Pivot (Polars)**: lazy pivot requires `on_columns` to be provided up-front (Polars needs output schema known before `collect()`).
+- **Not supported**: arbitrary Python UDFs / `.apply(...)` and schema-dependent compile-time column-name unions (that would require per-schema codegen).
 
 ### Development
 

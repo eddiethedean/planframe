@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pydantic import BaseModel
 
 from planframe.backend.adapter import BackendAdapter
 from planframe.backend.errors import PlanFrameBackendError, PlanFrameExpressionError, PlanFrameSchemaError
-from planframe.expr import Expr, add, col, eq, lit
+from planframe.expr import Expr, add, col, eq, lit, over
 from planframe.frame import Frame
 
 
@@ -64,15 +64,27 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         self.calls.append(("compile_expr", type(expr).__name__))
         return expr
 
-    def sort(self, df: list[dict[str, Any]], columns: tuple[str, ...], *, descending: bool = False) -> list[dict[str, Any]]:
-        self.calls.append(("sort", (columns, descending)))
+    def sort(
+        self,
+        df: list[dict[str, Any]],
+        columns: tuple[str, ...],
+        *,
+        descending: bool = False,
+        nulls_last: bool = False,
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("sort", (columns, descending, nulls_last)))
         out = sorted(df, key=lambda r: tuple(r[c] for c in columns), reverse=descending)
         return out
 
     def unique(
-        self, df: list[dict[str, Any]], subset: tuple[str, ...] | None, *, keep: str = "first"
+        self,
+        df: list[dict[str, Any]],
+        subset: tuple[str, ...] | None,
+        *,
+        keep: str = "first",
+        maintain_order: bool = False,
     ) -> list[dict[str, Any]]:
-        self.calls.append(("unique", (subset, keep)))
+        self.calls.append(("unique", (subset, keep, maintain_order)))
         seen: set[tuple[Any, ...]] = set()
         out: list[dict[str, Any]] = []
         for row in df:
@@ -94,6 +106,25 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
             out2.reverse()
             return out2
         return out
+
+    def sample(
+        self,
+        df: list[dict[str, Any]],
+        *,
+        n: int | None = None,
+        frac: float | None = None,
+        with_replacement: bool = False,
+        shuffle: bool = False,
+        seed: int | None = None,
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("sample", (n, frac, with_replacement, shuffle, seed)))
+        # Deterministic/minimal: just take head(n) or keep original for frac.
+        if n is not None:
+            return df[:n]
+        if frac is None:
+            return df
+        k = int(len(df) * frac)
+        return df[:k]
 
     def duplicated(
         self,
@@ -226,6 +257,18 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         self.calls.append(("concat_vertical", None))
         return [*left, *right]
 
+    def concat_horizontal(
+        self, left: list[dict[str, Any]], right: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("concat_horizontal", None))
+        out: list[dict[str, Any]] = []
+        for l, r in zip(left, right):
+            overlap = set(l.keys()).intersection(r.keys())
+            if overlap:
+                raise ValueError("overlap")
+            out.append({**l, **r})
+        return out
+
     def pivot(
         self,
         df: list[dict[str, Any]],
@@ -249,9 +292,121 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
                 rec[colname] = row[values]
         return list(out.values())
 
+    def explode(self, df: list[dict[str, Any]], column: str) -> list[dict[str, Any]]:
+        self.calls.append(("explode", column))
+        out: list[dict[str, Any]] = []
+        for r in df:
+            vals = r.get(column) or []
+            for v in vals:
+                r2 = dict(r)
+                r2[column] = v
+                out.append(r2)
+        return out
+
+    def unnest(self, df: list[dict[str, Any]], column: str) -> list[dict[str, Any]]:
+        self.calls.append(("unnest", column))
+        out: list[dict[str, Any]] = []
+        for r in df:
+            s = r.get(column) or {}
+            r2 = dict(r)
+            r2.pop(column, None)
+            if isinstance(s, dict):
+                r2.update(s)
+            out.append(r2)
+        return out
+
+    def drop_nulls_all(self, df: list[dict[str, Any]], subset: tuple[str, ...] | None) -> list[dict[str, Any]]:
+        self.calls.append(("drop_nulls_all", subset))
+        cols = subset or tuple(df[0].keys())
+        return [r for r in df if not all(r.get(c) is None for c in cols)]
+
+    def write_parquet(
+        self,
+        df: list[dict[str, Any]],
+        path: str,
+        *,
+        compression: str = "zstd",
+        row_group_size: int | None = None,
+        partition_by: tuple[str, ...] | None = None,
+        storage_options: dict[str, Any] | None = None,
+    ) -> None:
+        self.calls.append(("write_parquet", (path, compression, row_group_size, partition_by, storage_options)))
+
+    def write_csv(
+        self,
+        df: list[dict[str, Any]],
+        path: str,
+        *,
+        separator: str = ",",
+        include_header: bool = True,
+        storage_options: dict[str, Any] | None = None,
+    ) -> None:
+        self.calls.append(("write_csv", (path, separator, include_header, storage_options)))
+
+    def write_ndjson(self, df: list[dict[str, Any]], path: str, *, storage_options: dict[str, Any] | None = None) -> None:
+        self.calls.append(("write_ndjson", (path, storage_options)))
+
+    def write_ipc(
+        self,
+        df: list[dict[str, Any]],
+        path: str,
+        *,
+        compression: str = "uncompressed",
+        storage_options: dict[str, Any] | None = None,
+    ) -> None:
+        self.calls.append(("write_ipc", (path, compression, storage_options)))
+
+    def write_database(
+        self,
+        df: list[dict[str, Any]],
+        *,
+        table_name: str,
+        connection: Any,
+        if_table_exists: str = "fail",
+        engine: str | None = None,
+    ) -> None:
+        self.calls.append(("write_database", (table_name, if_table_exists, engine)))
+
+    def write_excel(self, df: list[dict[str, Any]], path: str, *, worksheet: str = "Sheet1") -> None:
+        self.calls.append(("write_excel", (path, worksheet)))
+
+    def write_delta(
+        self,
+        df: list[dict[str, Any]],
+        target: str,
+        *,
+        mode: str = "error",
+        storage_options: dict[str, Any] | None = None,
+    ) -> None:
+        self.calls.append(("write_delta", (target, mode, storage_options)))
+
+    def write_avro(
+        self,
+        df: list[dict[str, Any]],
+        path: str,
+        *,
+        compression: str = "uncompressed",
+        name: str = "",
+    ) -> None:
+        self.calls.append(("write_avro", (path, compression, name)))
+
     def collect(self, df: list[dict[str, Any]]) -> list[dict[str, Any]]:
         self.calls.append(("collect", None))
         return df
+
+    def to_dicts(self, df: list[dict[str, Any]]) -> list[dict[str, object]]:
+        self.calls.append(("to_dicts", None))
+        return cast(list[dict[str, object]], df)
+
+    def to_dict(self, df: list[dict[str, Any]]) -> dict[str, list[object]]:
+        self.calls.append(("to_dict", None))
+        if not df:
+            return {}
+        cols = {k: [] for k in df[0].keys()}
+        for row in df:
+            for k, v in row.items():
+                cols[k].append(v)
+        return cols
 
 
 def test_always_lazy_no_adapter_calls_until_collect() -> None:
@@ -291,8 +446,8 @@ def test_always_lazy_with_new_ops() -> None:
     out = (
         pf.fill_null(0, "age")
         .drop_nulls("age")
-        .sort("id")
-        .unique("id", keep="first")
+        .sort("id", nulls_last=True)
+        .unique("id", keep="first", maintain_order=True)
         .duplicated("id")
     )
 
@@ -514,6 +669,46 @@ def test_call_order_for_mixed_ops_including_pivot_and_concat() -> None:
     assert [c[0] for c in adapter.calls] == ["concat_vertical", "pivot", "head", "collect"]
 
 
+def test_new_transforms_are_lazy() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S:
+        id: int
+        x: int
+        lst: object
+        s: object
+
+    data = [{"id": 1, "x": 1, "lst": [1, 2], "s": {"a": 1, "b": None}}]
+    pf = Frame.source(data, adapter=adapter, schema=S)
+
+    out = (
+        pf.select("id", "x")
+        .union_distinct(pf.select("id", "x"))
+        .concat_horizontal(pf.select("lst", "s"))
+        .concat_horizontal(pf.select("id").rename(id="id2"))
+        .explode("lst")
+        .unnest("s", fields=("a", "b"))
+        .drop_nulls_all("a", "b")
+    )
+    assert adapter.calls == []
+    _ = out.collect()
+
+
+def test_write_methods_execute_and_are_boundaries(tmp_path: Any) -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)
+    out = pf.select("id").head(1)
+    assert adapter.calls == []
+
+    out.write_parquet(str(tmp_path / "x.parquet"))
+    assert [c[0] for c in adapter.calls] == ["select", "head", "write_parquet"]
+
+    adapter.calls.clear()
+    out.write_csv(str(tmp_path / "x.csv"))
+    assert [c[0] for c in adapter.calls] == ["select", "head", "write_csv"]
+
+
 def test_backend_compile_expr_type_guard() -> None:
     class StrictAdapter(SpyAdapter):
         def compile_expr(self, expr: Any) -> object:
@@ -528,4 +723,57 @@ def test_backend_compile_expr_type_guard() -> None:
     with pytest.raises(PlanFrameBackendError):
         # type: ignore[arg-type]
         pf.with_column("x", "not_an_expr").collect()
+
+
+def test_over_rejects_empty_order_by_tuple() -> None:
+    with pytest.raises(PlanFrameExpressionError):
+        over(col("age"), partition_by=("id",), order_by=())
+
+
+def test_to_dicts_and_to_dict_are_lazy_boundaries() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1, "age": 2}, {"id": 2, "age": 3}]
+    pf = Frame.source(data, adapter=adapter, schema=UserDC)
+
+    out = pf.select("id").sort("id", nulls_last=True)
+    assert adapter.calls == []
+
+    dicts = out.to_dicts()
+    assert dicts == [{"id": 1}, {"id": 2}]
+    assert [c[0] for c in adapter.calls] == ["select", "sort", "to_dicts"]
+
+    adapter.calls.clear()
+    d = out.to_dict()
+    assert d == {"id": [1, 2]}
+    assert [c[0] for c in adapter.calls] == ["select", "sort", "to_dict"]
+
+
+def test_sample_validates_arguments() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)
+
+    with pytest.raises(ValueError):
+        pf.sample()
+    with pytest.raises(ValueError):
+        pf.sample(1, frac=0.5)
+    with pytest.raises(ValueError):
+        pf.sample(-1)
+    with pytest.raises(ValueError):
+        pf.sample(frac=-0.1)
+    with pytest.raises(ValueError):
+        pf.sample(frac=1.1)
+    # allowed when with_replacement=True
+    _ = pf.sample(frac=1.1, with_replacement=True)
+
+
+def test_sample_is_lazy_until_collect() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1, "age": 2}, {"id": 2, "age": 3}]
+    pf = Frame.source(data, adapter=adapter, schema=UserDC)
+
+    out = pf.sample(1, seed=1, shuffle=True).select("id")
+    assert adapter.calls == []
+    collected = out.collect()
+    assert collected == [{"id": 1}]
+    assert [c[0] for c in adapter.calls] == ["sample", "select", "collect"]
 

@@ -30,6 +30,11 @@ from planframe.plan.nodes import (
     Tail,
     ConcatVertical,
     Pivot,
+    Explode,
+    Unnest,
+    ConcatHorizontal,
+    DropNullsAll,
+    Sample,
 )
 from planframe.schema.ir import Field, Schema
 from planframe.schema.materialize import materialize_model
@@ -93,9 +98,19 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             bexpr = self._compile(node.predicate)
             return self._adapter.filter(prev, bexpr)
         if isinstance(node, Sort):
-            return self._adapter.sort(self._eval(node.prev), node.columns, descending=node.descending)
+            return self._adapter.sort(
+                self._eval(node.prev),
+                node.columns,
+                descending=node.descending,
+                nulls_last=node.nulls_last,
+            )
         if isinstance(node, Unique):
-            return self._adapter.unique(self._eval(node.prev), node.subset, keep=node.keep)
+            return self._adapter.unique(
+                self._eval(node.prev),
+                node.subset,
+                keep=node.keep,
+                maintain_order=node.maintain_order,
+            )
         if isinstance(node, Duplicated):
             return self._adapter.duplicated(
                 self._eval(node.prev),
@@ -160,6 +175,30 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 agg=node.agg,
                 on_columns=node.on_columns,
                 separator=node.separator,
+            )
+        if isinstance(node, Explode):
+            return self._adapter.explode(self._eval(node.prev), node.column)
+        if isinstance(node, Unnest):
+            return self._adapter.unnest(self._eval(node.prev), node.column)
+        if isinstance(node, ConcatHorizontal):
+            left_df = self._eval(node.prev)
+            other_frame = cast(Any, node.other)
+            if getattr(other_frame, "_adapter", None) is None:
+                raise PlanFrameBackendError("ConcatHorizontal node other frame is invalid")
+            if other_frame._adapter.name != self._adapter.name:
+                raise PlanFrameBackendError("Cannot concat frames from different backends")
+            right_df = other_frame._eval(other_frame._plan)
+            return self._adapter.concat_horizontal(left_df, right_df)
+        if isinstance(node, DropNullsAll):
+            return self._adapter.drop_nulls_all(self._eval(node.prev), node.subset)
+        if isinstance(node, Sample):
+            return self._adapter.sample(
+                self._eval(node.prev),
+                n=node.n,
+                frac=node.frac,
+                with_replacement=node.with_replacement,
+                shuffle=node.shuffle,
+                seed=node.seed,
             )
 
         raise PlanFrameBackendError(f"Unsupported plan node: {type(node)!r}")
@@ -308,18 +347,23 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
-    def sort(self, *columns: str, descending: bool = False) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def sort(
+        self, *columns: str, descending: bool = False, nulls_last: bool = False
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         cols = tuple(columns)
         self._schema.select(cols)  # validate existence only
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Sort(self._plan, columns=cols, descending=descending),
+            _plan=Sort(self._plan, columns=cols, descending=descending, nulls_last=nulls_last),
             _schema=self._schema,
         )
 
     def unique(
-        self, *subset: str, keep: Literal["first", "last"] = "first"
+        self,
+        *subset: str,
+        keep: Literal["first", "last"] = "first",
+        maintain_order: bool = False,
     ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         sub = tuple(subset) if subset else None
         if sub is not None:
@@ -328,9 +372,17 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Unique(self._plan, subset=sub, keep=keep),
+            _plan=Unique(self._plan, subset=sub, keep=keep, maintain_order=maintain_order),
             _schema=schema2,
         )
+
+    def drop_duplicates(
+        self,
+        *subset: str,
+        keep: Literal["first", "last"] = "first",
+        maintain_order: bool = False,
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+        return self.unique(*subset, keep=keep, maintain_order=maintain_order)
 
     def duplicated(
         self, *subset: str, keep: Literal["first", "last"] | bool = "first", out_name: str = "duplicated"
@@ -344,6 +396,37 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _adapter=self._adapter,
             _plan=Duplicated(self._plan, subset=sub, keep=keep, out_name=out_name),
             _schema=schema2,
+        )
+
+    def sample(
+        self,
+        n: int | None = None,
+        *,
+        frac: float | None = None,
+        with_replacement: bool = False,
+        shuffle: bool = False,
+        seed: int | None = None,
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+        if (n is None) == (frac is None):
+            raise ValueError("sample requires exactly one of n= or frac=")
+        if n is not None and n < 0:
+            raise ValueError("sample n must be non-negative")
+        if frac is not None and frac < 0:
+            raise ValueError("sample frac must be non-negative")
+        if frac is not None and frac > 1.0 and not with_replacement:
+            raise ValueError("sample frac > 1.0 requires with_replacement=True")
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Sample(
+                self._plan,
+                n=n,
+                frac=frac,
+                with_replacement=with_replacement,
+                shuffle=shuffle,
+                seed=seed,
+            ),
+            _schema=self._schema,
         )
 
     def group_by(self, *keys: str) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]:
@@ -367,6 +450,18 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data,
             _adapter=self._adapter,
             _plan=DropNulls(self._plan, subset=sub),
+            _schema=schema2,
+        )
+
+    def drop_nulls_all(self, *subset: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+        sub = tuple(subset) if subset else None
+        if sub is not None:
+            self._schema.select(sub)  # validate
+        schema2 = self._schema.drop_nulls_all()
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=DropNullsAll(self._plan, subset=sub),
             _schema=schema2,
         )
 
@@ -472,6 +567,47 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
+    def concat_horizontal(
+        self, other: "Frame[SchemaT, BackendFrameT, BackendExprT]"
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+        if other._adapter.name != self._adapter.name:
+            raise PlanFrameBackendError("Cannot concat frames from different backends")
+        left_names = set(self._schema.names())
+        right_names = set(other._schema.names())
+        overlap = left_names.intersection(right_names)
+        if overlap:
+            raise PlanFrameSchemaError(f"concat_horizontal has overlapping columns: {sorted(overlap)}")
+        schema2 = Schema(fields=tuple([*self._schema.fields, *other._schema.fields]))
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=ConcatHorizontal(self._plan, other=other),
+            _schema=schema2,
+        )
+
+    def union_distinct(
+        self, other: "Frame[SchemaT, BackendFrameT, BackendExprT]"
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+        return self.concat_vertical(other).unique()
+
+    def explode(self, column: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+        schema2 = self._schema.explode(column)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Explode(self._plan, column=column),
+            _schema=schema2,
+        )
+
+    def unnest(self, column: str, *, fields: tuple[str, ...]) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+        schema2 = self._schema.unnest(column, fields=fields)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Unnest(self._plan, column=column),
+            _schema=schema2,
+        )
+
     def pivot(
         self,
         *,
@@ -508,12 +644,159 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def collect(self) -> BackendFrameT:
+    def collect(
+        self,
+        *,
+        kind: Literal["dataclass", "pydantic"] | None = None,
+        name: str = "Row",
+    ) -> BackendFrameT | list[Any]:
         try:
             planned = self._eval(self._plan)
-            return self._adapter.collect(planned)
+            out = self._adapter.collect(planned)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(f"Backend collect failed for {self._adapter.name}") from e
+
+        if kind is None:
+            return out
+
+        # Build row models from the derived schema.
+        Model = materialize_model(name=name, schema=self._schema, kind=kind)
+        try:
+            rows = self._adapter.to_dicts(out)
+            return [Model(**r) for r in rows]
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(
+                f"Backend collect(kind={kind!r}) failed for {self._adapter.name}"
+            ) from e
+
+    def to_dicts(self) -> list[dict[str, object]]:
+        try:
+            planned = self._eval(self._plan)
+            return self._adapter.to_dicts(planned)
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend to_dicts failed for {self._adapter.name}") from e
+
+    def to_dict(self) -> dict[str, list[object]]:
+        try:
+            planned = self._eval(self._plan)
+            return self._adapter.to_dict(planned)
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend to_dict failed for {self._adapter.name}") from e
+
+    def write_parquet(
+        self,
+        path: str,
+        *,
+        compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = "zstd",
+        row_group_size: int | None = None,
+        partition_by: tuple[str, ...] | None = None,
+        storage_options: dict[str, Any] | None = None,
+    ) -> None:
+        try:
+            planned = self._eval(self._plan)
+            self._adapter.write_parquet(
+                planned,
+                path,
+                compression=compression,
+                row_group_size=row_group_size,
+                partition_by=partition_by,
+                storage_options=storage_options,
+            )
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend write_parquet failed for {self._adapter.name}") from e
+
+    def write_csv(
+        self,
+        path: str,
+        *,
+        separator: str = ",",
+        include_header: bool = True,
+        storage_options: dict[str, Any] | None = None,
+    ) -> None:
+        try:
+            planned = self._eval(self._plan)
+            self._adapter.write_csv(
+                planned,
+                path,
+                separator=separator,
+                include_header=include_header,
+                storage_options=storage_options,
+            )
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend write_csv failed for {self._adapter.name}") from e
+
+    def write_ndjson(self, path: str, *, storage_options: dict[str, Any] | None = None) -> None:
+        try:
+            planned = self._eval(self._plan)
+            self._adapter.write_ndjson(planned, path, storage_options=storage_options)
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend write_ndjson failed for {self._adapter.name}") from e
+
+    def write_ipc(
+        self,
+        path: str,
+        *,
+        compression: Literal["uncompressed", "lz4", "zstd"] = "uncompressed",
+        storage_options: dict[str, Any] | None = None,
+    ) -> None:
+        try:
+            planned = self._eval(self._plan)
+            self._adapter.write_ipc(planned, path, compression=compression, storage_options=storage_options)
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend write_ipc failed for {self._adapter.name}") from e
+
+    def write_database(
+        self,
+        table_name: str,
+        *,
+        connection: Any,
+        if_table_exists: Literal["fail", "replace", "append"] = "fail",
+        engine: str | None = None,
+    ) -> None:
+        try:
+            planned = self._eval(self._plan)
+            self._adapter.write_database(
+                planned,
+                table_name=table_name,
+                connection=connection,
+                if_table_exists=if_table_exists,
+                engine=engine,
+            )
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend write_database failed for {self._adapter.name}") from e
+
+    def write_excel(self, path: str, *, worksheet: str = "Sheet1") -> None:
+        try:
+            planned = self._eval(self._plan)
+            self._adapter.write_excel(planned, path, worksheet=worksheet)
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend write_excel failed for {self._adapter.name}") from e
+
+    def write_delta(
+        self,
+        target: str,
+        *,
+        mode: Literal["error", "append", "overwrite", "ignore", "merge"] = "error",
+        storage_options: dict[str, Any] | None = None,
+    ) -> None:
+        try:
+            planned = self._eval(self._plan)
+            self._adapter.write_delta(planned, target, mode=mode, storage_options=storage_options)
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend write_delta failed for {self._adapter.name}") from e
+
+    def write_avro(
+        self,
+        path: str,
+        *,
+        compression: Literal["uncompressed", "snappy", "deflate"] = "uncompressed",
+        name: str = "",
+    ) -> None:
+        try:
+            planned = self._eval(self._plan)
+            self._adapter.write_avro(planned, path, compression=compression, name=name)
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend write_avro failed for {self._adapter.name}") from e
 
     def materialize_model(
         self,

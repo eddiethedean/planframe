@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-import polars as pl
-
 from planframe.expr import abs_, ceil, coalesce, col, eq, floor, if_else, lit, round_, xor
-from planframe_polars import from_polars
+
+from planframe_polars import PolarsFrame
 
 
-@dataclass(frozen=True)
-class S:
+class S(PolarsFrame):
     id: int
     x: float
     a: int | None
     b: int | None
 
 
-pf = from_polars(pl.DataFrame({"id": [1], "x": [-1.2], "a": [None], "b": [10]}).lazy(), schema=S)
+pf = S({"id": [1], "x": [-1.2], "a": [None], "b": [10]})
 out = (
     pf.select("id", "x", "a", "b")
     .with_column("ax", abs_(col("x")))

@@ -10,6 +10,21 @@ from planframe.schema.ir import Field, Schema
 def schema_from_type(schema_type: type[Any]) -> Schema:
     """Build Schema IR from a dataclass type or a Pydantic model type."""
 
+    # PlanFrameModel-style: plain class with annotations only.
+    # NOTE: This must come before the dataclass branch because subclasses of our
+    # core `Frame` inherit dataclass internals and will otherwise be mistaken for
+    # schema dataclasses.
+    if getattr(schema_type, "__planframe_model__", False):
+        # Use only annotations defined directly on the class; avoid inheriting annotations
+        # from base `Frame`/dataclass internals.
+        raw = dict(getattr(schema_type, "__dict__", {}).get("__annotations__", {}))
+        hints = get_type_hints(schema_type, include_extras=True)
+        hints = {k: hints[k] for k in raw.keys() if k in hints}
+        if not hints:
+            raise PlanFrameSchemaError("PlanFrameModel schema must have type annotations")
+        fields = [Field(name=name, dtype=tp) for name, tp in hints.items()]
+        return Schema(fields=tuple(fields))
+
     if dataclasses.is_dataclass(schema_type):
         hints = get_type_hints(schema_type)
         fields: list[Field] = []

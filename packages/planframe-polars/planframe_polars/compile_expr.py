@@ -9,10 +9,16 @@ from planframe.expr.api import (
     Add,
     And,
     Abs,
+    Between,
     Ceil,
     Col,
     Coalesce,
+    Clip,
+    DtDay,
+    DtMonth,
+    DtYear,
     Eq,
+    Exp,
     Expr,
     Floor,
     Ge,
@@ -21,16 +27,30 @@ from planframe.expr.api import (
     IsIn,
     IsNotNull,
     IsNull,
+    Log,
     Le,
     Lit,
     Lt,
     Mul,
     Ne,
     Not,
+    Over,
     Or,
+    Pow,
     Round,
+    StrContains,
+    StrEndsWith,
+    StrLen,
+    StrLower,
+    StrReplace,
+    StrSplit,
+    StrStrip,
+    StrStartsWith,
+    StrUpper,
     Sub,
+    Sqrt,
     TrueDiv,
+    IsFinite,
     Xor,
 )
 
@@ -89,6 +109,66 @@ def compile_expr(expr: Expr[Any]) -> pl.Expr:
         return pl.when(compile_expr(expr.cond)).then(compile_expr(expr.then_value)).otherwise(
             compile_expr(expr.else_value)
         )
+    if isinstance(expr, Over):
+        e = compile_expr(expr.value)
+        return e.over(
+            partition_by=list(expr.partition_by),
+            order_by=(list(expr.order_by) if expr.order_by is not None else None),
+        )
+    if isinstance(expr, Between):
+        return compile_expr(expr.value).is_between(
+            compile_expr(expr.low),
+            compile_expr(expr.high),
+            closed=expr.closed,
+        )
+    if isinstance(expr, Clip):
+        e = compile_expr(expr.value)
+        lower = compile_expr(expr.lower) if expr.lower is not None else None
+        upper = compile_expr(expr.upper) if expr.upper is not None else None
+        return e.clip(lower_bound=lower, upper_bound=upper)
+    if isinstance(expr, Pow):
+        return compile_expr(expr.base) ** compile_expr(expr.exponent)
+    if isinstance(expr, Exp):
+        return compile_expr(expr.value).exp()
+    if isinstance(expr, Log):
+        return compile_expr(expr.value).log()
+    if isinstance(expr, StrContains):
+        e = compile_expr(expr.value).cast(pl.Utf8)
+        return e.str.contains(expr.pattern, literal=expr.literal)
+    if isinstance(expr, StrStartsWith):
+        e = compile_expr(expr.value).cast(pl.Utf8)
+        return e.str.starts_with(expr.prefix)
+    if isinstance(expr, StrEndsWith):
+        e = compile_expr(expr.value).cast(pl.Utf8)
+        return e.str.ends_with(expr.suffix)
+    if isinstance(expr, StrLower):
+        e = compile_expr(expr.value).cast(pl.Utf8)
+        return e.str.to_lowercase()
+    if isinstance(expr, StrUpper):
+        e = compile_expr(expr.value).cast(pl.Utf8)
+        return e.str.to_uppercase()
+    if isinstance(expr, StrLen):
+        e = compile_expr(expr.value).cast(pl.Utf8)
+        return e.str.len_chars()
+    if isinstance(expr, StrReplace):
+        e = compile_expr(expr.value).cast(pl.Utf8)
+        return e.str.replace_all(expr.pattern, expr.replacement, literal=expr.literal)
+    if isinstance(expr, StrStrip):
+        e = compile_expr(expr.value).cast(pl.Utf8)
+        return e.str.strip_chars()
+    if isinstance(expr, StrSplit):
+        e = compile_expr(expr.value).cast(pl.Utf8)
+        return e.str.split(expr.by)
+    if isinstance(expr, DtYear):
+        return compile_expr(expr.value).dt.year()
+    if isinstance(expr, DtMonth):
+        return compile_expr(expr.value).dt.month()
+    if isinstance(expr, DtDay):
+        return compile_expr(expr.value).dt.day()
+    if isinstance(expr, Sqrt):
+        return compile_expr(expr.value).sqrt()
+    if isinstance(expr, IsFinite):
+        return compile_expr(expr.value).is_finite()
 
     raise PlanFrameExpressionError(f"Unsupported expr node: {type(expr)!r}")
 

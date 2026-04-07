@@ -58,6 +58,7 @@ class Sort(PlanNode):
     prev: PlanNode
     columns: tuple[str, ...]
     descending: bool = False
+    nulls_last: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +66,7 @@ class Unique(PlanNode):
     prev: PlanNode
     subset: tuple[str, ...] | None
     keep: str = "first"
+    maintain_order: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,4 +154,38 @@ class Pivot(PlanNode):
     agg: str
     on_columns: tuple[str, ...] | None
     separator: str = "_"
+
+
+@dataclass(frozen=True, slots=True)
+class Explode(PlanNode):
+    prev: PlanNode
+    column: str
+
+
+@dataclass(frozen=True, slots=True)
+class Unnest(PlanNode):
+    prev: PlanNode
+    column: str
+
+
+@dataclass(frozen=True, slots=True)
+class ConcatHorizontal(PlanNode):
+    prev: PlanNode
+    other: Any
+
+
+@dataclass(frozen=True, slots=True)
+class DropNullsAll(PlanNode):
+    prev: PlanNode
+    subset: tuple[str, ...] | None
+
+
+@dataclass(frozen=True, slots=True)
+class Sample(PlanNode):
+    prev: PlanNode
+    n: int | None
+    frac: float | None
+    with_replacement: bool = False
+    shuffle: bool = False
+    seed: int | None = None
  

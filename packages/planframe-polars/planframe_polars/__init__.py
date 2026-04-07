@@ -1,5 +1,8 @@
-from planframe_polars.api import from_polars
 from planframe_polars.adapter import PolarsAdapter
+from planframe_polars.frame import PolarsFrame
 
-__all__ = ["PolarsAdapter", "from_polars"]
+__all__ = [
+    "PolarsAdapter",
+    "PolarsFrame",
+]
  

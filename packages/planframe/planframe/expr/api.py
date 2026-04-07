@@ -153,6 +153,122 @@ class IfElse(Expr[object]):
     else_value: Expr[object]
 
 
+@dataclass(frozen=True, slots=True)
+class Over(Expr[object]):
+    value: Expr[object]
+    partition_by: tuple[str, ...]
+    order_by: tuple[str, ...] | None
+
+
+@dataclass(frozen=True, slots=True)
+class Between(Expr[bool]):
+    value: Expr[object]
+    low: Expr[object]
+    high: Expr[object]
+    closed: str = "both"
+
+
+@dataclass(frozen=True, slots=True)
+class Clip(Expr[object]):
+    value: Expr[object]
+    lower: Expr[object] | None
+    upper: Expr[object] | None
+
+
+@dataclass(frozen=True, slots=True)
+class Pow(Expr[object]):
+    base: Expr[object]
+    exponent: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class Exp(Expr[object]):
+    value: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class Log(Expr[object]):
+    value: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class StrContains(Expr[bool]):
+    value: Expr[object]
+    pattern: str
+    literal: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class StrStartsWith(Expr[bool]):
+    value: Expr[object]
+    prefix: str
+
+
+@dataclass(frozen=True, slots=True)
+class StrEndsWith(Expr[bool]):
+    value: Expr[object]
+    suffix: str
+
+
+@dataclass(frozen=True, slots=True)
+class StrLower(Expr[object]):
+    value: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class StrUpper(Expr[object]):
+    value: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class StrLen(Expr[object]):
+    value: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class StrReplace(Expr[object]):
+    value: Expr[object]
+    pattern: str
+    replacement: str
+    literal: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class StrStrip(Expr[object]):
+    value: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class StrSplit(Expr[object]):
+    value: Expr[object]
+    by: str
+
+
+@dataclass(frozen=True, slots=True)
+class DtYear(Expr[object]):
+    value: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class DtMonth(Expr[object]):
+    value: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class DtDay(Expr[object]):
+    value: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class Sqrt(Expr[object]):
+    value: Expr[object]
+
+
+@dataclass(frozen=True, slots=True)
+class IsFinite(Expr[bool]):
+    value: Expr[object]
+
+
 def col(name: str) -> Col[object]:
     return Col(name=name)
 
@@ -254,8 +370,124 @@ def if_else(cond: Expr[bool], then_value: Expr[object], else_value: Expr[object]
     return IfElse(cond=cond, then_value=then_value, else_value=else_value)
 
 
+def over(value: Expr[object], *, partition_by: tuple[str, ...], order_by: tuple[str, ...] | None = None) -> Over:
+    if not partition_by:
+        raise PlanFrameExpressionError("over requires non-empty partition_by")
+    if order_by is not None and not order_by:
+        raise PlanFrameExpressionError("over order_by must be non-empty when provided")
+    return Over(value=value, partition_by=partition_by, order_by=order_by)
+
+
+def between(
+    value: Expr[object],
+    low: Expr[object],
+    high: Expr[object],
+    *,
+    closed: str = "both",
+) -> Between:
+    if closed not in {"both", "left", "right", "none"}:
+        raise PlanFrameExpressionError("between closed must be one of: both, left, right, none")
+    return Between(value=value, low=low, high=high, closed=closed)
+
+
+def clip(value: Expr[object], *, lower: Expr[object] | None = None, upper: Expr[object] | None = None) -> Clip:
+    if lower is None and upper is None:
+        raise PlanFrameExpressionError("clip requires at least one of lower= or upper=")
+    return Clip(value=value, lower=lower, upper=upper)
+
+
+def pow_(base: Expr[object], exponent: Expr[object]) -> Pow:
+    return Pow(base=base, exponent=exponent)
+
+
+def exp(value: Expr[object]) -> Exp:
+    return Exp(value=value)
+
+
+def log(value: Expr[object]) -> Log:
+    return Log(value=value)
+
+
+def contains(value: Expr[object], pattern: str, *, literal: bool = False) -> StrContains:
+    return StrContains(value=value, pattern=pattern, literal=literal)
+
+
+def starts_with(value: Expr[object], prefix: str) -> StrStartsWith:
+    return StrStartsWith(value=value, prefix=prefix)
+
+
+def ends_with(value: Expr[object], suffix: str) -> StrEndsWith:
+    return StrEndsWith(value=value, suffix=suffix)
+
+
+def lower(value: Expr[object]) -> StrLower:
+    return StrLower(value=value)
+
+
+def upper(value: Expr[object]) -> StrUpper:
+    return StrUpper(value=value)
+
+
+def length(value: Expr[object]) -> StrLen:
+    return StrLen(value=value)
+
+
+def replace(value: Expr[object], pattern: str, replacement: str, *, literal: bool = False) -> StrReplace:
+    return StrReplace(value=value, pattern=pattern, replacement=replacement, literal=literal)
+
+
+def strip(value: Expr[object]) -> StrStrip:
+    return StrStrip(value=value)
+
+
+def split(value: Expr[object], by: str) -> StrSplit:
+    return StrSplit(value=value, by=by)
+
+
+def year(value: Expr[object]) -> DtYear:
+    return DtYear(value=value)
+
+
+def month(value: Expr[object]) -> DtMonth:
+    return DtMonth(value=value)
+
+
+def day(value: Expr[object]) -> DtDay:
+    return DtDay(value=value)
+
+
+def sqrt(value: Expr[object]) -> Sqrt:
+    return Sqrt(value=value)
+
+
+def is_finite(value: Expr[object]) -> IsFinite:
+    return IsFinite(value=value)
+
+
 def _assert_bool(expr: Expr[object]) -> Expr[bool]:
-    if isinstance(expr, (Eq, Ne, Lt, Le, Gt, Ge, IsNull, IsNotNull, IsIn, And, Or, Not, Xor)):
+    if isinstance(
+        expr,
+        (
+            Eq,
+            Ne,
+            Lt,
+            Le,
+            Gt,
+            Ge,
+            IsNull,
+            IsNotNull,
+            IsIn,
+            And,
+            Or,
+            Not,
+            Xor,
+            Between,
+            StrContains,
+            StrStartsWith,
+            StrEndsWith,
+            IsFinite,
+        ),
+    ):
         return expr  # type: ignore[return-value]
     raise PlanFrameExpressionError(f"Expected boolean Expr, got: {type(expr).__name__}")
 
@@ -268,11 +500,56 @@ def infer_dtype(expr: Expr[Any]) -> Any:
 
     if isinstance(expr, Lit):
         return type(expr.value)
-    if isinstance(expr, (Eq, Ne, Lt, Le, Gt, Ge, IsNull, IsNotNull, IsIn, And, Or, Not, Xor)):
+    if isinstance(
+        expr,
+        (
+            Eq,
+            Ne,
+            Lt,
+            Le,
+            Gt,
+            Ge,
+            IsNull,
+            IsNotNull,
+            IsIn,
+            And,
+            Or,
+            Not,
+            Xor,
+            Between,
+            StrContains,
+            StrStartsWith,
+            StrEndsWith,
+            IsFinite,
+        ),
+    ):
         return bool
     if isinstance(expr, (Add, Sub, Mul, TrueDiv)):
         return object
-    if isinstance(expr, (Abs, Round, Floor, Ceil, Coalesce, IfElse)):
+    if isinstance(
+        expr,
+        (
+            Abs,
+            Round,
+            Floor,
+            Ceil,
+            Coalesce,
+            IfElse,
+            Clip,
+            Pow,
+            Exp,
+            Log,
+            StrLower,
+            StrUpper,
+            StrReplace,
+            StrStrip,
+            StrSplit,
+            Over,
+            Sqrt,
+        ),
+    ):
+        return object
+    if isinstance(expr, (StrLen, DtYear, DtMonth, DtDay)):
         return object
     if isinstance(expr, Col):
         return Any

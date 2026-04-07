@@ -1,4 +1,4 @@
-from planframe.backend.adapter import BackendAdapter
+from planframe.backend.adapter import BackendAdapter, BaseAdapter
 from planframe.backend.errors import (
     PlanFrameBackendError,
     PlanFrameError,
@@ -9,6 +9,7 @@ from planframe.backend.errors import (
 
 __all__ = [
     "BackendAdapter",
+    "BaseAdapter",
     "PlanFrameError",
     "PlanFrameBackendError",
     "PlanFrameExecutionError",

@@ -1,19 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-import polars as pl
-
-from planframe_polars import from_polars
+from planframe_polars import PolarsFrame
 
 
-@dataclass(frozen=True)
-class S:
+class S(PolarsFrame):
     id: int
     age: int
 
 
-pf = from_polars(pl.DataFrame({"id": [1, 2, 3], "age": [10, 20, 30]}).lazy(), schema=S)
+pf = S({"id": [1, 2, 3], "age": [10, 20, 30]})
 out = pf.head(2).slice(0, 1).tail(1).limit(1)
 df = out.collect()
 

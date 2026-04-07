@@ -1,21 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-import polars as pl
-
 from planframe.expr import and_, col, gt, is_not_null, isin, lit, mul
-from planframe_polars import from_polars
+
+from planframe_polars import PolarsFrame
 
 
-@dataclass(frozen=True)
-class UserSchema:
+class User(PolarsFrame):
     id: int
     age: int | None
 
 
-lf = pl.DataFrame({"id": [1], "age": [2]}).lazy()
-pf = from_polars(lf, schema=UserSchema)
+pf = User({"id": [1], "age": [2]})
 
 out = (
     pf.select("id", "age")

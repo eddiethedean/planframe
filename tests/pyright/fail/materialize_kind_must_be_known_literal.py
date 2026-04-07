@@ -4,7 +4,9 @@ from dataclasses import dataclass
 
 import polars as pl
 
-from planframe_polars import from_polars
+from typing import Any, cast
+
+from planframe_polars import PolarsFrame
 
 
 @dataclass(frozen=True)
@@ -14,7 +16,7 @@ class UserSchema:
 
 
 lf = pl.DataFrame({"id": [1], "age": [2]}).lazy()
-pf = from_polars(lf, schema=UserSchema)
+pf = cast(Any, PolarsFrame[UserSchema])(lf)
 
 # This should fail: kind is a Literal["dataclass", "pydantic"].
 Out = pf.materialize_model("Out", kind="nope")

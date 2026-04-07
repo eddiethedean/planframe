@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-import polars as pl
-
-from planframe_polars import from_polars
+from planframe_polars import PolarsFrame
 
 
-@dataclass(frozen=True)
-class S:
+class S(PolarsFrame):
     id: int
 
 
-lf = pl.DataFrame({"id": [1, 1]}).lazy()
-pf = from_polars(lf, schema=S)
+pf = S({"id": [1, 1]})
 
 # Typing allows bool keep; runtime backend may reject keep=False depending on implementation.
 mask = pf.duplicated("id", keep=False)

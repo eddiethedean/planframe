@@ -154,8 +154,32 @@ class Schema:
     def drop_nulls(self) -> Schema:
         return self
 
+    def drop_nulls_all(self) -> Schema:
+        return self
+
     def fill_null(self) -> Schema:
         return self
+
+    def explode(self, column: str) -> Schema:
+        self.get(column)  # validate
+        return self
+
+    def unnest(self, column: str, *, fields: tuple[str, ...]) -> Schema:
+        if not fields:
+            raise PlanFrameSchemaError("unnest requires non-empty fields")
+        fm = self.field_map()
+        if column not in fm:
+            raise PlanFrameSchemaError(f"Cannot unnest missing column: {column}")
+        if len(set(fields)) != len(fields):
+            raise PlanFrameSchemaError("unnest fields must be unique")
+        remaining = [f for f in self.fields if f.name != column]
+        out_names = {f.name for f in remaining}
+        for name in fields:
+            if name in out_names:
+                raise PlanFrameSchemaError(f"unnest would create duplicate column name: {name}")
+            out_names.add(name)
+            remaining.append(Field(name=name, dtype=object))
+        return Schema(fields=tuple(remaining))
 
     def melt(
         self,
