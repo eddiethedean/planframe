@@ -168,7 +168,9 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     ) -> None: ...
 
     @abstractmethod
-    def write_ndjson(self, df: BackendFrameT, path: str, *, storage_options: dict[str, Any] | None = None) -> None: ...
+    def write_ndjson(
+        self, df: BackendFrameT, path: str, *, storage_options: dict[str, Any] | None = None
+    ) -> None: ...
 
     @abstractmethod
     def write_ipc(
@@ -221,7 +223,9 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def unnest(self, df: BackendFrameT, column: str) -> BackendFrameT: ...
 
     @abstractmethod
-    def drop_nulls_all(self, df: BackendFrameT, subset: tuple[str, ...] | None) -> BackendFrameT: ...
+    def drop_nulls_all(
+        self, df: BackendFrameT, subset: tuple[str, ...] | None
+    ) -> BackendFrameT: ...
 
     @abstractmethod
     def sample(
@@ -250,4 +254,3 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
 
 # Backwards-compatible name for older imports.
 BackendAdapter = BaseAdapter
- 

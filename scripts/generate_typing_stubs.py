@@ -36,11 +36,11 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("from planframe.schema.ir import Schema")
     a("from planframe.typing._schema_types import JoinedSchema")
     a("")
-    a("SchemaT = TypeVar(\"SchemaT\")")
-    a("BackendFrameT = TypeVar(\"BackendFrameT\")")
-    a("BackendExprT = TypeVar(\"BackendExprT\")")
-    a("OtherSchemaT = TypeVar(\"OtherSchemaT\")")
-    a("T = TypeVar(\"T\")")
+    a('SchemaT = TypeVar("SchemaT")')
+    a('BackendFrameT = TypeVar("BackendFrameT")')
+    a('BackendExprT = TypeVar("BackendExprT")')
+    a('OtherSchemaT = TypeVar("OtherSchemaT")')
+    a('T = TypeVar("T")')
     a("")
     a("")
     a("class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):")
@@ -48,6 +48,14 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("    _adapter: BackendAdapter[BackendFrameT, BackendExprT]")
     a("    _plan: PlanNode")
     a("    _schema: Schema")
+    a("")
+    a("    def __init__(")
+    a("        self,")
+    a("        _data: BackendFrameT,")
+    a("        _adapter: BackendAdapter[BackendFrameT, BackendExprT],")
+    a("        _plan: PlanNode,")
+    a("        _schema: Schema,")
+    a("    ) -> None: ...")
     a("")
     a("    @classmethod")
     a("    def source(")
@@ -138,22 +146,24 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("    def unique(")
     a("        self,")
     a("        *subset: LiteralString,")
-    a("        keep: Literal[\"first\", \"last\"] = ...,")
+    a('        keep: Literal["first", "last"] = ...,')
     a("        maintain_order: bool = ...,")
     a("    ) -> Self: ...")
     a("    def drop_duplicates(")
     a("        self,")
     a("        *subset: LiteralString,")
-    a("        keep: Literal[\"first\", \"last\"] = ...,")
+    a('        keep: Literal["first", "last"] = ...,')
     a("        maintain_order: bool = ...,")
     a("    ) -> Self: ...")
     a("    def duplicated(")
     a("        self,")
     a("        *subset: LiteralString,")
-    a("        keep: Literal[\"first\", \"last\"] | bool = ...,")
+    a('        keep: Literal["first", "last"] | bool = ...,')
     a("        out_name: str = ...,")
     a("    ) -> Self: ...")
-    a("    def group_by(self, *keys: LiteralString) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...")
+    a(
+        "    def group_by(self, *keys: LiteralString) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ..."
+    )
     a("    def drop_nulls(self, *subset: LiteralString) -> Self: ...")
     a("    def fill_null(self, value: Any, *subset: LiteralString) -> Self: ...")
     a("    def melt(")
@@ -169,11 +179,19 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("    def limit(self, n: int) -> Self: ...")
     a("    def head(self, n: int) -> Self: ...")
     a("    def tail(self, n: int) -> Self: ...")
-    a("    def concat_vertical(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
-    a("    def concat_horizontal(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
-    a("    def union_distinct(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
+    a(
+        "    def concat_vertical(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ..."
+    )
+    a(
+        "    def concat_horizontal(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ..."
+    )
+    a(
+        "    def union_distinct(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ..."
+    )
     a("    def explode(self, column: LiteralString) -> Self: ...")
-    a("    def unnest(self, column: LiteralString, *, fields: tuple[LiteralString, ...]) -> Self: ...")
+    a(
+        "    def unnest(self, column: LiteralString, *, fields: tuple[LiteralString, ...]) -> Self: ..."
+    )
     a("    def drop_nulls_all(self, *subset: LiteralString) -> Self: ...")
     a("    def pivot(")
     a("        self,")
@@ -181,7 +199,9 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        index: tuple[LiteralString, ...],")
     a("        on: LiteralString,")
     a("        values: LiteralString,")
-    a("        agg: Literal[\"first\", \"last\", \"sum\", \"mean\", \"min\", \"max\", \"count\", \"len\", \"median\"] = ...,")
+    a(
+        '        agg: Literal["first", "last", "sum", "mean", "min", "max", "count", "len", "median"] = ...,'
+    )
     a("        on_columns: tuple[str, ...] | None = ...,")
     a("        separator: str = ...,")
     a("    ) -> Self: ...")
@@ -201,7 +221,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],")
     a("        *,")
     a("        on: tuple[LiteralString],")
-    a("        how: Literal[\"inner\", \"left\", \"right\", \"full\", \"semi\", \"anti\", \"cross\"] = ...,")
+    a('        how: Literal["inner", "left", "right", "full", "semi", "anti", "cross"] = ...,')
     a("        suffix: str = ...,")
     a("    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...")
     for n in range(2, 6):
@@ -212,21 +232,25 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
         a("        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],")
         a("        *,")
         a(f"        on: tuple[{on_tuple}],")
-        a("        how: Literal[\"inner\", \"left\", \"right\", \"full\", \"semi\", \"anti\", \"cross\"] = ...,")
+        a('        how: Literal["inner", "left", "right", "full", "semi", "anti", "cross"] = ...,')
         a("        suffix: str = ...,")
         a("    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...")
     a("    @overload")
     a("    def collect(self) -> BackendFrameT: ...")
     a("")
     a("    @overload")
-    a('    def collect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ...) -> list[Any]: ...')
+    a(
+        '    def collect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ...) -> list[Any]: ...'
+    )
     a("    def to_dicts(self) -> list[dict[str, object]]: ...")
     a("    def to_dict(self) -> dict[str, list[object]]: ...")
     a("    def write_parquet(")
     a("        self,")
     a("        path: str,")
     a("        *,")
-    a("        compression: Literal[\"uncompressed\", \"snappy\", \"gzip\", \"brotli\", \"zstd\", \"lz4\"] = ...,")
+    a(
+        '        compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = ...,'
+    )
     a("        row_group_size: int | None = ...,")
     a("        partition_by: tuple[LiteralString, ...] | None = ...,")
     a("        storage_options: dict[str, Any] | None = ...,")
@@ -239,12 +263,14 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        include_header: bool = ...,")
     a("        storage_options: dict[str, Any] | None = ...,")
     a("    ) -> None: ...")
-    a("    def write_ndjson(self, path: str, *, storage_options: dict[str, Any] | None = ...) -> None: ...")
+    a(
+        "    def write_ndjson(self, path: str, *, storage_options: dict[str, Any] | None = ...) -> None: ..."
+    )
     a("    def write_ipc(")
     a("        self,")
     a("        path: str,")
     a("        *,")
-    a("        compression: Literal[\"uncompressed\", \"lz4\", \"zstd\"] = ...,")
+    a('        compression: Literal["uncompressed", "lz4", "zstd"] = ...,')
     a("        storage_options: dict[str, Any] | None = ...,")
     a("    ) -> None: ...")
     a("    def write_database(")
@@ -252,7 +278,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        table_name: str,")
     a("        *,")
     a("        connection: Any,")
-    a("        if_table_exists: Literal[\"fail\", \"replace\", \"append\"] = ...,")
+    a('        if_table_exists: Literal["fail", "replace", "append"] = ...,')
     a("        engine: str | None = ...,")
     a("    ) -> None: ...")
     a("    def write_excel(self, path: str, *, worksheet: str = ...) -> None: ...")
@@ -260,14 +286,14 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        self,")
     a("        target: str,")
     a("        *,")
-    a("        mode: Literal[\"error\", \"append\", \"overwrite\", \"ignore\", \"merge\"] = ...,")
+    a('        mode: Literal["error", "append", "overwrite", "ignore", "merge"] = ...,')
     a("        storage_options: dict[str, Any] | None = ...,")
     a("    ) -> None: ...")
     a("    def write_avro(")
     a("        self,")
     a("        path: str,")
     a("        *,")
-    a("        compression: Literal[\"uncompressed\", \"snappy\", \"deflate\"] = ...,")
+    a('        compression: Literal["uncompressed", "snappy", "deflate"] = ...,')
     a("        name: str = ...,")
     a("    ) -> None: ...")
     a("")
@@ -275,7 +301,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        self,")
     a("        name: str,")
     a("        *,")
-    a("        kind: Literal[\"dataclass\", \"pydantic\"] = ...,")
+    a('        kind: Literal["dataclass", "pydantic"] = ...,')
     a("    ) -> type[Any]: ...")
     a("")
 
@@ -289,8 +315,8 @@ def _render_schema_types_pyi() -> str:
             "",
             "from typing import Generic, TypeVar",
             "",
-            "LeftSchemaT = TypeVar(\"LeftSchemaT\")",
-            "RightSchemaT = TypeVar(\"RightSchemaT\")",
+            'LeftSchemaT = TypeVar("LeftSchemaT")',
+            'RightSchemaT = TypeVar("RightSchemaT")',
             "",
             "class JoinedSchema(Generic[LeftSchemaT, RightSchemaT]):",
             "    ...",
@@ -334,4 +360,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

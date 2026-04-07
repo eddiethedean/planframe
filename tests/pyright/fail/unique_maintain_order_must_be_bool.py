@@ -16,4 +16,3 @@ pf = PolarsFrame.from_polars(pl.DataFrame({"id": [1]}).lazy(), schema=S)
 
 # should fail: maintain_order must be bool
 _out = pf.unique("id", maintain_order=1)
-

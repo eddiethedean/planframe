@@ -71,7 +71,8 @@ class Schema:
         fm = self.field_map()
         if name in fm:
             out = [
-                Field(name=f.name, dtype=(dtype if f.name == name else f.dtype)) for f in self.fields
+                Field(name=f.name, dtype=(dtype if f.name == name else f.dtype))
+                for f in self.fields
             ]
             return Schema(fields=tuple(out))
         return Schema(fields=tuple([*self.fields, Field(name=name, dtype=dtype)]))
@@ -235,4 +236,3 @@ class Schema:
             out_fields.append(Field(name=name, dtype=rf.dtype))
 
         return Schema(fields=tuple(out_fields))
- 

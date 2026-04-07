@@ -16,4 +16,3 @@ pf = PolarsFrame.from_polars(pl.DataFrame({"id": [1]}).lazy(), schema=S)
 
 # should fail: n must be int | None
 _out = pf.sample("2")
-

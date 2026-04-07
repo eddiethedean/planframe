@@ -24,4 +24,3 @@ right = cast(Any, PolarsFrame[Right])(pl.DataFrame({"id": [1]}).lazy())
 
 # should fail: invalid how literal
 _out = left.join(right, on=("id",), how="not_a_join")
-

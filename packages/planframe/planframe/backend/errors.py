@@ -16,4 +16,3 @@ class PlanFrameBackendError(PlanFrameError):
 
 class PlanFrameExecutionError(PlanFrameBackendError):
     """Raised when backend execution/collection fails."""
- 

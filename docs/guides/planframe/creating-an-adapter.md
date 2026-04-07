@@ -1,0 +1,50 @@
+# Creating an adapter (PlanFrame core)
+
+This guide shows how to implement a **PlanFrame adapter** for an existing “dataframe-like” engine by implementing `BaseAdapter`.
+
+## What an adapter does
+
+PlanFrame’s core (`planframe`) is backend-agnostic. It builds a typed plan, then calls an adapter to:
+
+- **compile expressions** (`compile_expr`)
+- **execute plan nodes** (`select`, `filter`, `join`, …)
+- **materialize outputs** (`collect`, `to_dicts`, `to_dict`, `write_*`)
+
+The adapter API is the abstract base class:
+
+- `packages/planframe/planframe/backend/adapter.py` (`BaseAdapter`)
+
+## A minimal runnable adapter
+
+Below we implement an adapter for a tiny engine that represents a “DataFrame” as `list[dict[str, object]]`.
+
+It’s not fast, but it’s a good template: each adapter method is a pure transformation returning a new “frame”.
+
+### Example script
+
+Run:
+
+```bash
+./.venv/bin/python docs/guides/planframe/examples/rows_adapter_minimal.py
+```
+
+Expected output:
+
+```text
+schema=('id', 'age')
+collect=[{'id': 1, 'age': 10}, {'id': 2, 'age': 20}]
+dicts=[{'id': 1, 'age': 10}, {'id': 2, 'age': 20}]
+dict={'id': [1, 2], 'age': [10, 20]}
+```
+
+## Checklist for a real engine adapter
+
+- **Frame type**: pick the backend’s “frame” type (e.g. a lazy plan type if it has one)
+- **Expression type**: pick the backend’s expression type (or use a small wrapper object)
+- **Always-lazy**: return lazy objects from transforms; only execute inside `collect`/`to_dicts`/writes
+- **I/O**: implement `write_*` (or raise a clear error if not supported)
+
+## Notes
+
+- PlanFrame validates many schema invariants *before* calling the backend. Your adapter can assume the plan is well-formed, but it should still validate backend-specific constraints (e.g. “pivot requires on_columns when lazy”).
+

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal, cast
 
 import polars as pl
 
@@ -106,8 +106,10 @@ def compile_expr(expr: Expr[Any]) -> pl.Expr:
     if isinstance(expr, Coalesce):
         return pl.coalesce([compile_expr(v) for v in expr.values])
     if isinstance(expr, IfElse):
-        return pl.when(compile_expr(expr.cond)).then(compile_expr(expr.then_value)).otherwise(
-            compile_expr(expr.else_value)
+        return (
+            pl.when(compile_expr(expr.cond))
+            .then(compile_expr(expr.then_value))
+            .otherwise(compile_expr(expr.else_value))
         )
     if isinstance(expr, Over):
         e = compile_expr(expr.value)
@@ -116,10 +118,14 @@ def compile_expr(expr: Expr[Any]) -> pl.Expr:
             order_by=(list(expr.order_by) if expr.order_by is not None else None),
         )
     if isinstance(expr, Between):
+        allowed_closed = {"left", "right", "both", "none"}
+        if expr.closed not in allowed_closed:
+            raise ValueError(f"Unsupported closed interval: {expr.closed!r}")
+        closed_lit = cast(Literal["left", "right", "both", "none"], expr.closed)
         return compile_expr(expr.value).is_between(
             compile_expr(expr.low),
             compile_expr(expr.high),
-            closed=expr.closed,
+            closed=closed_lit,
         )
     if isinstance(expr, Clip):
         e = compile_expr(expr.value)
@@ -171,4 +177,3 @@ def compile_expr(expr: Expr[Any]) -> pl.Expr:
         return compile_expr(expr.value).is_finite()
 
     raise PlanFrameExpressionError(f"Unsupported expr node: {type(expr)!r}")
-

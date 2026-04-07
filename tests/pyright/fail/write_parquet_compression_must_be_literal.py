@@ -16,9 +16,10 @@ class S:
 
 pf = cast(Any, PolarsFrame[S])(pl.DataFrame({"id": [1]}).lazy())
 
+
 def get_comp() -> str:
     return "zstd"
 
+
 # should fail: compression must be a known Literal
 pf.write_parquet("out.parquet", compression=get_comp())
-

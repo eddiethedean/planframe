@@ -16,9 +16,10 @@ class S:
 
 pf = cast(Any, PolarsFrame[S])(pl.DataFrame({"id": [1]}).lazy())
 
+
 def get_mode() -> str:
     return "append"
 
+
 # should fail: if_table_exists must be a known Literal
 pf.write_database("t", connection=object(), if_table_exists=get_mode())
-

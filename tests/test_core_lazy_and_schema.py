@@ -7,7 +7,11 @@ import pytest
 from pydantic import BaseModel
 
 from planframe.backend.adapter import BackendAdapter
-from planframe.backend.errors import PlanFrameBackendError, PlanFrameExpressionError, PlanFrameSchemaError
+from planframe.backend.errors import (
+    PlanFrameBackendError,
+    PlanFrameExpressionError,
+    PlanFrameSchemaError,
+)
 from planframe.expr import Expr, add, col, eq, lit, over
 from planframe.frame import Frame
 
@@ -48,7 +52,9 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
             out.append(row2)
         return out
 
-    def with_column(self, df: list[dict[str, Any]], name: str, expr: object) -> list[dict[str, Any]]:
+    def with_column(
+        self, df: list[dict[str, Any]], name: str, expr: object
+    ) -> list[dict[str, Any]]:
         self.calls.append(("with_column", name))
         return [{**row, name: "computed"} for row in df]
 
@@ -146,7 +152,11 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         return out
 
     def group_by_agg(
-        self, df: list[dict[str, Any]], *, keys: tuple[str, ...], named_aggs: dict[str, tuple[str, str]]
+        self,
+        df: list[dict[str, Any]],
+        *,
+        keys: tuple[str, ...],
+        named_aggs: dict[str, tuple[str, str]],
     ) -> list[dict[str, Any]]:
         self.calls.append(("group_by_agg", (keys, dict(named_aggs))))
         groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
@@ -156,8 +166,8 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         out: list[dict[str, Any]] = []
         for k, rows in groups.items():
             base = {keys[i]: k[i] for i in range(len(keys))}
-            for out_name, (op, col) in named_aggs.items():
-                vals = [r[col] for r in rows]
+            for out_name, (op, col_name) in named_aggs.items():
+                vals = [r[col_name] for r in rows]
                 if op == "count":
                     base[out_name] = len(vals)
                 elif op == "sum":
@@ -167,12 +177,16 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
             out.append(dict(base))
         return out
 
-    def drop_nulls(self, df: list[dict[str, Any]], subset: tuple[str, ...] | None) -> list[dict[str, Any]]:
+    def drop_nulls(
+        self, df: list[dict[str, Any]], subset: tuple[str, ...] | None
+    ) -> list[dict[str, Any]]:
         self.calls.append(("drop_nulls", subset))
         cols = subset or tuple(df[0].keys())
         return [r for r in df if all(r.get(c) is not None for c in cols)]
 
-    def fill_null(self, df: list[dict[str, Any]], value: Any, subset: tuple[str, ...] | None) -> list[dict[str, Any]]:
+    def fill_null(
+        self, df: list[dict[str, Any]], value: Any, subset: tuple[str, ...] | None
+    ) -> list[dict[str, Any]]:
         self.calls.append(("fill_null", (value, subset)))
         cols = subset or tuple(df[0].keys())
         out: list[dict[str, Any]] = []
@@ -218,11 +232,11 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
             k = tuple(r[c] for c in on)
             right_index.setdefault(k, []).append(r)
         out: list[dict[str, Any]] = []
-        for l in left:
-            lk = tuple(l[c] for c in on)
+        for left_row in left:
+            lk = tuple(left_row[c] for c in on)
             matches = right_index.get(lk, [])
             for r in matches:
-                row = dict(l)
+                row = dict(left_row)
                 for rk, rv in r.items():
                     if rk in on:
                         continue
@@ -262,11 +276,11 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
     ) -> list[dict[str, Any]]:
         self.calls.append(("concat_horizontal", None))
         out: list[dict[str, Any]] = []
-        for l, r in zip(left, right):
-            overlap = set(l.keys()).intersection(r.keys())
+        for left_row, right_row in zip(left, right):
+            overlap = set(left_row.keys()).intersection(right_row.keys())
             if overlap:
                 raise ValueError("overlap")
-            out.append({**l, **r})
+            out.append({**left_row, **right_row})
         return out
 
     def pivot(
@@ -315,7 +329,9 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
             out.append(r2)
         return out
 
-    def drop_nulls_all(self, df: list[dict[str, Any]], subset: tuple[str, ...] | None) -> list[dict[str, Any]]:
+    def drop_nulls_all(
+        self, df: list[dict[str, Any]], subset: tuple[str, ...] | None
+    ) -> list[dict[str, Any]]:
         self.calls.append(("drop_nulls_all", subset))
         cols = subset or tuple(df[0].keys())
         return [r for r in df if not all(r.get(c) is None for c in cols)]
@@ -330,7 +346,9 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         partition_by: tuple[str, ...] | None = None,
         storage_options: dict[str, Any] | None = None,
     ) -> None:
-        self.calls.append(("write_parquet", (path, compression, row_group_size, partition_by, storage_options)))
+        self.calls.append(
+            ("write_parquet", (path, compression, row_group_size, partition_by, storage_options))
+        )
 
     def write_csv(
         self,
@@ -343,7 +361,9 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
     ) -> None:
         self.calls.append(("write_csv", (path, separator, include_header, storage_options)))
 
-    def write_ndjson(self, df: list[dict[str, Any]], path: str, *, storage_options: dict[str, Any] | None = None) -> None:
+    def write_ndjson(
+        self, df: list[dict[str, Any]], path: str, *, storage_options: dict[str, Any] | None = None
+    ) -> None:
         self.calls.append(("write_ndjson", (path, storage_options)))
 
     def write_ipc(
@@ -367,7 +387,9 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
     ) -> None:
         self.calls.append(("write_database", (table_name, if_table_exists, engine)))
 
-    def write_excel(self, df: list[dict[str, Any]], path: str, *, worksheet: str = "Sheet1") -> None:
+    def write_excel(
+        self, df: list[dict[str, Any]], path: str, *, worksheet: str = "Sheet1"
+    ) -> None:
         self.calls.append(("write_excel", (path, worksheet)))
 
     def write_delta(
@@ -662,7 +684,11 @@ def test_call_order_for_mixed_ops_including_pivot_and_concat() -> None:
         schema=S,
     )
 
-    out = left.concat_vertical(right).pivot(index=("id",), on="k", values="v", on_columns=("a", "b")).head(1)
+    out = (
+        left.concat_vertical(right)
+        .pivot(index=("id",), on="k", values="v", on_columns=("a", "b"))
+        .head(1)
+    )
     assert adapter.calls == []
     collected = out.collect()
     assert collected == [{"id": 1, "a": 10, "b": 20}]
@@ -776,4 +802,3 @@ def test_sample_is_lazy_until_collect() -> None:
     collected = out.collect()
     assert collected == [{"id": 1}]
     assert [c[0] for c in adapter.calls] == ["sample", "select", "collect"]
-

@@ -35,7 +35,6 @@ from planframe.expr import (
     replace,
     round_,
     starts_with,
-    upper,
     year,
     xor,
 )
@@ -252,7 +251,11 @@ def test_window_over_partition_by_multiple_keys() -> None:
 
     pf = S(data)
     # Note: `over()` applies window context; without an aggregation the values remain unchanged.
-    df = pf.with_column("x_over", over(col("x"), partition_by=("g1", "g2"), order_by=("x",))).sort("x").collect()
+    df = (
+        pf.with_column("x_over", over(col("x"), partition_by=("g1", "g2"), order_by=("x",)))
+        .sort("x")
+        .collect()
+    )
     assert df["x_over"].to_list() == [1, 2, 3, 4]
 
 
@@ -574,7 +577,9 @@ def test_io_read_database_sqlite_dbapi(tmp_path: Any) -> None:
         id: int
         age: int
 
-    out = PolarsFrame.read_database("SELECT id, age FROM t ORDER BY id", connection=conn, schema=S).collect()
+    out = PolarsFrame.read_database(
+        "SELECT id, age FROM t ORDER BY id", connection=conn, schema=S
+    ).collect()
     assert out["age"].to_list() == [10, 20]
 
 
@@ -590,7 +595,11 @@ def test_io_parquet_dataset_partitioned_write_and_scan(tmp_path: Any) -> None:
     pf = S(data)
     pf.write_parquet(str(base), partition_by=("part",), compression="zstd")
 
-    out = PolarsFrame.scan_parquet_dataset(str(base / "**" / "*.parquet"), schema=S).sort("id").collect()
+    out = (
+        PolarsFrame.scan_parquet_dataset(str(base / "**" / "*.parquet"), schema=S)
+        .sort("id")
+        .collect()
+    )
     assert out["age"].to_list() == [10, 20, 30]
 
 
@@ -804,4 +813,3 @@ def test_construction_via_model_subclass_list_of_dicts() -> None:
     pf = User2([{"id": 1, "name": "a", "age": 10}])
     df = pf.select("age").collect()
     assert df.to_dict(as_series=False) == {"age": [10]}
-

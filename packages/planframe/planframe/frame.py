@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
-from typing import Any, Generic, Literal, TypeVar, cast
+from typing import Any, Generic, Literal, TypeVar
 
 from planframe.backend.adapter import BackendAdapter
-from planframe.backend.errors import PlanFrameBackendError, PlanFrameExecutionError, PlanFrameSchemaError
+from planframe.backend.errors import (
+    PlanFrameBackendError,
+    PlanFrameExecutionError,
+    PlanFrameSchemaError,
+)
 from planframe.expr.api import Expr, infer_dtype
 from planframe.plan.nodes import (
     Agg,
@@ -46,12 +49,25 @@ BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
 
 
-@dataclass(frozen=True, slots=True)
 class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
+    __slots__ = ("_data", "_adapter", "_plan", "_schema")
+
     _data: BackendFrameT
     _adapter: BackendAdapter[BackendFrameT, BackendExprT]
     _plan: PlanNode
     _schema: Schema
+
+    def __init__(
+        self,
+        _data: BackendFrameT,
+        _adapter: BackendAdapter[BackendFrameT, BackendExprT],
+        _plan: PlanNode,
+        _schema: Schema,
+    ) -> None:
+        self._data = _data
+        self._adapter = _adapter
+        self._plan = _plan
+        self._schema = _schema
 
     @classmethod
     def source(
@@ -62,7 +78,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         schema: type[SchemaT],
     ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         schema_ir = schema_from_type(schema)
-        return cls(_data=data, _adapter=adapter, _plan=Source(schema_type=schema), _schema=schema_ir)
+        return cls(
+            _data=data, _adapter=adapter, _plan=Source(schema_type=schema), _schema=schema_ir
+        )
 
     def schema(self) -> Schema:
         return self._schema
@@ -144,22 +162,26 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             )
         if isinstance(node, Join):
             left_df = self._eval(node.prev)
-            right_frame = cast(Any, node.right)
+            right_frame = node.right
             if getattr(right_frame, "_adapter", None) is None:
                 raise PlanFrameBackendError("Join node right frame is invalid")
             if right_frame._adapter.name != self._adapter.name:
                 raise PlanFrameBackendError("Cannot join frames from different backends")
             right_df = right_frame._eval(right_frame._plan)
-            return self._adapter.join(left_df, right_df, on=node.on, how=node.how, suffix=node.suffix)
+            return self._adapter.join(
+                left_df, right_df, on=node.on, how=node.how, suffix=node.suffix
+            )
         if isinstance(node, Slice):
-            return self._adapter.slice(self._eval(node.prev), offset=node.offset, length=node.length)
+            return self._adapter.slice(
+                self._eval(node.prev), offset=node.offset, length=node.length
+            )
         if isinstance(node, Head):
             return self._adapter.head(self._eval(node.prev), node.n)
         if isinstance(node, Tail):
             return self._adapter.tail(self._eval(node.prev), node.n)
         if isinstance(node, ConcatVertical):
             left_df = self._eval(node.prev)
-            other_frame = cast(Any, node.other)
+            other_frame = node.other
             if getattr(other_frame, "_adapter", None) is None:
                 raise PlanFrameBackendError("ConcatVertical node other frame is invalid")
             if other_frame._adapter.name != self._adapter.name:
@@ -182,7 +204,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             return self._adapter.unnest(self._eval(node.prev), node.column)
         if isinstance(node, ConcatHorizontal):
             left_df = self._eval(node.prev)
-            other_frame = cast(Any, node.other)
+            other_frame = node.other
             if getattr(other_frame, "_adapter", None) is None:
                 raise PlanFrameBackendError("ConcatHorizontal node other frame is invalid")
             if other_frame._adapter.name != self._adapter.name:
@@ -206,23 +228,43 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def select(self, *columns: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         cols = tuple(columns)
         schema2 = self._schema.select(cols)
-        return Frame(_data=self._data, _adapter=self._adapter, _plan=Select(self._plan, cols), _schema=schema2)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Select(self._plan, cols),
+            _schema=schema2,
+        )
 
     def select_prefix(self, prefix: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         cols = tuple(n for n in self._schema.names() if n.startswith(prefix))
         schema2 = self._schema.select(cols)
-        return Frame(_data=self._data, _adapter=self._adapter, _plan=Select(self._plan, cols), _schema=schema2)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Select(self._plan, cols),
+            _schema=schema2,
+        )
 
     def select_suffix(self, suffix: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         cols = tuple(n for n in self._schema.names() if n.endswith(suffix))
         schema2 = self._schema.select(cols)
-        return Frame(_data=self._data, _adapter=self._adapter, _plan=Select(self._plan, cols), _schema=schema2)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Select(self._plan, cols),
+            _schema=schema2,
+        )
 
     def select_regex(self, pattern: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         rx = re.compile(pattern)
         cols = tuple(n for n in self._schema.names() if rx.search(n))
         schema2 = self._schema.select(cols)
-        return Frame(_data=self._data, _adapter=self._adapter, _plan=Select(self._plan, cols), _schema=schema2)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Select(self._plan, cols),
+            _schema=schema2,
+        )
 
     def select_exclude(self, *columns: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         cols = tuple(columns)
@@ -275,21 +317,27 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def drop(self, *columns: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         cols = tuple(columns)
         schema2 = self._schema.drop(cols)
-        return Frame(_data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2)
+        return Frame(
+            _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
+        )
 
     def drop_prefix(self, prefix: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         cols = tuple(n for n in self._schema.names() if n.startswith(prefix))
         if not cols:
             return self
         schema2 = self._schema.drop(cols)
-        return Frame(_data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2)
+        return Frame(
+            _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
+        )
 
     def drop_suffix(self, suffix: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         cols = tuple(n for n in self._schema.names() if n.endswith(suffix))
         if not cols:
             return self
         schema2 = self._schema.drop(cols)
-        return Frame(_data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2)
+        return Frame(
+            _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
+        )
 
     def drop_regex(self, pattern: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         rx = re.compile(pattern)
@@ -297,30 +345,45 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if not cols:
             return self
         schema2 = self._schema.drop(cols)
-        return Frame(_data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2)
+        return Frame(
+            _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
+        )
 
     def rename(self, **mapping: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         if not mapping:
             return self
         schema2 = self._schema.rename(mapping)
-        return Frame(_data=self._data, _adapter=self._adapter, _plan=Rename(self._plan, mapping), _schema=schema2)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Rename(self._plan, mapping),
+            _schema=schema2,
+        )
 
-    def rename_prefix(self, prefix: str, *subset: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def rename_prefix(
+        self, prefix: str, *subset: str
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         names = subset if subset else self._schema.names()
         mapping = {n: f"{prefix}{n}" for n in names}
         return self.rename(**mapping)
 
-    def rename_suffix(self, suffix: str, *subset: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def rename_suffix(
+        self, suffix: str, *subset: str
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         names = subset if subset else self._schema.names()
         mapping = {n: f"{n}{suffix}" for n in names}
         return self.rename(**mapping)
 
-    def rename_replace(self, old: str, new: str, *subset: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def rename_replace(
+        self, old: str, new: str, *subset: str
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         names = subset if subset else self._schema.names()
         mapping = {n: n.replace(old, new) for n in names}
         return self.rename(**mapping)
 
-    def with_column(self, name: str, expr: Expr[Any]) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def with_column(
+        self, name: str, expr: Expr[Any]
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         dtype = infer_dtype(expr)
         schema2 = self._schema.with_column(name, dtype=dtype)
         return Frame(
@@ -385,7 +448,10 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         return self.unique(*subset, keep=keep, maintain_order=maintain_order)
 
     def duplicated(
-        self, *subset: str, keep: Literal["first", "last"] | bool = "first", out_name: str = "duplicated"
+        self,
+        *subset: str,
+        keep: Literal["first", "last"] | bool = "first",
+        out_name: str = "duplicated",
     ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         sub = tuple(subset) if subset else None
         if sub is not None:
@@ -486,7 +552,10 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         value_name: str = "value",
     ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         schema2 = self._schema.melt(
-            id_vars=id_vars, value_vars=value_vars, variable_name=variable_name, value_name=value_name
+            id_vars=id_vars,
+            value_vars=value_vars,
+            variable_name=variable_name,
+            value_name=value_name,
         )
         return Frame(
             _data=self._data,
@@ -517,7 +586,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def slice(self, offset: int, length: int | None = None) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def slice(
+        self, offset: int, length: int | None = None
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         if length is not None and length < 0:
             raise ValueError("length must be non-negative or None")
         return Frame(
@@ -556,7 +627,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if other._adapter.name != self._adapter.name:
             raise PlanFrameBackendError("Cannot concat frames from different backends")
         if self._schema.names() != other._schema.names():
-            raise PlanFrameSchemaError("concat_vertical requires identical column names and ordering")
+            raise PlanFrameSchemaError(
+                "concat_vertical requires identical column names and ordering"
+            )
         for name in self._schema.names():
             if self._schema.get(name).dtype != other._schema.get(name).dtype:
                 raise PlanFrameSchemaError(f"concat_vertical dtype mismatch for column: {name}")
@@ -576,7 +649,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         right_names = set(other._schema.names())
         overlap = left_names.intersection(right_names)
         if overlap:
-            raise PlanFrameSchemaError(f"concat_horizontal has overlapping columns: {sorted(overlap)}")
+            raise PlanFrameSchemaError(
+                f"concat_horizontal has overlapping columns: {sorted(overlap)}"
+            )
         schema2 = Schema(fields=tuple([*self._schema.fields, *other._schema.fields]))
         return Frame(
             _data=self._data,
@@ -599,7 +674,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def unnest(self, column: str, *, fields: tuple[str, ...]) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def unnest(
+        self, column: str, *, fields: tuple[str, ...]
+    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         schema2 = self._schema.unnest(column, fields=fields)
         return Frame(
             _data=self._data,
@@ -614,7 +691,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         index: tuple[str, ...],
         on: str,
         values: str,
-        agg: Literal["first", "last", "sum", "mean", "min", "max", "count", "len", "median"] = "first",
+        agg: Literal[
+            "first", "last", "sum", "mean", "min", "max", "count", "len", "median"
+        ] = "first",
         on_columns: tuple[str, ...] | None = None,
         separator: str = "_",
     ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
@@ -674,7 +753,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             planned = self._eval(self._plan)
             return self._adapter.to_dicts(planned)
         except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend to_dicts failed for {self._adapter.name}") from e
+            raise PlanFrameExecutionError(
+                f"Backend to_dicts failed for {self._adapter.name}"
+            ) from e
 
     def to_dict(self) -> dict[str, list[object]]:
         try:
@@ -703,7 +784,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 storage_options=storage_options,
             )
         except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend write_parquet failed for {self._adapter.name}") from e
+            raise PlanFrameExecutionError(
+                f"Backend write_parquet failed for {self._adapter.name}"
+            ) from e
 
     def write_csv(
         self,
@@ -723,14 +806,18 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 storage_options=storage_options,
             )
         except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend write_csv failed for {self._adapter.name}") from e
+            raise PlanFrameExecutionError(
+                f"Backend write_csv failed for {self._adapter.name}"
+            ) from e
 
     def write_ndjson(self, path: str, *, storage_options: dict[str, Any] | None = None) -> None:
         try:
             planned = self._eval(self._plan)
             self._adapter.write_ndjson(planned, path, storage_options=storage_options)
         except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend write_ndjson failed for {self._adapter.name}") from e
+            raise PlanFrameExecutionError(
+                f"Backend write_ndjson failed for {self._adapter.name}"
+            ) from e
 
     def write_ipc(
         self,
@@ -741,9 +828,13 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> None:
         try:
             planned = self._eval(self._plan)
-            self._adapter.write_ipc(planned, path, compression=compression, storage_options=storage_options)
+            self._adapter.write_ipc(
+                planned, path, compression=compression, storage_options=storage_options
+            )
         except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend write_ipc failed for {self._adapter.name}") from e
+            raise PlanFrameExecutionError(
+                f"Backend write_ipc failed for {self._adapter.name}"
+            ) from e
 
     def write_database(
         self,
@@ -763,14 +854,18 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 engine=engine,
             )
         except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend write_database failed for {self._adapter.name}") from e
+            raise PlanFrameExecutionError(
+                f"Backend write_database failed for {self._adapter.name}"
+            ) from e
 
     def write_excel(self, path: str, *, worksheet: str = "Sheet1") -> None:
         try:
             planned = self._eval(self._plan)
             self._adapter.write_excel(planned, path, worksheet=worksheet)
         except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend write_excel failed for {self._adapter.name}") from e
+            raise PlanFrameExecutionError(
+                f"Backend write_excel failed for {self._adapter.name}"
+            ) from e
 
     def write_delta(
         self,
@@ -783,7 +878,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             planned = self._eval(self._plan)
             self._adapter.write_delta(planned, target, mode=mode, storage_options=storage_options)
         except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend write_delta failed for {self._adapter.name}") from e
+            raise PlanFrameExecutionError(
+                f"Backend write_delta failed for {self._adapter.name}"
+            ) from e
 
     def write_avro(
         self,
@@ -796,7 +893,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             planned = self._eval(self._plan)
             self._adapter.write_avro(planned, path, compression=compression, name=name)
         except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend write_avro failed for {self._adapter.name}") from e
+            raise PlanFrameExecutionError(
+                f"Backend write_avro failed for {self._adapter.name}"
+            ) from e
 
     def materialize_model(
         self,
@@ -805,4 +904,3 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         kind: Literal["dataclass", "pydantic"] = "dataclass",
     ) -> type[Any]:
         return materialize_model(name=name, schema=self._schema, kind=kind)
- 

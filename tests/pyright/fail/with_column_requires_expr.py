@@ -20,4 +20,3 @@ pf = cast(Any, PolarsFrame[UserSchema])(lf)
 
 # This should fail: with_column expects an Expr[T], not an int.
 pf2 = pf.with_column("x", 1)
-

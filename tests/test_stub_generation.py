@@ -15,4 +15,3 @@ def test_generate_typing_stubs_check() -> None:
         capture_output=True,
     )
     assert res.returncode == 0, res.stdout + "\n" + res.stderr
-

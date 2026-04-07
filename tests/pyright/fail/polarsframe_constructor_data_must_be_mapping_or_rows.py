@@ -12,4 +12,3 @@ class S:
 
 # should fail: data must be a Polars frame or mapping/rows
 pf = PolarsFrame[S](123)
-

@@ -20,4 +20,3 @@ pf = cast(Any, PolarsFrame[UserSchema])(lf)
 
 # This should fail: kind is a Literal["dataclass", "pydantic"].
 Out = pf.materialize_model("Out", kind="nope")
-

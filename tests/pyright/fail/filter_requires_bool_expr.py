@@ -21,4 +21,3 @@ pf = cast(Any, PolarsFrame[UserSchema])(lf)
 
 # This should fail: filter expects Expr[bool], but col(...) is not boolean.
 pf2 = pf.filter(col("age"))
-

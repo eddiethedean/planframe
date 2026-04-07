@@ -48,4 +48,3 @@ def schema_from_type(schema_type: type[Any]) -> Schema:
     raise PlanFrameSchemaError(
         "Unsupported schema type. Expected a dataclass type or a Pydantic model type."
     )
- 

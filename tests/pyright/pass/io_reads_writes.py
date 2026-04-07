@@ -20,4 +20,3 @@ pf2 = PolarsFrame.scan_csv(str(csv_path), schema=S)
 
 pf1.select("id").write_parquet("out.parquet")
 pf2.select("id").write_csv("out.csv")
-

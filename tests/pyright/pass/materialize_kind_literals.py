@@ -3,6 +3,7 @@ from __future__ import annotations
 from planframe.expr import add, col, lit
 
 from planframe_polars import PolarsFrame
+from typing_extensions import reveal_type
 
 
 class User(PolarsFrame):
@@ -19,4 +20,3 @@ OutPD = out.materialize_model("OutPD", kind="pydantic")
 
 reveal_type(OutDC)
 reveal_type(OutPD)
-

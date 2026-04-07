@@ -11,5 +11,6 @@ class S:
 
 
 # should fail: engine must be a known Literal
-_pf = PolarsFrame.read_database_uri("select 1 as x", uri="sqlite:///tmp.db", engine="sqlalchemy", schema=S)
-
+_pf = PolarsFrame.read_database_uri(
+    "select 1 as x", uri="sqlite:///tmp.db", engine="sqlalchemy", schema=S
+)

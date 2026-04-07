@@ -8,6 +8,11 @@ This repository is a mono-repo that currently ships:
 - **`planframe`**: core package (import as `planframe`)
 - **`planframe-polars`**: Polars adapter (import as `planframe_polars`)
 
+### Guides
+
+- **PlanFrame (core) – creating an adapter**: `https://github.com/eddiethedean/planframe/blob/main/docs/guides/planframe/creating-an-adapter.md`
+- **PlanFrame-Polars – using planframe-polars**: `https://github.com/eddiethedean/planframe/blob/main/docs/guides/planframe-polars/using-planframe-polars.md`
+
 ### Install (development)
 
 This repo uses a local virtualenv at `.venv` (Python 3.10+ recommended).

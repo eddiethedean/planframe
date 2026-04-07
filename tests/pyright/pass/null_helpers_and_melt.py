@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing_extensions import reveal_type
+
 from planframe_polars import PolarsFrame
 
 
@@ -14,4 +16,3 @@ pf = S({"id": [1], "a": [None], "b": [2]})
 out = pf.fill_null(0, "a").drop_nulls("a").melt(id_vars=("id",), value_vars=("a", "b"))
 df = out.collect()
 reveal_type(df)
-

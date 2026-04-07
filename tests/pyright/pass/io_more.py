@@ -20,4 +20,3 @@ pf2.select("id").write_ipc("out.ipc")
 conn: object = object()
 pf3 = PolarsFrame.read_database("select 1 as id, 2 as age", connection=conn, schema=S)
 pf3.write_database("t", connection=conn, if_table_exists="append")
-

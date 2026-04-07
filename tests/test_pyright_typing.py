@@ -35,4 +35,3 @@ def test_pyright_fail_suite() -> None:
     for f in files:
         res = _run_pyright(f)
         assert res.returncode != 0, f"expected pyright to fail but it passed: {f}"
-

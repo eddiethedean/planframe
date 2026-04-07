@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing_extensions import reveal_type
+
 from planframe_polars import PolarsFrame
 
 
@@ -23,4 +25,3 @@ out = (
 
 df = out.collect()
 reveal_type(df)
-

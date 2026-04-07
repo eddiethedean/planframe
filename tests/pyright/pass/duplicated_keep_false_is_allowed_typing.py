@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from planframe_polars import PolarsFrame
+from typing_extensions import reveal_type
 
 
 class S(PolarsFrame):
@@ -13,4 +14,3 @@ pf = S({"id": [1, 1]})
 mask = pf.duplicated("id", keep=False)
 df = mask.collect()
 reveal_type(df)
-

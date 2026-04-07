@@ -20,4 +20,3 @@ pf = cast(Any, PolarsFrame[UserSchema])(lf)
 
 # This should fail: keys must be strings (ideally literals).
 pf2 = pf.group_by(1)
-

@@ -17,8 +17,9 @@ def materialize_dataclass(name: str, schema: Schema) -> type[Any]:
 
 
 def materialize_pydantic(name: str, schema: Schema) -> type[BaseModel]:
-    fields: dict[str, tuple[Any, Any]] = {f.name: (f.dtype, ...) for f in schema.fields}
-    return create_model(name, **fields)  # type: ignore[return-value]
+    # Pydantic's `create_model` accepts field definitions as kwargs: name=(type, default).
+    field_definitions: dict[str, Any] = {f.name: (f.dtype, ...) for f in schema.fields}
+    return create_model(name, **field_definitions)
 
 
 def materialize_model(
@@ -27,4 +28,3 @@ def materialize_model(
     if kind == "dataclass":
         return materialize_dataclass(name, schema)
     return materialize_pydantic(name, schema)
- 

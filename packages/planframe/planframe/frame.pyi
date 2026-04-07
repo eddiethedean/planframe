@@ -23,6 +23,14 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     _plan: PlanNode
     _schema: Schema
 
+    def __init__(
+        self,
+        _data: BackendFrameT,
+        _adapter: BackendAdapter[BackendFrameT, BackendExprT],
+        _plan: PlanNode,
+        _schema: Schema,
+    ) -> None: ...
+
     @classmethod
     def source(
         cls,

@@ -16,4 +16,3 @@ pf = PolarsFrame.from_polars(pl.DataFrame({"id": [1]}).lazy(), schema=S)
 
 # should fail: nulls_last must be bool
 _out = pf.sort("id", nulls_last="yes")
-

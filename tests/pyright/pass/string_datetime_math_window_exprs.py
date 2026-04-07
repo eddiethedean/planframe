@@ -1,6 +1,27 @@
 from __future__ import annotations
 
-from planframe.expr import between, clip, col, contains, day, ends_with, exp, length, lit, log, lower, month, over, pow_, replace, starts_with, upper, year
+from typing_extensions import reveal_type
+
+from planframe.expr import (
+    between,
+    clip,
+    col,
+    contains,
+    day,
+    ends_with,
+    exp,
+    length,
+    lit,
+    log,
+    lower,
+    month,
+    over,
+    pow_,
+    replace,
+    starts_with,
+    upper,
+    year,
+)
 
 from planframe_polars import PolarsFrame
 
@@ -33,4 +54,3 @@ out = (
 
 df = out.collect()
 reveal_type(df)
-

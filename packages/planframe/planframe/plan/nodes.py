@@ -188,4 +188,3 @@ class Sample(PlanNode):
     with_replacement: bool = False
     shuffle: bool = False
     seed: int | None = None
- 

@@ -21,4 +21,3 @@ pf.write_parquet(
     compression="zstd",
     storage_options={"aws_region": "us-east-1"},
 )
-

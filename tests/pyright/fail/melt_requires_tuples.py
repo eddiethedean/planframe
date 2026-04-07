@@ -21,4 +21,3 @@ pf = cast(Any, PolarsFrame[S])(lf)
 
 # This should fail: melt expects tuples for id_vars/value_vars.
 pf2 = pf.melt(id_vars=("id",), value_vars=["a", "b"])
-

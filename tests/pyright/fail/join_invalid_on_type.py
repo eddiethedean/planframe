@@ -24,4 +24,3 @@ right = cast(Any, PolarsFrame[Right])(pl.DataFrame({"id": [1]}).lazy())
 
 # should fail: on key must be a (literal) string
 _out = left.join(right, on=(1,))
-

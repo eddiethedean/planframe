@@ -33,6 +33,7 @@ class Eq(Expr[bool]):
     left: Expr[object]
     right: Expr[object]
 
+
 @dataclass(frozen=True, slots=True)
 class Ne(Expr[bool]):
     left: Expr[object]
@@ -284,6 +285,7 @@ def add(left: Expr[object], right: Expr[object]) -> Add:
 def eq(left: Expr[object], right: Expr[object]) -> Eq:
     return Eq(left=left, right=right)
 
+
 def ne(left: Expr[object], right: Expr[object]) -> Ne:
     return Ne(left=left, right=right)
 
@@ -370,7 +372,9 @@ def if_else(cond: Expr[bool], then_value: Expr[object], else_value: Expr[object]
     return IfElse(cond=cond, then_value=then_value, else_value=else_value)
 
 
-def over(value: Expr[object], *, partition_by: tuple[str, ...], order_by: tuple[str, ...] | None = None) -> Over:
+def over(
+    value: Expr[object], *, partition_by: tuple[str, ...], order_by: tuple[str, ...] | None = None
+) -> Over:
     if not partition_by:
         raise PlanFrameExpressionError("over requires non-empty partition_by")
     if order_by is not None and not order_by:
@@ -390,7 +394,9 @@ def between(
     return Between(value=value, low=low, high=high, closed=closed)
 
 
-def clip(value: Expr[object], *, lower: Expr[object] | None = None, upper: Expr[object] | None = None) -> Clip:
+def clip(
+    value: Expr[object], *, lower: Expr[object] | None = None, upper: Expr[object] | None = None
+) -> Clip:
     if lower is None and upper is None:
         raise PlanFrameExpressionError("clip requires at least one of lower= or upper=")
     return Clip(value=value, lower=lower, upper=upper)
@@ -432,7 +438,9 @@ def length(value: Expr[object]) -> StrLen:
     return StrLen(value=value)
 
 
-def replace(value: Expr[object], pattern: str, replacement: str, *, literal: bool = False) -> StrReplace:
+def replace(
+    value: Expr[object], pattern: str, replacement: str, *, literal: bool = False
+) -> StrReplace:
     return StrReplace(value=value, pattern=pattern, replacement=replacement, literal=literal)
 
 
@@ -554,4 +562,3 @@ def infer_dtype(expr: Expr[Any]) -> Any:
     if isinstance(expr, Col):
         return Any
     return Any
- 
