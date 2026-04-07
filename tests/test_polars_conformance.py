@@ -66,6 +66,13 @@ class User(PolarsFrame):
     age: int
 
 
+def test_drop_strict_false_ignores_unknown_polars_columns() -> None:
+    pf = User({"id": [1], "name": ["a"], "age": [10]})
+    out = pf.select("id", "name", "age").drop("not_a_column", strict=False)
+    df = out.collect()
+    assert df.columns == ["id", "name", "age"]
+
+
 def test_select_drop_rename_with_column_filter_collect() -> None:
     pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
 

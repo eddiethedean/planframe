@@ -24,8 +24,10 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     def select(self, df: PolarsBackendFrame, columns: tuple[str, ...]) -> PolarsBackendFrame:
         return df.select(list(columns))
 
-    def drop(self, df: PolarsBackendFrame, columns: tuple[str, ...]) -> PolarsBackendFrame:
-        return df.drop(list(columns))
+    def drop(
+        self, df: PolarsBackendFrame, columns: tuple[str, ...], *, strict: bool = True
+    ) -> PolarsBackendFrame:
+        return df.drop(*columns, strict=strict)
 
     def rename(self, df: PolarsBackendFrame, mapping: dict[str, str]) -> PolarsBackendFrame:
         return df.rename(mapping)

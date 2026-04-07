@@ -40,13 +40,17 @@ class Schema:
             out.append(fm[c])
         return Schema(fields=tuple(out))
 
-    def drop(self, columns: Iterable[str]) -> Schema:
+    def drop(self, columns: Iterable[str], *, strict: bool = True) -> Schema:
         drop_set = set(columns)
         fm = self.field_map()
-        missing = drop_set.difference(fm.keys())
-        if missing:
-            raise PlanFrameSchemaError(f"Cannot drop missing columns: {sorted(missing)}")
-        return Schema(fields=tuple(f for f in self.fields if f.name not in drop_set))
+        if strict:
+            missing = drop_set.difference(fm.keys())
+            if missing:
+                raise PlanFrameSchemaError(f"Cannot drop missing columns: {sorted(missing)}")
+            to_drop = drop_set
+        else:
+            to_drop = drop_set.intersection(fm.keys())
+        return Schema(fields=tuple(f for f in self.fields if f.name not in to_drop))
 
     def rename(self, mapping: dict[str, str]) -> Schema:
         fm = self.field_map()

@@ -20,7 +20,15 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def select(self, df: BackendFrameT, columns: tuple[str, ...]) -> BackendFrameT: ...
 
     @abstractmethod
-    def drop(self, df: BackendFrameT, columns: tuple[str, ...]) -> BackendFrameT: ...
+    def drop(
+        self, df: BackendFrameT, columns: tuple[str, ...], *, strict: bool = True
+    ) -> BackendFrameT:
+        """Remove columns named in *columns* from *df*.
+
+        When *strict* is True (default), implementations must raise if any name is missing.
+        When *strict* is False, implementations must ignore names that are not present in *df*.
+        """
+        ...
 
     @abstractmethod
     def rename(self, df: BackendFrameT, mapping: dict[str, str]) -> BackendFrameT: ...
