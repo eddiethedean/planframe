@@ -1,0 +1,447 @@
+# PlanFrame — Backend Adapter Interface Design (Polars First)
+
+## Purpose
+
+This document defines the backend adapter protocol for PlanFrame.
+
+PlanFrame is a backend-agnostic typed transformation engine. It should not execute operations directly against pandas, Polars, or other runtimes in the core layer. Instead, each backend should implement a small, explicit adapter interface.
+
+The adapter layer has one job:
+
+> Translate PlanFrame's typed relational operations into backend-native operations.
+
+---
+
+## 1. Design Goals
+
+The adapter layer must be:
+
+- backend-agnostic at the core package boundary
+- small and explicit
+- stable enough for third-party adapters
+- decoupled from static typing logic
+- able to compile typed expressions into backend-native expressions
+
+The adapter must not:
+- redefine schema semantics
+- expose backend-native typing semantics into the core API
+- weaken PlanFrame's safe subset
+
+---
+
+## 2. Guiding Rule
+
+The core package owns:
+- schema semantics
+- expression semantics
+- transformation semantics
+- plan nodes
+
+The adapter owns:
+- runtime execution (evaluating a plan only when `collect()` is called)
+- backend expression compilation
+- runtime collection/materialization
+- backend dtype mapping
+
+---
+
+## 3. Proposed Package Split
+
+## planframe
+Contains:
+- Frame API
+- plan nodes
+- expression IR
+- schema IR
+- materialization interfaces
+
+## planframe-polars
+Contains:
+- PolarsAdapter
+- expression compiler to Polars expressions
+- dtype mapping to/from Polars
+- runtime collection helpers
+
+## planframe-pandas
+Contains:
+- PandasAdapter
+- expression compiler to pandas operations
+- dtype mapping
+- eager execution helpers
+
+MVP recommendation:
+- ship `planframe-core`
+- ship `planframe-polars` first
+- treat pandas as second backend
+
+---
+
+## 4. Core Adapter Protocol
+
+```python
+from __future__ import annotations
+
+from typing import Any, Protocol, TypeVar, Generic
+
+BackendFrameT = TypeVar("BackendFrameT")
+BackendExprT = TypeVar("BackendExprT")
+
+class BackendAdapter(Protocol, Generic[BackendFrameT, BackendExprT]):
+    name: str
+
+    def select(self, df: BackendFrameT, columns: tuple[str, ...]) -> BackendFrameT:
+        ...
+
+    def drop(self, df: BackendFrameT, columns: tuple[str, ...]) -> BackendFrameT:
+        ...
+
+    def rename(self, df: BackendFrameT, mapping: dict[str, str]) -> BackendFrameT:
+        ...
+
+    def with_column(
+        self,
+        df: BackendFrameT,
+        name: str,
+        expr: BackendExprT,
+    ) -> BackendFrameT:
+        ...
+
+    def cast(
+        self,
+        df: BackendFrameT,
+        name: str,
+        dtype: Any,
+    ) -> BackendFrameT:
+        ...
+
+    def filter(
+        self,
+        df: BackendFrameT,
+        predicate: BackendExprT,
+    ) -> BackendFrameT:
+        ...
+
+    def compile_expr(self, expr: Any) -> BackendExprT:
+        ...
+
+    def collect(self, df: BackendFrameT) -> BackendFrameT:
+        ...
+```
+
+### Notes
+- `compile_expr` converts PlanFrame expression IR into backend-native expression objects.
+- `collect` may be a no-op for eager backends like pandas.
+- `BackendFrameT` may be a DataFrame or LazyFrame depending on backend strategy.
+
+---
+
+## 5. Recommended Runtime Model
+
+PlanFrame's `Frame` object should hold:
+
+- a backend adapter instance
+- a backend-native runtime object
+- a plan node or plan metadata
+- schema metadata
+
+Example:
+
+```python
+class Frame(Generic[PlanT, BackendT]):
+    def __init__(
+        self,
+        data: Any,
+        adapter: BackendAdapter[Any, Any],
+        plan: Any,
+        schema_ir: Any,
+    ) -> None:
+        self._data = data
+        self._adapter = adapter
+        self._plan = plan
+        self._schema_ir = schema_ir
+```
+
+Each method:
+1. updates the logical plan
+2. updates derived schema metadata
+3. returns a new immutable `Frame`
+
+Execution is deferred:
+- adapter methods like `select(...)` / `filter(...)` are applied when the plan is evaluated (typically inside `collect()`), not during chaining.
+
+---
+
+## 6. Expression Compilation Contract
+
+The expression IR must be owned by core PlanFrame.
+
+The backend adapter is responsible for compiling it.
+
+### PlanFrame expression examples
+- `col("age")`
+- `lit(1)`
+- `add(col("age"), lit(1))`
+- `eq(col("country"), lit("US"))`
+- `and_(...)`
+
+### Adapter responsibility
+- pattern match or visit the expression tree
+- return backend-native expression representation
+
+---
+
+## 7. Polars Adapter Design
+
+Polars is the best first backend because it already has:
+- an expression system
+- clear column semantics
+- eager and lazy execution models
+- a relatively modern dtype model
+
+### Proposed choice for v1
+Prefer Polars `LazyFrame` internally where practical.
+
+Advantages:
+- natural fit for relational plan chaining
+- backend execution remains deferred (PlanFrame evaluates only at `collect()`)
+- better alignment with plan-based architecture
+
+### Minimal Polars adapter skeleton
+
+```python
+from __future__ import annotations
+
+from typing import Any
+import polars as pl
+
+class PolarsAdapter:
+    name = "polars"
+
+    def select(self, df: pl.DataFrame | pl.LazyFrame, columns: tuple[str, ...]):
+        return df.select(list(columns))
+
+    def drop(self, df: pl.DataFrame | pl.LazyFrame, columns: tuple[str, ...]):
+        return df.drop(list(columns))
+
+    def rename(self, df: pl.DataFrame | pl.LazyFrame, mapping: dict[str, str]):
+        return df.rename(mapping)
+
+    def with_column(self, df: pl.DataFrame | pl.LazyFrame, name: str, expr: pl.Expr):
+        return df.with_columns(expr.alias(name))
+
+    def cast(self, df: pl.DataFrame | pl.LazyFrame, name: str, dtype: Any):
+        return df.with_columns(pl.col(name).cast(dtype))
+
+    def filter(self, df: pl.DataFrame | pl.LazyFrame, predicate: pl.Expr):
+        return df.filter(predicate)
+
+    def compile_expr(self, expr: Any) -> pl.Expr:
+        ...
+
+    def collect(self, df: pl.DataFrame | pl.LazyFrame):
+        return df.collect() if isinstance(df, pl.LazyFrame) else df
+```
+
+---
+
+## 8. Polars Expression Compiler
+
+Use a small visitor or dispatcher.
+
+### Example expression IR nodes
+```python
+class Expr[T]: ...
+class Col(Expr[T]): ...
+class Lit(Expr[T]): ...
+class Add(Expr[int]): ...
+class Eq(Expr[bool]): ...
+```
+
+### Compiler sketch
+```python
+import polars as pl
+
+def compile_expr(expr: Expr[Any]) -> pl.Expr:
+    if isinstance(expr, Col):
+        return pl.col(expr.name)
+    if isinstance(expr, Lit):
+        return pl.lit(expr.value)
+    if isinstance(expr, Add):
+        return compile_expr(expr.left) + compile_expr(expr.right)
+    if isinstance(expr, Eq):
+        return compile_expr(expr.left) == compile_expr(expr.right)
+    raise TypeError(f"Unsupported expr node: {type(expr)!r}")
+```
+
+This keeps typing and execution clearly separated.
+
+---
+
+## 9. Pandas Adapter Design
+
+Pandas should be treated as a second backend because:
+- its expression model is less uniform
+- eager mutation semantics are more dangerous
+- dtype handling is more inconsistent
+
+Still, it is important as a popular target.
+
+### Recommended pandas strategy
+- keep PlanFrame immutable even if pandas is mutable
+- clone or assign into new frames in adapter methods
+- compile expressions into vectorized pandas operations only
+- do not support arbitrary `.apply(...)` in safe typed mode
+
+### Pandas adapter sketch
+```python
+import pandas as pd
+
+class PandasAdapter:
+    name = "pandas"
+
+    def select(self, df: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
+        return df.loc[:, list(columns)].copy()
+
+    def drop(self, df: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
+        return df.drop(columns=list(columns)).copy()
+
+    def rename(self, df: pd.DataFrame, mapping: dict[str, str]) -> pd.DataFrame:
+        return df.rename(columns=mapping).copy()
+
+    def with_column(self, df: pd.DataFrame, name: str, expr: Any) -> pd.DataFrame:
+        out = df.copy()
+        out[name] = expr
+        return out
+
+    def cast(self, df: pd.DataFrame, name: str, dtype: Any) -> pd.DataFrame:
+        out = df.copy()
+        out[name] = out[name].astype(dtype)
+        return out
+
+    def filter(self, df: pd.DataFrame, predicate: Any) -> pd.DataFrame:
+        return df.loc[predicate].copy()
+
+    def compile_expr(self, expr: Any) -> Any:
+        ...
+
+    def collect(self, df: pd.DataFrame) -> pd.DataFrame:
+        return df
+```
+
+---
+
+## 10. Join Support
+
+Join support should be deferred until the adapter contract for column collision handling is fully specified.
+
+When added, the adapter must support:
+- left/right/inner joins
+- deterministic column collision naming rules
+- backend-specific join compilation
+- schema IR merge logic owned by core
+
+### Future protocol extension
+```python
+def join(
+    self,
+    left: BackendFrameT,
+    right: BackendFrameT,
+    on: tuple[str, ...],
+    how: str = "inner",
+) -> BackendFrameT:
+    ...
+```
+
+MVP recommendation:
+- do not ship joins until schema collision behavior is locked down
+
+---
+
+## 11. Error Handling Rules
+
+Adapters should raise backend-specific errors internally, but the public API should normalize them into PlanFrame exceptions where appropriate.
+
+Recommended core exceptions:
+- `PlanFrameBackendError`
+- `PlanFrameExpressionError`
+- `PlanFrameSchemaError`
+- `PlanFrameExecutionError`
+
+This prevents backend leaks in the public contract.
+
+---
+
+## 12. Backend Feature Policy
+
+Not every backend can support every feature equally.
+
+PlanFrame should adopt this policy:
+
+- core safe subset is portable
+- adapters may support optional extensions
+- extensions must be clearly marked as backend-specific and unsafe or experimental if they weaken portability
+
+This matters because the package promise is not:
+> every feature of every backend
+
+The promise is:
+> a sound typed relational subset across multiple backends
+
+---
+
+## 13. Recommended v1 Adapter Surface
+
+For v1, the adapter interface should support only:
+
+- `select`
+- `drop`
+- `rename`
+- `with_column`
+- `cast`
+- `filter`
+- `compile_expr`
+- `collect`
+
+That is enough to prove the architecture without exploding the backend contract.
+
+---
+
+## 14. Testing Strategy
+
+Adapter tests should be split into two groups.
+
+### Conformance tests
+These test that every backend satisfies the same logical behavior.
+
+Examples:
+- select preserves row count and selected columns
+- drop removes requested columns
+- with_column adds a correctly typed value column
+- filter preserves schema but changes row count
+
+### Backend-specific tests
+These test backend-specific edge behavior.
+
+Examples:
+- Polars LazyFrame collection behavior
+- pandas nullable dtype edge cases
+
+---
+
+## 15. Final Recommendation
+
+Start with:
+
+1. `planframe-core`
+2. `planframe-polars`
+3. no joins in the first iteration
+4. a minimal expression compiler
+5. a strict safe subset only
+
+This keeps the package:
+- coherent
+- portable
+- type-safe
+- realistically shippable
+
+The backend adapter layer should remain small, explicit, and boring. That is a strength, not a weakness.
