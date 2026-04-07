@@ -397,6 +397,33 @@ def test_join_inner_key_drop_and_collision_suffixing() -> None:
     assert collected.height == 2
 
 
+def test_join_left_on_right_on_polars() -> None:
+    @dataclass(frozen=True)
+    class L:
+        user_id: int
+        x: int
+
+    @dataclass(frozen=True)
+    class R:
+        id: int
+        y: int
+
+    class LF(PolarsFrame):
+        user_id: int
+        x: int
+
+    class RF(PolarsFrame):
+        id: int
+        y: int
+
+    left_pf = LF({"user_id": [1, 2], "x": [10, 20]})
+    right_pf = RF({"id": [1, 3], "y": [100, 300]})
+    out = left_pf.join(
+        right_pf, left_on=("user_id",), right_on=("id",), how="inner"
+    ).collect()
+    assert out.to_dict(as_series=False) == {"user_id": [1], "x": [10], "y": [100]}
+
+
 def test_row_ops_head_tail_slice_limit() -> None:
     pf = User({"id": [1, 2, 3, 4], "name": ["a", "b", "c", "d"], "age": [10, 20, 30, 40]})
 

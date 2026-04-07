@@ -44,6 +44,7 @@ from planframe.schema.ir import Field, Schema
 from planframe.schema.materialize import materialize_model
 from planframe.schema.source import schema_from_type
 from planframe.groupby import GroupedFrame
+from planframe.plan.join_options import JoinOptions
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
@@ -187,7 +188,13 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 raise PlanFrameBackendError("Cannot join frames from different backends")
             right_df = right_frame._eval(right_frame._plan)
             return self._adapter.join(
-                left_df, right_df, on=node.on, how=node.how, suffix=node.suffix
+                left_df,
+                right_df,
+                left_on=node.left_keys,
+                right_on=node.right_keys,
+                how=node.how,
+                suffix=node.suffix,
+                options=node.options,
             )
         if isinstance(node, Slice):
             return self._adapter.slice(
@@ -602,15 +609,52 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self,
         other: "Frame[Any, BackendFrameT, BackendExprT]",
         *,
-        on: tuple[str, ...],
+        on: tuple[str, ...] | None = None,
+        left_on: tuple[str, ...] | None = None,
+        right_on: tuple[str, ...] | None = None,
         how: Literal["inner", "left", "right", "full", "semi", "anti", "cross"] = "inner",
         suffix: str = "_right",
+        options: JoinOptions | None = None,
     ) -> "Frame[Any, BackendFrameT, BackendExprT]":
-        schema2 = self._schema.join_merge(other._schema, on=on, suffix=suffix)
+        if how == "cross":
+            if on is not None or left_on is not None or right_on is not None:
+                raise ValueError(
+                    "cross join must not specify join keys (on, left_on, or right_on)"
+                )
+            schema2 = self._schema.join_merge_cross(other._schema, suffix=suffix)
+            lk: tuple[str, ...] = ()
+            rk: tuple[str, ...] = ()
+        else:
+            if on is not None:
+                if left_on is not None or right_on is not None:
+                    raise ValueError("join(): pass either on= or left_on=/right_on=, not both")
+                lk = rk = tuple(on)
+            elif left_on is not None and right_on is not None:
+                lk, rk = tuple(left_on), tuple(right_on)
+            elif left_on is not None or right_on is not None:
+                raise ValueError("join(): left_on and right_on must be provided together")
+            else:
+                raise ValueError("join(): requires on= or both left_on= and right_on=")
+            if len(lk) != len(rk):
+                raise ValueError("join(): left_on and right_on must have the same length")
+            if not lk:
+                raise ValueError("join keys must be non-empty for non-cross joins")
+            schema2 = self._schema.join_merge(
+                other._schema, left_on=lk, right_on=rk, suffix=suffix
+            )
+
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Join(self._plan, right=other, on=on, how=how, suffix=suffix),
+            _plan=Join(
+                self._plan,
+                right=other,
+                left_keys=lk,
+                right_keys=rk,
+                how=how,
+                suffix=suffix,
+                options=options,
+            ),
             _schema=schema2,
         )
 
