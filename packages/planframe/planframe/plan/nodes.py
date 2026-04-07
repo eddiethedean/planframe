@@ -58,8 +58,8 @@ class Filter(PlanNode):
 class Sort(PlanNode):
     prev: PlanNode
     columns: tuple[str, ...]
-    descending: bool = False
-    nulls_last: bool = False
+    descending: tuple[bool, ...]
+    nulls_last: tuple[bool, ...]
 
 
 @dataclass(frozen=True, slots=True)

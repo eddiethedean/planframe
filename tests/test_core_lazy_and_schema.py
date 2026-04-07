@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cmp_to_key
 from typing import Any, cast
 
 import pytest
@@ -81,12 +82,37 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         df: list[dict[str, Any]],
         columns: tuple[str, ...],
         *,
-        descending: bool = False,
-        nulls_last: bool = False,
+        descending: tuple[bool, ...],
+        nulls_last: tuple[bool, ...],
     ) -> list[dict[str, Any]]:
         self.calls.append(("sort", (columns, descending, nulls_last)))
-        out = sorted(df, key=lambda r: tuple(r[c] for c in columns), reverse=descending)
-        return out
+        if not columns:
+            return list(df)
+        if len(descending) != len(columns) or len(nulls_last) != len(columns):
+            raise ValueError("SpyAdapter.sort: flag tuple lengths must match columns")
+
+        def cmp_vals(va: Any, vb: Any, desc: bool, nl: bool) -> int:
+            na, nb = va is None, vb is None
+            if na and nb:
+                return 0
+            if na:
+                return 1 if nl else -1
+            if nb:
+                return -1 if nl else 1
+            if va == vb:
+                return 0
+            if not desc:
+                return -1 if va < vb else 1
+            return -1 if va > vb else 1
+
+        def cmp_rows(ra: dict[str, Any], rb: dict[str, Any]) -> int:
+            for c, desc, nl in zip(columns, descending, nulls_last):
+                r = cmp_vals(ra.get(c), rb.get(c), desc, nl)
+                if r != 0:
+                    return r
+            return 0
+
+        return sorted(df, key=cmp_to_key(cmp_rows))
 
     def unique(
         self,
@@ -533,6 +559,46 @@ def test_drop_strict_false_drops_present_and_ignores_missing() -> None:
     # rename collision
     with pytest.raises(PlanFrameSchemaError):
         pf.rename(id="age")
+
+
+def test_sort_accepts_per_key_descending_and_nulls_last() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source(
+        [
+            {"id": 1, "age": 10},
+            {"id": 2, "age": 20},
+            {"id": 1, "age": 30},
+        ],
+        adapter=adapter,
+        schema=UserDC,
+    )
+    out = pf.sort("id", "age", descending=[False, True], nulls_last=[True, True])
+    collected = out.collect()
+    assert collected == [
+        {"id": 1, "age": 30},
+        {"id": 1, "age": 10},
+        {"id": 2, "age": 20},
+    ]
+    assert adapter.calls[0] == (
+        "sort",
+        (("id", "age"), (False, True), (True, True)),
+    )
+
+
+def test_sort_rejects_flag_sequences_with_wrong_length() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)
+    with pytest.raises(ValueError, match="descending"):
+        _ = pf.sort("id", "age", descending=[True])
+    with pytest.raises(ValueError, match="nulls_last"):
+        _ = pf.sort("id", "age", nulls_last=(True,))
+
+
+def test_sort_rejects_non_bool_flag_sequence_elements() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)
+    with pytest.raises(TypeError, match="descending"):
+        _ = pf.sort("id", "age", descending=[True, "no"])  # type: ignore[list-item]
 
 
 def test_schema_ordering_helpers_errors() -> None:

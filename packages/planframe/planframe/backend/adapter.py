@@ -48,9 +48,15 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         df: BackendFrameT,
         columns: tuple[str, ...],
         *,
-        descending: bool = False,
-        nulls_last: bool = False,
-    ) -> BackendFrameT: ...
+        descending: tuple[bool, ...],
+        nulls_last: tuple[bool, ...],
+    ) -> BackendFrameT:
+        """Sort *df* by *columns* (first key is most significant).
+
+        *descending* and *nulls_last* must have the same length as *columns*.
+        Each position applies to the sort key at that index (per-key direction and null placement).
+        """
+        ...
 
     @abstractmethod
     def unique(

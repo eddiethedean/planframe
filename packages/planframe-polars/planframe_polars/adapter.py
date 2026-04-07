@@ -46,8 +46,8 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         df: PolarsBackendFrame,
         columns: tuple[str, ...],
         *,
-        descending: bool = False,
-        nulls_last: bool = False,
+        descending: tuple[bool, ...],
+        nulls_last: tuple[bool, ...],
     ) -> PolarsBackendFrame:
         if not columns:
             return df
@@ -236,16 +236,19 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         if agg not in allowed_agg:
             raise ValueError(f"Unsupported pivot agg={agg!r}")
         if agg == "count":
-            agg_arg: Literal[
-                "min",
-                "max",
-                "first",
-                "last",
-                "sum",
-                "mean",
-                "median",
-                "len",
-            ] | pl.Expr = "len"
+            agg_arg: (
+                Literal[
+                    "min",
+                    "max",
+                    "first",
+                    "last",
+                    "sum",
+                    "mean",
+                    "median",
+                    "len",
+                ]
+                | pl.Expr
+            ) = "len"
         elif agg == "n_unique":
             agg_arg = pl.col(values).n_unique()
         else:

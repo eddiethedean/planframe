@@ -295,6 +295,17 @@ def test_sort_descending() -> None:
     assert out["id"].to_list() == [3, 2, 1]
 
 
+def test_sort_per_key_descending_and_nulls_last() -> None:
+    pf = User({"id": [1, 1, 2, 2], "name": ["b", "a", "d", "c"], "age": [1, 2, 3, 4]})
+    out = pf.sort("id", "name", descending=[False, True], nulls_last=[True, False]).collect()
+    assert [(r["id"], r["name"]) for r in out.to_dicts()] == [
+        (1, "b"),
+        (1, "a"),
+        (2, "d"),
+        (2, "c"),
+    ]
+
+
 def test_unique_no_subset_keeps_one_row_per_full_row() -> None:
     pf = User({"id": [1, 1, 1], "name": ["a", "a", "b"], "age": [10, 10, 10]})
     out = pf.unique().collect()
