@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from planframe.expr import add, col, lit
-
-from planframe_polars import PolarsFrame
 from typing_extensions import reveal_type
+
+from planframe.expr import add, col, lit
+from planframe_polars import PolarsFrame
 
 
 class User(PolarsFrame):

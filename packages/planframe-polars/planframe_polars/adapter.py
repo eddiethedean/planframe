@@ -5,8 +5,8 @@ from typing import Any, Literal, cast
 import polars as pl
 
 from planframe.backend.adapter import BaseAdapter
-from planframe.plan.join_options import JoinOptions
 from planframe.expr.api import Expr
+from planframe.plan.join_options import JoinOptions
 from planframe_polars.compile_expr import compile_expr
 
 PolarsBackendFrame = pl.DataFrame | pl.LazyFrame

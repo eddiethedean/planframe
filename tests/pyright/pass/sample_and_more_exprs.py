@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing_extensions import reveal_type
 
 from planframe.expr import col, is_finite, split, sqrt, strip
-
 from planframe_polars import PolarsFrame
 
 

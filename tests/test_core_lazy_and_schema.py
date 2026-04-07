@@ -44,10 +44,7 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
     ) -> list[dict[str, Any]]:
         self.calls.append(("drop", (columns, strict)))
         keys = set(df[0].keys()) if df else set()
-        if strict:
-            drop_set = set(columns)
-        else:
-            drop_set = set(columns) & keys
+        drop_set = set(columns) if strict else set(columns) & keys
         return [{k: v for k, v in row.items() if k not in drop_set} for row in df]
 
     def rename(self, df: list[dict[str, Any]], mapping: dict[str, str]) -> list[dict[str, Any]]:
@@ -107,7 +104,7 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
             return -1 if va > vb else 1
 
         def cmp_rows(ra: dict[str, Any], rb: dict[str, Any]) -> int:
-            for c, desc, nl in zip(columns, descending, nulls_last):
+            for c, desc, nl in zip(columns, descending, nulls_last, strict=True):
                 r = cmp_vals(ra.get(c), rb.get(c), desc, nl)
                 if r != 0:
                     return r
@@ -323,7 +320,7 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
     ) -> list[dict[str, Any]]:
         self.calls.append(("concat_horizontal", None))
         out: list[dict[str, Any]] = []
-        for left_row, right_row in zip(left, right):
+        for left_row, right_row in zip(left, right, strict=True):
             overlap = set(left_row.keys()).intersection(right_row.keys())
             if overlap:
                 raise ValueError("overlap")
@@ -471,7 +468,7 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         self.calls.append(("to_dict", None))
         if not df:
             return {}
-        cols = {k: [] for k in df[0].keys()}
+        cols = {k: [] for k in df[0]}
         for row in df:
             for k, v in row.items():
                 cols[k].append(v)

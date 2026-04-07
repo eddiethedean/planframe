@@ -16,7 +16,7 @@ PolarsData = Mapping[str, Sequence[object]] | Sequence[Mapping[str, object]]
 def _schema_defaults(schema: type[Any]) -> dict[str, object]:
     ann = dict(getattr(schema, "__dict__", {}).get("__annotations__", {}))
     out: dict[str, object] = {}
-    for name in ann.keys():
+    for name in ann:
         if name in getattr(schema, "__dict__", {}):
             out[name] = getattr(schema, name)
     return out

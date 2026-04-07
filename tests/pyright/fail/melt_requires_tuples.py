@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, cast
 
 import polars as pl
-
-from typing import Any, cast
 
 from planframe_polars import PolarsFrame
 

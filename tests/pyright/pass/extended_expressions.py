@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from planframe.expr import and_, col, gt, is_not_null, isin, lit, mul
-
-from planframe_polars import PolarsFrame
 from typing_extensions import reveal_type
+
+from planframe.expr import and_, col, gt, is_not_null, isin, lit, mul
+from planframe_polars import PolarsFrame
 
 
 class User(PolarsFrame):

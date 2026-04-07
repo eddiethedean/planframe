@@ -11,40 +11,40 @@ from planframe.backend.errors import (
     PlanFrameSchemaError,
 )
 from planframe.expr.api import Expr, infer_dtype
+from planframe.groupby import GroupedFrame
+from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import (
     Agg,
     Cast,
+    ConcatHorizontal,
+    ConcatVertical,
     Drop,
+    DropNulls,
+    DropNullsAll,
     Duplicated,
+    Explode,
+    FillNull,
     Filter,
     GroupBy,
+    Head,
+    Join,
+    Melt,
+    Pivot,
     PlanNode,
     Rename,
+    Sample,
     Select,
+    Slice,
     Sort,
     Source,
-    Unique,
-    WithColumn,
-    DropNulls,
-    FillNull,
-    Melt,
-    Join,
-    Slice,
-    Head,
     Tail,
-    ConcatVertical,
-    Pivot,
-    Explode,
+    Unique,
     Unnest,
-    ConcatHorizontal,
-    DropNullsAll,
-    Sample,
+    WithColumn,
 )
 from planframe.schema.ir import Field, Schema
 from planframe.schema.materialize import materialize_model
 from planframe.schema.source import schema_from_type
-from planframe.groupby import GroupedFrame
-from planframe.plan.join_options import JoinOptions
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
@@ -95,7 +95,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         adapter: BackendAdapter[BackendFrameT, BackendExprT],
         schema: type[SchemaT],
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema_ir = schema_from_type(schema)
         return cls(
             _data=data, _adapter=adapter, _plan=Source(schema_type=schema), _schema=schema_ir
@@ -250,7 +250,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
         raise PlanFrameBackendError(f"Unsupported plan node: {type(node)!r}")
 
-    def select(self, *columns: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def select(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(columns)
         schema2 = self._schema.select(cols)
         return Frame(
@@ -260,7 +260,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_prefix(self, prefix: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def select_prefix(self, prefix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(n for n in self._schema.names() if n.startswith(prefix))
         schema2 = self._schema.select(cols)
         return Frame(
@@ -270,7 +270,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_suffix(self, suffix: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def select_suffix(self, suffix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(n for n in self._schema.names() if n.endswith(suffix))
         schema2 = self._schema.select(cols)
         return Frame(
@@ -280,7 +280,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_regex(self, pattern: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def select_regex(self, pattern: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         rx = re.compile(pattern)
         cols = tuple(n for n in self._schema.names() if rx.search(n))
         schema2 = self._schema.select(cols)
@@ -291,7 +291,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_exclude(self, *columns: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def select_exclude(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(columns)
         schema2 = self._schema.select_exclude(cols)
         return Frame(
@@ -301,7 +301,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def reorder_columns(self, *columns: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def reorder_columns(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.reorder_columns(columns)
         return Frame(
             _data=self._data,
@@ -310,7 +310,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_first(self, *columns: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def select_first(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.select_first(columns)
         return Frame(
             _data=self._data,
@@ -319,7 +319,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_last(self, *columns: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def select_last(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.select_last(columns)
         return Frame(
             _data=self._data,
@@ -330,7 +330,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def move(
         self, column: str, *, before: str | None = None, after: str | None = None
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.move(column, before=before, after=after)
         return Frame(
             _data=self._data,
@@ -341,7 +341,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def drop(
         self, *columns: str, strict: bool = True
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(columns)
         schema2 = self._schema.drop(cols, strict=strict)
         return Frame(
@@ -351,7 +351,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def drop_prefix(self, prefix: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def drop_prefix(self, prefix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(n for n in self._schema.names() if n.startswith(prefix))
         if not cols:
             return self
@@ -360,7 +360,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
-    def drop_suffix(self, suffix: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def drop_suffix(self, suffix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(n for n in self._schema.names() if n.endswith(suffix))
         if not cols:
             return self
@@ -369,7 +369,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
-    def drop_regex(self, pattern: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def drop_regex(self, pattern: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         rx = re.compile(pattern)
         cols = tuple(n for n in self._schema.names() if rx.search(n))
         if not cols:
@@ -379,7 +379,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
-    def rename(self, **mapping: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def rename(self, **mapping: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if not mapping:
             return self
         schema2 = self._schema.rename(mapping)
@@ -392,28 +392,28 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def rename_prefix(
         self, prefix: str, *subset: str
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         names = subset if subset else self._schema.names()
         mapping = {n: f"{prefix}{n}" for n in names}
         return self.rename(**mapping)
 
     def rename_suffix(
         self, suffix: str, *subset: str
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         names = subset if subset else self._schema.names()
         mapping = {n: f"{n}{suffix}" for n in names}
         return self.rename(**mapping)
 
     def rename_replace(
         self, old: str, new: str, *subset: str
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         names = subset if subset else self._schema.names()
         mapping = {n: n.replace(old, new) for n in names}
         return self.rename(**mapping)
 
     def with_column(
         self, name: str, expr: Expr[Any]
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         dtype = infer_dtype(expr)
         schema2 = self._schema.with_column(name, dtype=dtype)
         return Frame(
@@ -423,7 +423,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def cast(self, name: str, dtype: Any) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def cast(self, name: str, dtype: Any) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.cast(name, dtype=dtype)
         return Frame(
             _data=self._data,
@@ -432,7 +432,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def filter(self, predicate: Expr[bool]) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def filter(self, predicate: Expr[bool]) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
@@ -445,7 +445,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *columns: str,
         descending: bool | Sequence[bool] = False,
         nulls_last: bool | Sequence[bool] = False,
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(columns)
         self._schema.select(cols)  # validate existence only
         des = _coerce_sort_flags("descending", len(cols), descending)
@@ -462,7 +462,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         keep: Literal["first", "last"] = "first",
         maintain_order: bool = False,
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         sub = tuple(subset) if subset else None
         if sub is not None:
             self._schema.select(sub)  # validate
@@ -479,7 +479,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         keep: Literal["first", "last"] = "first",
         maintain_order: bool = False,
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         return self.unique(*subset, keep=keep, maintain_order=maintain_order)
 
     def duplicated(
@@ -487,7 +487,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         keep: Literal["first", "last"] | bool = "first",
         out_name: str = "duplicated",
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         sub = tuple(subset) if subset else None
         if sub is not None:
             self._schema.select(sub)  # validate
@@ -507,7 +507,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         with_replacement: bool = False,
         shuffle: bool = False,
         seed: int | None = None,
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if (n is None) == (frac is None):
             raise ValueError("sample requires exactly one of n= or frac=")
         if n is not None and n < 0:
@@ -542,7 +542,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _keys=tuple(keys),
         )
 
-    def drop_nulls(self, *subset: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def drop_nulls(self, *subset: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         sub = tuple(subset) if subset else None
         if sub is not None:
             self._schema.select(sub)  # validate
@@ -554,7 +554,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def drop_nulls_all(self, *subset: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def drop_nulls_all(self, *subset: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         sub = tuple(subset) if subset else None
         if sub is not None:
             self._schema.select(sub)  # validate
@@ -566,7 +566,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def fill_null(self, value: Any, *subset: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def fill_null(self, value: Any, *subset: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         sub = tuple(subset) if subset else None
         if sub is not None:
             self._schema.select(sub)  # validate
@@ -585,7 +585,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         value_vars: tuple[str, ...],
         variable_name: str = "variable",
         value_name: str = "value",
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.melt(
             id_vars=id_vars,
             value_vars=value_vars,
@@ -607,7 +607,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def join(
         self,
-        other: "Frame[Any, BackendFrameT, BackendExprT]",
+        other: Frame[Any, BackendFrameT, BackendExprT],
         *,
         on: tuple[str, ...] | None = None,
         left_on: tuple[str, ...] | None = None,
@@ -615,12 +615,10 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         how: Literal["inner", "left", "right", "full", "semi", "anti", "cross"] = "inner",
         suffix: str = "_right",
         options: JoinOptions | None = None,
-    ) -> "Frame[Any, BackendFrameT, BackendExprT]":
+    ) -> Frame[Any, BackendFrameT, BackendExprT]:
         if how == "cross":
             if on is not None or left_on is not None or right_on is not None:
-                raise ValueError(
-                    "cross join must not specify join keys (on, left_on, or right_on)"
-                )
+                raise ValueError("cross join must not specify join keys (on, left_on, or right_on)")
             schema2 = self._schema.join_merge_cross(other._schema, suffix=suffix)
             lk: tuple[str, ...] = ()
             rk: tuple[str, ...] = ()
@@ -639,9 +637,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 raise ValueError("join(): left_on and right_on must have the same length")
             if not lk:
                 raise ValueError("join keys must be non-empty for non-cross joins")
-            schema2 = self._schema.join_merge(
-                other._schema, left_on=lk, right_on=rk, suffix=suffix
-            )
+            schema2 = self._schema.join_merge(other._schema, left_on=lk, right_on=rk, suffix=suffix)
 
         return Frame(
             _data=self._data,
@@ -660,7 +656,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def slice(
         self, offset: int, length: int | None = None
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if length is not None and length < 0:
             raise ValueError("length must be non-negative or None")
         return Frame(
@@ -670,10 +666,10 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
-    def limit(self, n: int) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def limit(self, n: int) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         return self.head(n)
 
-    def head(self, n: int) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def head(self, n: int) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if n < 0:
             raise ValueError("n must be non-negative")
         return Frame(
@@ -683,7 +679,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
-    def tail(self, n: int) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def tail(self, n: int) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if n < 0:
             raise ValueError("n must be non-negative")
         return Frame(
@@ -694,8 +690,8 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         )
 
     def concat_vertical(
-        self, other: "Frame[SchemaT, BackendFrameT, BackendExprT]"
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+        self, other: Frame[SchemaT, BackendFrameT, BackendExprT]
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if other._adapter.name != self._adapter.name:
             raise PlanFrameBackendError("Cannot concat frames from different backends")
         if self._schema.names() != other._schema.names():
@@ -713,8 +709,8 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         )
 
     def concat_horizontal(
-        self, other: "Frame[SchemaT, BackendFrameT, BackendExprT]"
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+        self, other: Frame[SchemaT, BackendFrameT, BackendExprT]
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if other._adapter.name != self._adapter.name:
             raise PlanFrameBackendError("Cannot concat frames from different backends")
         left_names = set(self._schema.names())
@@ -733,11 +729,11 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         )
 
     def union_distinct(
-        self, other: "Frame[SchemaT, BackendFrameT, BackendExprT]"
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+        self, other: Frame[SchemaT, BackendFrameT, BackendExprT]
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         return self.concat_vertical(other).unique()
 
-    def explode(self, column: str) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    def explode(self, column: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.explode(column)
         return Frame(
             _data=self._data,
@@ -748,7 +744,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def unnest(
         self, column: str, *, fields: tuple[str, ...]
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.unnest(column, fields=fields)
         return Frame(
             _data=self._data,
@@ -768,7 +764,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         ] = "first",
         on_columns: tuple[str, ...] | None = None,
         separator: str = "_",
-    ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if not index:
             raise PlanFrameSchemaError("pivot requires non-empty index")
         self._schema.select(index)  # validate

@@ -20,7 +20,8 @@ dependencies = []
 dev = [
   "pytest>=8.0",
   "pyright>=1.1.350",
-  "ruff>=0.5",
+  "ruff>=0.9",
+  "ty>=0.0.25",
   "connectorx",
   "xlsxwriter",
   "fastexcel>=0.7.0",
@@ -37,4 +38,32 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
- 
+src = ["packages/planframe", "packages/planframe-polars"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+  "E4",
+  "E7",
+  "E9",
+  "F",
+  "I",
+  "UP",
+  "B",
+  "SIM",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["planframe", "planframe_polars"]
+
+# Astral ty — https://docs.astral.sh/ty/reference/configuration/
+[tool.ty.environment]
+python-version = "3.10"
+root = ["packages/planframe", "packages/planframe-polars"]
+
+# First-party code only; tests remain covered by Pyright (`tests/pyright/`, `test_pyright_typing.py`).
+[tool.ty.src]
+include = ["packages/**/*.py", "packages/**/*.pyi", "scripts/**/*.py"]
+

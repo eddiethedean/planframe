@@ -4,10 +4,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from planframe.backend.adapter import BaseAdapter
-from planframe.plan.join_options import JoinOptions
 from planframe.expr.api import Expr
 from planframe.frame import Frame
-
+from planframe.plan.join_options import JoinOptions
 
 RowsFrame = list[dict[str, object]]
 
@@ -24,10 +23,7 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
 
     def drop(self, df: RowsFrame, columns: tuple[str, ...], *, strict: bool = True) -> RowsFrame:
         keys = set(df[0].keys()) if df else set()
-        if strict:
-            cols = set(columns)
-        else:
-            cols = set(columns) & keys
+        cols = set(columns) if strict else set(columns) & keys
         return [{k: v for k, v in row.items() if k not in cols} for row in df]
 
     def rename(self, df: RowsFrame, mapping: dict[str, str]) -> RowsFrame:
@@ -43,7 +39,7 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
         # Minimal example: only supports `lit(...)` expressions.
         if getattr(expr, "kind", None) != "lit":
             raise NotImplementedError("RowsAdapter example only supports lit(...) expressions")
-        value = getattr(expr, "value")
+        value = expr.value
         return [{**row, name: value} for row in df]
 
     def cast(self, df: RowsFrame, name: str, dtype: Any) -> RowsFrame:

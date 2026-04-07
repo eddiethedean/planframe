@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing_extensions import reveal_type
 
 from planframe.expr import abs_, ceil, coalesce, col, eq, floor, if_else, lit, round_, xor
-
 from planframe_polars import PolarsFrame
 
 

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from planframe_polars import PolarsFrame
+
 from typing_extensions import reveal_type
+
+from planframe_polars import PolarsFrame
 
 
 @dataclass(frozen=True)

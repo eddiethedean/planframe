@@ -35,8 +35,8 @@ from planframe.expr import (
     replace,
     round_,
     starts_with,
-    year,
     xor,
+    year,
 )
 from planframe_polars import PolarsFrame
 
@@ -93,8 +93,8 @@ def test_select_drop_rename_with_column_filter_collect() -> None:
 
     rows = out.collect(kind="dataclass", name="OutRow")
     assert len(rows) == 1
-    assert getattr(rows[0], "id") == 1
-    assert getattr(rows[0], "years") == 10
+    assert rows[0].id == 1
+    assert rows[0].years == 10
 
 
 def test_materialize_model_dataclass() -> None:
@@ -418,9 +418,7 @@ def test_join_left_on_right_on_polars() -> None:
 
     left_pf = LF({"user_id": [1, 2], "x": [10, 20]})
     right_pf = RF({"id": [1, 3], "y": [100, 300]})
-    out = left_pf.join(
-        right_pf, left_on=("user_id",), right_on=("id",), how="inner"
-    ).collect()
+    out = left_pf.join(right_pf, left_on=("user_id",), right_on=("id",), how="inner").collect()
     assert out.to_dict(as_series=False) == {"user_id": [1], "x": [10], "y": [100]}
 
 
@@ -601,8 +599,8 @@ def test_io_write_ipc_and_scan_ipc(tmp_path: Any) -> None:
 
 
 def test_io_read_database_sqlite_dbapi(tmp_path: Any) -> None:
-    import sqlite3
     import importlib.util
+    import sqlite3
 
     # Polars DB reading may rely on optional engines; skip if unavailable.
     if importlib.util.find_spec("connectorx") is None:

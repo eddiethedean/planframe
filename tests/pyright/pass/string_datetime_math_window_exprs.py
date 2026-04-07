@@ -22,7 +22,6 @@ from planframe.expr import (
     upper,
     year,
 )
-
 from planframe_polars import PolarsFrame
 
 
