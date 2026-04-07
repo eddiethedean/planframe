@@ -59,8 +59,8 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
         df: RowsFrame,
         columns: tuple[str, ...],
         *,
-        descending: bool = False,
-        nulls_last: bool = False,
+        descending: tuple[bool, ...],
+        nulls_last: tuple[bool, ...],
     ) -> RowsFrame:
         raise NotImplementedError("RowsAdapter example does not implement sort")
 

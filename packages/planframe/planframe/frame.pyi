@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Generic, Literal, TypeVar, overload
 from typing_extensions import LiteralString, Self
 
@@ -210,7 +211,12 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     @overload
     def cast(self, name: LiteralString, dtype: Any) -> Self: ...
     def filter(self, predicate: Expr[bool]) -> Self: ...
-    def sort(self, *columns: LiteralString, descending: bool = ..., nulls_last: bool = ...) -> Self: ...
+    def sort(
+        self,
+        *columns: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
     def unique(
         self,
         *subset: LiteralString,

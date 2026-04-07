@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from typing import Any, Generic, Literal, TypeVar
 
 from planframe.backend.adapter import BackendAdapter
@@ -47,6 +48,23 @@ from planframe.groupby import GroupedFrame
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
+
+
+def _coerce_sort_flags(name: str, n: int, value: bool | Sequence[bool]) -> tuple[bool, ...]:
+    if isinstance(value, bool):
+        return (value,) * n
+    seq = tuple(value)
+    if len(seq) != n:
+        raise ValueError(
+            f"sort {name} must be a bool or a sequence of length {n} "
+            f"(number of sort keys), got length {len(seq)}"
+        )
+    for i, x in enumerate(seq):
+        if not isinstance(x, bool):
+            raise TypeError(
+                f"sort {name} must contain only bool values, got {type(x).__name__!r} at index {i}"
+            )
+    return seq
 
 
 class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
@@ -418,14 +436,19 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         )
 
     def sort(
-        self, *columns: str, descending: bool = False, nulls_last: bool = False
+        self,
+        *columns: str,
+        descending: bool | Sequence[bool] = False,
+        nulls_last: bool | Sequence[bool] = False,
     ) -> "Frame[SchemaT, BackendFrameT, BackendExprT]":
         cols = tuple(columns)
         self._schema.select(cols)  # validate existence only
+        des = _coerce_sort_flags("descending", len(cols), descending)
+        nls = _coerce_sort_flags("nulls_last", len(cols), nulls_last)
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Sort(self._plan, columns=cols, descending=descending, nulls_last=nulls_last),
+            _plan=Sort(self._plan, columns=cols, descending=des, nulls_last=nls),
             _schema=self._schema,
         )
 

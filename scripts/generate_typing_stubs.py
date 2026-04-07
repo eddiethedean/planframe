@@ -26,6 +26,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
 
     a("from __future__ import annotations")
     a("")
+    a("from collections.abc import Sequence")
     a("from typing import Any, Generic, Literal, TypeVar, overload")
     a("from typing_extensions import LiteralString, Self")
     a("")
@@ -140,9 +141,12 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("    @overload")
     a("    def cast(self, name: LiteralString, dtype: Any) -> Self: ...")
     a("    def filter(self, predicate: Expr[bool]) -> Self: ...")
-    a(
-        "    def sort(self, *columns: LiteralString, descending: bool = ..., nulls_last: bool = ...) -> Self: ..."
-    )
+    a("    def sort(")
+    a("        self,")
+    a("        *columns: LiteralString,")
+    a("        descending: bool | Sequence[bool] = ...,")
+    a("        nulls_last: bool | Sequence[bool] = ...,")
+    a("    ) -> Self: ...")
     a("    def unique(")
     a("        self,")
     a("        *subset: LiteralString,")

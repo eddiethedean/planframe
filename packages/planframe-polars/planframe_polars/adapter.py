@@ -46,8 +46,8 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         df: PolarsBackendFrame,
         columns: tuple[str, ...],
         *,
-        descending: bool = False,
-        nulls_last: bool = False,
+        descending: tuple[bool, ...],
+        nulls_last: tuple[bool, ...],
     ) -> PolarsBackendFrame:
         if not columns:
             return df
