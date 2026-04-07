@@ -57,7 +57,7 @@ df = out.collect()
 - **Transforms**:
   - **projection**: `select`, `drop`, `select_exclude`
   - **column order**: `reorder_columns`, `select_first`, `select_last`, `move`
-  - **rename helpers**: `rename`, `rename_prefix`, `rename_suffix`, `rename_replace`
+  - **rename helpers**: `rename` (optional `strict=False` ignores unknown source names, like `drop`), `rename_prefix`, `rename_suffix`, `rename_replace`
   - **row ops**: `head`, `tail`, `limit`, `slice`
   - **null helpers**: `drop_nulls`, `fill_null`
   - **reshape**: `melt`, `pivot` (see note below)

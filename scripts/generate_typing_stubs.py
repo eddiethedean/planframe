@@ -124,7 +124,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        after: LiteralString | None = ...,")
     a("    ) -> Self: ...")
     a("")
-    a("    def rename(self, **mapping: str) -> Self: ...")
+    a("    def rename(self, *, strict: bool = ..., **mapping: str) -> Self: ...")
     a("")
     a("    def rename_prefix(self, prefix: str, *subset: LiteralString) -> Self: ...")
     a("    def rename_suffix(self, suffix: str, *subset: LiteralString) -> Self: ...")

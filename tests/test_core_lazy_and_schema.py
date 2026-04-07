@@ -47,13 +47,27 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         drop_set = set(columns) if strict else set(columns) & keys
         return [{k: v for k, v in row.items() if k not in drop_set} for row in df]
 
-    def rename(self, df: list[dict[str, Any]], mapping: dict[str, str]) -> list[dict[str, Any]]:
-        self.calls.append(("rename", dict(mapping)))
+    def rename(
+        self,
+        df: list[dict[str, Any]],
+        mapping: dict[str, str],
+        *,
+        strict: bool = True,
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("rename", (dict(mapping), strict)))
+        keys = set(df[0].keys()) if df else set()
+        if strict:
+            missing = set(mapping.keys()).difference(keys)
+            if missing:
+                raise PlanFrameBackendError(f"rename: unknown columns: {sorted(missing)}")
+            effective = dict(mapping)
+        else:
+            effective = {k: v for k, v in mapping.items() if k in keys}
         out: list[dict[str, Any]] = []
         for row in df:
             row2: dict[str, Any] = {}
             for k, v in row.items():
-                row2[mapping.get(k, k)] = v
+                row2[effective.get(k, k)] = v
             out.append(row2)
         return out
 
@@ -540,6 +554,36 @@ def test_schema_errors_select_drop_rename() -> None:
 
     with pytest.raises(PlanFrameSchemaError):
         pf.rename(missing="x")
+
+
+def test_rename_strict_false_ignores_unknown_columns() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)
+
+    out = pf.rename(id="pk", ghost="y", strict=False)
+    assert out.schema().names() == ("pk", "age")
+    assert adapter.calls == []
+
+    collected = out.collect()
+    assert collected == [{"pk": 1, "age": 2}]
+    assert adapter.calls == [
+        ("rename", ({"id": "pk", "ghost": "y"}, False)),
+        ("collect", None),
+    ]
+
+
+def test_rename_strict_false_only_renames_existing_keys() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)
+
+    out = pf.rename(age="years", missing="x", strict=False)
+    assert out.schema().names() == ("id", "years")
+    collected = out.collect()
+    assert collected == [{"id": 1, "years": 2}]
+    assert adapter.calls[0] == (
+        "rename",
+        ({"age": "years", "missing": "x"}, False),
+    )
 
 
 def test_drop_strict_false_ignores_unknown_columns() -> None:
