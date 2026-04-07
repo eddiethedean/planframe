@@ -26,9 +26,10 @@ def main() -> None:
     print(f"rows={out.to_dicts()}")
 
     models = out.collect(kind="dataclass", name="Row")
-    print(f"row_models={[ (m.__class__.__name__, m.id, m.full_name, m.age_plus_one) for m in models ]}")
+    print(
+        f"row_models={[(m.__class__.__name__, m.id, m.full_name, m.age_plus_one) for m in models]}"
+    )
 
 
 if __name__ == "__main__":
     main()
-

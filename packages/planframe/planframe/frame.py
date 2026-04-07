@@ -120,9 +120,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if isinstance(node, Select):
             return self._adapter.select(self._eval(node.prev), node.columns)
         if isinstance(node, Drop):
-            return self._adapter.drop(
-                self._eval(node.prev), node.columns, strict=node.strict
-            )
+            return self._adapter.drop(self._eval(node.prev), node.columns, strict=node.strict)
         if isinstance(node, Rename):
             return self._adapter.rename(self._eval(node.prev), node.mapping)
         if isinstance(node, WithColumn):

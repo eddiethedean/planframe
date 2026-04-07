@@ -21,9 +21,7 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
         cols = set(columns)
         return [{k: v for k, v in row.items() if k in cols} for row in df]
 
-    def drop(
-        self, df: RowsFrame, columns: tuple[str, ...], *, strict: bool = True
-    ) -> RowsFrame:
+    def drop(self, df: RowsFrame, columns: tuple[str, ...], *, strict: bool = True) -> RowsFrame:
         keys = set(df[0].keys()) if df else set()
         if strict:
             cols = set(columns)
@@ -228,4 +226,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
