@@ -15,6 +15,7 @@ from planframe.backend.errors import (
 )
 from planframe.expr import Expr, add, col, eq, lit, over
 from planframe.frame import Frame
+from planframe.plan.join_options import JoinOptions
 
 
 @dataclass(frozen=True)
@@ -252,32 +253,46 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         left: list[dict[str, Any]],
         right: list[dict[str, Any]],
         *,
-        on: tuple[str, ...],
+        left_on: tuple[str, ...],
+        right_on: tuple[str, ...],
         how: str = "inner",
         suffix: str = "_right",
+        options: JoinOptions | None = None,
     ) -> list[dict[str, Any]]:
-        self.calls.append(("join", (on, how, suffix)))
+        self.calls.append(("join", (left_on, right_on, how, suffix, options)))
+        if how == "cross":
+            out: list[dict[str, Any]] = []
+            for lr in left:
+                for rr in right:
+                    row = dict(lr)
+                    for rk, rv in rr.items():
+                        nk = rk
+                        if nk in row:
+                            nk = f"{nk}{suffix}"
+                        row[nk] = rv
+                    out.append(row)
+            return out
         if how != "inner":
-            raise NotImplementedError("SpyAdapter only implements inner join for tests")
+            raise NotImplementedError("SpyAdapter only implements inner and cross join for tests")
         right_index: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
         for r in right:
-            k = tuple(r[c] for c in on)
+            k = tuple(r[c] for c in right_on)
             right_index.setdefault(k, []).append(r)
-        out: list[dict[str, Any]] = []
+        out2: list[dict[str, Any]] = []
         for left_row in left:
-            lk = tuple(left_row[c] for c in on)
+            lk = tuple(left_row[c] for c in left_on)
             matches = right_index.get(lk, [])
             for r in matches:
                 row = dict(left_row)
                 for rk, rv in r.items():
-                    if rk in on:
+                    if rk in right_on:
                         continue
                     out_key = rk
                     if out_key in row:
                         out_key = f"{out_key}{suffix}"
                     row[out_key] = rv
-                out.append(row)
-        return out
+                out2.append(row)
+        return out2
 
     def slice(
         self,
@@ -658,6 +673,65 @@ def test_join_is_always_lazy_and_schema_merge_rules() -> None:
         "join",
         "collect",
     ]
+
+
+def test_join_asymmetric_keys_inner() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class Left:
+        user_id: int
+        x: int
+
+    @dataclass(frozen=True)
+    class Right:
+        id: int
+        y: int
+
+    left = Frame.source(
+        [{"user_id": 1, "x": 10}, {"user_id": 2, "x": 20}],
+        adapter=adapter,
+        schema=Left,
+    )
+    right = Frame.source([{"id": 1, "y": 100}], adapter=adapter, schema=Right)
+
+    out = left.join(right, left_on=("user_id",), right_on=("id",), how="inner")
+    assert adapter.calls == []
+    assert out.schema().names() == ("user_id", "x", "y")
+
+    collected = out.collect()
+    assert collected == [{"user_id": 1, "x": 10, "y": 100}]
+    assert adapter.calls[0][1][0] == ("user_id",)
+    assert adapter.calls[0][1][1] == ("id",)
+
+
+def test_join_cross_is_lazy_and_cartesian_in_spy() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class A:
+        a: int
+
+    @dataclass(frozen=True)
+    class B:
+        b: int
+
+    left = Frame.source([{"a": 1}, {"a": 2}], adapter=adapter, schema=A)
+    right = Frame.source([{"b": 10}], adapter=adapter, schema=B)
+    out = left.join(right, how="cross")
+    assert adapter.calls == []
+    assert out.schema().names() == ("a", "b")
+
+    collected = out.collect()
+    assert collected == [{"a": 1, "b": 10}, {"a": 2, "b": 10}]
+
+
+def test_join_rejects_conflicting_key_arguments() -> None:
+    adapter = SpyAdapter()
+    left = Frame.source([{"id": 1}], adapter=adapter, schema=UserDC)
+    right = Frame.source([{"id": 1}], adapter=adapter, schema=UserDC)
+    with pytest.raises(ValueError, match="either on"):
+        left.join(right, on=("id",), left_on=("id",), right_on=("id",))  # type: ignore[call-overload]
 
 
 def test_row_ops_are_always_lazy() -> None:

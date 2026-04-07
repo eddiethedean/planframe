@@ -1,3 +1,4 @@
+from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import (
     Cast,
     Drop,
@@ -12,6 +13,7 @@ from planframe.plan.nodes import (
 )
 
 __all__ = [
+    "JoinOptions",
     "Cast",
     "Drop",
     "Duplicated",

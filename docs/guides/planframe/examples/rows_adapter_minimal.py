@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from planframe.backend.adapter import BaseAdapter
+from planframe.plan.join_options import JoinOptions
 from planframe.expr.api import Expr
 from planframe.frame import Frame
 
@@ -113,9 +114,11 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
         left: RowsFrame,
         right: RowsFrame,
         *,
-        on: tuple[str, ...],
+        left_on: tuple[str, ...],
+        right_on: tuple[str, ...],
         how: str = "inner",
         suffix: str = "_right",
+        options: JoinOptions | None = None,
     ) -> RowsFrame:
         raise NotImplementedError("RowsAdapter example does not implement join")
 

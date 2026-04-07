@@ -3,6 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
+from planframe.plan.join_options import JoinOptions
+
 BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
 
@@ -119,10 +121,18 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         left: BackendFrameT,
         right: BackendFrameT,
         *,
-        on: tuple[str, ...],
+        left_on: tuple[str, ...],
+        right_on: tuple[str, ...],
         how: str = "inner",
         suffix: str = "_right",
-    ) -> BackendFrameT: ...
+        options: JoinOptions | None = None,
+    ) -> BackendFrameT:
+        """Join *right* to *left*.
+
+        For symmetric keys, *left_on* and *right_on* are identical. For a cross join, both are
+        empty tuples. *options* is backend-specific and may be ignored.
+        """
+        ...
 
     @abstractmethod
     def slice(

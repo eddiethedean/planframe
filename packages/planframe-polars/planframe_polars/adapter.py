@@ -5,6 +5,7 @@ from typing import Any, Literal, cast
 import polars as pl
 
 from planframe.backend.adapter import BaseAdapter
+from planframe.plan.join_options import JoinOptions
 from planframe.expr.api import Expr
 from planframe_polars.compile_expr import compile_expr
 
@@ -161,12 +162,12 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         left: PolarsBackendFrame,
         right: PolarsBackendFrame,
         *,
-        on: tuple[str, ...],
+        left_on: tuple[str, ...],
+        right_on: tuple[str, ...],
         how: str = "inner",
         suffix: str = "_right",
+        options: JoinOptions | None = None,
     ) -> PolarsBackendFrame:
-        if not on:
-            raise ValueError("on must be non-empty")
         allowed_how = {
             "inner",
             "left",
@@ -178,6 +179,10 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         }
         if how not in allowed_how:
             raise ValueError(f"Unsupported join how={how!r}")
+        if how != "cross" and (not left_on or not right_on):
+            raise ValueError("join left_on and right_on must be non-empty unless how='cross'")
+        if how != "cross" and len(left_on) != len(right_on):
+            raise ValueError("join left_on and right_on must have the same length")
 
         # Keep plans always-lazy: coerce eager frames to LazyFrame.
         left_lf = left.lazy() if isinstance(left, pl.DataFrame) else left
@@ -187,7 +192,28 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
             Literal["inner", "left", "right", "full", "semi", "anti", "cross"],
             how,
         )
-        return left_lf.join(right_lf, on=list(on), how=how_lit, suffix=suffix)
+        join_kwargs: dict[str, Any] = {"how": how_lit, "suffix": suffix}
+        if how == "cross":
+            pass
+        elif left_on == right_on:
+            join_kwargs["on"] = list(left_on)
+        else:
+            join_kwargs["left_on"] = list(left_on)
+            join_kwargs["right_on"] = list(right_on)
+
+        if options is not None:
+            if options.coalesce is not None:
+                join_kwargs["coalesce"] = options.coalesce
+            if options.validate is not None:
+                join_kwargs["validate"] = options.validate
+            if options.join_nulls is not None:
+                join_kwargs["nulls_equal"] = options.join_nulls
+            if options.maintain_order is not None:
+                join_kwargs["maintain_order"] = options.maintain_order
+            if options.streaming is not None:
+                join_kwargs["allow_parallel"] = not options.streaming
+
+        return left_lf.join(right_lf, **join_kwargs)
 
     def slice(
         self, df: PolarsBackendFrame, *, offset: int, length: int | None

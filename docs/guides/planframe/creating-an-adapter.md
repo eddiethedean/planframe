@@ -44,6 +44,12 @@ dict={'id': [1, 2], 'age': [10, 20]}
 - **Always-lazy**: return lazy objects from transforms; only execute inside `collect`/`to_dicts`/writes
 - **I/O**: implement `write_*` (or raise a clear error if not supported)
 
+## `join`
+
+`BaseAdapter.join` receives **`left_on`** and **`right_on`** tuples of equal length (for symmetric joins they are identical). For a **`how="cross"`** join from `Frame.join`, both tuples are empty—there are no key columns.
+
+Optional **`JoinOptions`** (`planframe.plan.join_options`) carries backend-specific hints (`coalesce`, `validate`, `join_nulls`, `maintain_order`, `streaming`). Adapters may ignore any field they do not support; omit kwargs when the option is `None` so the engine keeps its defaults.
+
 ## Notes
 
 - PlanFrame validates many schema invariants *before* calling the backend. Your adapter can assume the plan is well-formed, but it should still validate backend-specific constraints (e.g. “pivot requires on_columns when lazy”).

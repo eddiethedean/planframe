@@ -209,17 +209,20 @@ class Schema:
         self,
         right: Schema,
         *,
-        on: tuple[str, ...],
+        left_on: tuple[str, ...],
+        right_on: tuple[str, ...],
         suffix: str = "_right",
     ) -> Schema:
-        if not on:
-            raise PlanFrameSchemaError("join_merge requires non-empty on keys")
+        if not left_on or not right_on:
+            raise PlanFrameSchemaError("join_merge requires non-empty join keys")
+        if len(left_on) != len(right_on):
+            raise PlanFrameSchemaError("join_merge left_on and right_on must have the same length")
 
         left_map = self.field_map()
         right_map = right.field_map()
 
-        missing_left = set(on).difference(left_map.keys())
-        missing_right = set(on).difference(right_map.keys())
+        missing_left = set(left_on).difference(left_map.keys())
+        missing_right = set(right_on).difference(right_map.keys())
         if missing_left:
             raise PlanFrameSchemaError(f"Join keys missing on left: {sorted(missing_left)}")
         if missing_right:
@@ -227,10 +230,26 @@ class Schema:
 
         out_fields: list[Field] = list(self.fields)
         out_names = {f.name for f in out_fields}
+        right_keys_drop = set(right_on)
 
         for rf in right.fields:
-            if rf.name in on:
-                continue  # drop right join keys
+            if rf.name in right_keys_drop:
+                continue
+            name = rf.name
+            if name in out_names:
+                name = f"{name}{suffix}"
+            if name in out_names:
+                raise PlanFrameSchemaError(f"Join suffix collision for column: {rf.name!r}")
+            out_names.add(name)
+            out_fields.append(Field(name=name, dtype=rf.dtype))
+
+        return Schema(fields=tuple(out_fields))
+
+    def join_merge_cross(self, right: Schema, *, suffix: str = "_right") -> Schema:
+        out_fields: list[Field] = list(self.fields)
+        out_names = {f.name for f in out_fields}
+
+        for rf in right.fields:
             name = rf.name
             if name in out_names:
                 name = f"{name}{suffix}"

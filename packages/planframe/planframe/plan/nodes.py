@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from planframe.expr.api import Expr
+from planframe.plan.join_options import JoinOptions
 
 
 class PlanNode:
@@ -116,9 +117,11 @@ class Melt(PlanNode):
 class Join(PlanNode):
     prev: PlanNode
     right: Any
-    on: tuple[str, ...]
+    left_keys: tuple[str, ...]
+    right_keys: tuple[str, ...]
     how: str = "inner"
     suffix: str = "_right"
+    options: JoinOptions | None = None
 
 
 @dataclass(frozen=True, slots=True)
