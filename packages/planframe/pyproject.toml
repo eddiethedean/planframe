@@ -4,19 +4,28 @@
  
  [project]
 name = "planframe"
- version = "0.1.0"
+ version = "0.2.0"
  description = "Core typed relational planning layer for Python DataFrames."
  readme = "README.md"
  requires-python = ">=3.10"
  license = { text = "MIT" }
  authors = [{ name = "PlanFrame Contributors" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "License :: OSI Approved :: MIT License",
+  "Typing :: Typed",
+]
  dependencies = [
    "typing-extensions>=4.8",
    "pydantic>=1.10",
  ]
  
  [project.urls]
- Repository = "https://example.invalid/planframe"
+Repository = "https://github.com/eddiethedean/planframe"
+Documentation = "https://github.com/eddiethedean/planframe/blob/main/README.md"
+Issues = "https://github.com/eddiethedean/planframe/issues"
  
  [tool.hatch.build.targets.wheel]
  packages = ["planframe"]
