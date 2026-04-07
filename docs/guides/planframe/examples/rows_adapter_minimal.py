@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from planframe.backend.adapter import BaseAdapter
-from planframe.expr.api import Expr
+from planframe.backend.adapter import BaseAdapter, CompiledProjectItem
+from planframe.expr.api import Expr, Lit
 from planframe.frame import Frame
 from planframe.plan.join_options import JoinOptions
 
@@ -20,6 +20,24 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
     def select(self, df: RowsFrame, columns: tuple[str, ...]) -> RowsFrame:
         cols = set(columns)
         return [{k: v for k, v in row.items() if k in cols} for row in df]
+
+    def project(
+        self, df: RowsFrame, items: tuple[CompiledProjectItem[Expr[object]], ...]
+    ) -> RowsFrame:
+        out: RowsFrame = []
+        for row in df:
+            r: dict[str, object] = {}
+            for it in items:
+                if it.from_column is not None:
+                    r[it.name] = row[it.from_column]
+                elif it.expr is not None and isinstance(it.expr, Lit):
+                    r[it.name] = it.expr.value
+                else:
+                    raise NotImplementedError(
+                        "RowsAdapter example project only supports column picks or lit expr"
+                    )
+            out.append(r)
+        return out
 
     def drop(self, df: RowsFrame, columns: tuple[str, ...], *, strict: bool = True) -> RowsFrame:
         keys = set(df[0].keys()) if df else set()

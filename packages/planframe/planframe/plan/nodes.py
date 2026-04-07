@@ -23,6 +23,29 @@ class Select(PlanNode):
 
 
 @dataclass(frozen=True, slots=True)
+class ProjectPick:
+    """Existing column to include in a :class:`Project` (output name equals *column*)."""
+
+    column: str
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectExpr:
+    """Computed column: *name* is the output name, *expr* the PlanFrame expression IR."""
+
+    name: str
+    expr: Expr[Any]
+
+
+@dataclass(frozen=True, slots=True)
+class Project(PlanNode):
+    """Mixed projection: existing columns (:class:`ProjectPick`) and computed (:class:`ProjectExpr`)."""
+
+    prev: PlanNode
+    items: tuple[ProjectPick | ProjectExpr, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class Drop(PlanNode):
     prev: PlanNode
     columns: tuple[str, ...]

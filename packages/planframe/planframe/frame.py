@@ -4,7 +4,7 @@ import re
 from collections.abc import Sequence
 from typing import Any, Generic, Literal, TypeVar
 
-from planframe.backend.adapter import BackendAdapter
+from planframe.backend.adapter import BackendAdapter, CompiledProjectItem
 from planframe.backend.errors import (
     PlanFrameBackendError,
     PlanFrameExecutionError,
@@ -31,6 +31,9 @@ from planframe.plan.nodes import (
     Melt,
     Pivot,
     PlanNode,
+    Project,
+    ProjectExpr,
+    ProjectPick,
     Rename,
     Sample,
     Select,
@@ -120,6 +123,25 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             return self._data
         if isinstance(node, Select):
             return self._adapter.select(self._eval(node.prev), node.columns)
+        if isinstance(node, Project):
+            prev = self._eval(node.prev)
+            parts: list[CompiledProjectItem[BackendExprT]] = []
+            for it in node.items:
+                if isinstance(it, ProjectPick):
+                    parts.append(
+                        CompiledProjectItem(
+                            name=it.column, from_column=it.column, expr=None
+                        )
+                    )
+                else:
+                    parts.append(
+                        CompiledProjectItem(
+                            name=it.name,
+                            from_column=None,
+                            expr=self._compile(it.expr),
+                        )
+                    )
+            return self._adapter.project(prev, tuple(parts))
         if isinstance(node, Drop):
             return self._adapter.drop(self._eval(node.prev), node.columns, strict=node.strict)
         if isinstance(node, Rename):
@@ -252,14 +274,44 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
         raise PlanFrameBackendError(f"Unsupported plan node: {type(node)!r}")
 
-    def select(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
-        cols = tuple(columns)
-        schema2 = self._schema.select(cols)
+    def select(
+        self, *columns: str | tuple[str, Expr[Any]]
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        if not columns:
+            cols: tuple[str, ...] = tuple()
+            schema2 = self._schema.select(cols)
+            return Frame(
+                _data=self._data,
+                _adapter=self._adapter,
+                _plan=Select(self._plan, cols),
+                _schema=schema2,
+            )
+        if all(isinstance(c, str) for c in columns):
+            cols = tuple(columns)  # type: ignore[arg-type]
+            schema2 = self._schema.select(cols)
+            return Frame(
+                _data=self._data,
+                _adapter=self._adapter,
+                _plan=Select(self._plan, cols),
+                _schema=schema2,
+            )
+        items: list[ProjectPick | ProjectExpr] = []
+        for c in columns:
+            if isinstance(c, str):
+                items.append(ProjectPick(column=c))
+            elif isinstance(c, tuple) and len(c) == 2 and isinstance(c[0], str):
+                items.append(ProjectExpr(name=c[0], expr=c[1]))
+            else:
+                raise TypeError(
+                    "select arguments must be column names (str) or (name, Expr) tuples"
+                )
+        tup = tuple(items)
+        schema3 = self._schema.project(tup)
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Select(self._plan, cols),
-            _schema=schema2,
+            _plan=Project(self._plan, tup),
+            _schema=schema3,
         )
 
     def select_prefix(self, prefix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:

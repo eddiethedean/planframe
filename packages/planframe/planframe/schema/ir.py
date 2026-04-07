@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from planframe.backend.errors import PlanFrameSchemaError
+from planframe.expr.api import infer_dtype
+from planframe.plan.nodes import ProjectExpr, ProjectPick
 
 PFType = Any
 
@@ -39,6 +41,29 @@ class Schema:
             if c not in fm:
                 raise PlanFrameSchemaError(f"Cannot select missing column: {c}")
             out.append(fm[c])
+        return Schema(fields=tuple(out))
+
+    def project(self, items: tuple[ProjectPick | ProjectExpr, ...]) -> Schema:
+        """Output schema for a mixed projection (see :class:`planframe.plan.nodes.Project`)."""
+        fm = self.field_map()
+        out: list[Field] = []
+        seen: set[str] = set()
+        for it in items:
+            if isinstance(it, ProjectPick):
+                if it.column not in fm:
+                    raise PlanFrameSchemaError(f"Cannot project missing column: {it.column}")
+                if it.column in seen:
+                    raise PlanFrameSchemaError(
+                        f"project repeats output column name: {it.column!r}"
+                    )
+                seen.add(it.column)
+                out.append(fm[it.column])
+            else:
+                if it.name in seen:
+                    raise PlanFrameSchemaError(f"project repeats output column name: {it.name!r}")
+                seen.add(it.name)
+                dtype = infer_dtype(it.expr)
+                out.append(Field(name=it.name, dtype=dtype))
         return Schema(fields=tuple(out))
 
     def drop(self, columns: Iterable[str], *, strict: bool = True) -> Schema:

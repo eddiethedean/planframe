@@ -55,7 +55,7 @@ df = out.collect()
 
 - **Frames**: `Frame.source(...)` (or backend frame constructors like `class User(PolarsFrame): ...; User(data)`), immutable chaining (lazy)
 - **Transforms**:
-  - **projection**: `select`, `drop`, `select_exclude`
+  - **projection**: `select` (column names and/or `("out_name", expr)` tuples in one step; lowers to `Project` when expressions are present), `drop`, `select_exclude`
   - **column order**: `reorder_columns`, `select_first`, `select_last`, `move`
   - **rename helpers**: `rename` (optional `strict=False` ignores unknown source names, like `drop`), `rename_prefix`, `rename_suffix`, `rename_replace`
   - **row ops**: `head`, `tail`, `limit`, `slice`

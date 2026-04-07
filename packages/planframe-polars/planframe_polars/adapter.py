@@ -4,7 +4,7 @@ from typing import Any, Literal, cast
 
 import polars as pl
 
-from planframe.backend.adapter import BaseAdapter
+from planframe.backend.adapter import BaseAdapter, CompiledProjectItem
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
 from planframe_polars.compile_expr import compile_expr
@@ -24,6 +24,21 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
 
     def select(self, df: PolarsBackendFrame, columns: tuple[str, ...]) -> PolarsBackendFrame:
         return df.select(list(columns))
+
+    def project(
+        self,
+        df: PolarsBackendFrame,
+        items: tuple[CompiledProjectItem[pl.Expr], ...],
+    ) -> PolarsBackendFrame:
+        out: list[pl.Expr] = []
+        for it in items:
+            if it.from_column is not None:
+                out.append(pl.col(it.from_column).alias(it.name))
+            elif it.expr is not None:
+                out.append(it.expr.alias(it.name))
+            else:
+                raise ValueError("CompiledProjectItem requires from_column or expr")
+        return df.select(out)
 
     def drop(
         self, df: PolarsBackendFrame, columns: tuple[str, ...], *, strict: bool = True

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
 from planframe.plan.join_options import JoinOptions
@@ -9,17 +10,42 @@ BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
 
 
+@dataclass(frozen=True, slots=True)
+class CompiledProjectItem(Generic[BackendExprT]):
+    """One output column for :meth:`BaseAdapter.project`.
+
+    Exactly one of *from_column* or *expr* must be non-``None``.
+    *name* is the output column name (often equal to *from_column* for existing picks).
+    """
+
+    name: str
+    from_column: str | None = None
+    expr: BackendExprT | None = None
+
+
 class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     """Backend execution base class.
 
     Core PlanFrame code must not import backend libraries. Adapters translate PlanFrame
     operations + expression IR into backend-native operations.
+
+    String-only :meth:`select` may be implemented directly or lowered to :meth:`project`
+    using :class:`CompiledProjectItem` with *from_column* and *name* set to each column.
     """
 
     name: str
 
     @abstractmethod
     def select(self, df: BackendFrameT, columns: tuple[str, ...]) -> BackendFrameT: ...
+
+    @abstractmethod
+    def project(
+        self,
+        df: BackendFrameT,
+        items: tuple[CompiledProjectItem[BackendExprT], ...],
+    ) -> BackendFrameT:
+        """Project *df* to output columns described by *items* (order preserved)."""
+        ...
 
     @abstractmethod
     def drop(

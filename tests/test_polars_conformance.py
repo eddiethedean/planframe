@@ -82,6 +82,15 @@ def test_rename_strict_false_ignores_unknown_polars_columns() -> None:
     assert df.columns == ["id", "full_name", "age"]
 
 
+def test_select_mixed_str_and_expr_polars() -> None:
+    pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
+    out = pf.select("id", ("twice_age", mul(col("age"), lit(2))))
+    df = out.collect()
+    assert df.columns == ["id", "twice_age"]
+    assert df["id"].to_list() == [1, 2]
+    assert df["twice_age"].to_list() == [20, 40]
+
+
 def test_select_drop_rename_with_column_filter_collect() -> None:
     pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
 
