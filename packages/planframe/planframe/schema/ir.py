@@ -53,23 +53,27 @@ class Schema:
             to_drop = drop_set.intersection(fm.keys())
         return Schema(fields=tuple(f for f in self.fields if f.name not in to_drop))
 
-    def rename(self, mapping: dict[str, str]) -> Schema:
+    def rename(self, mapping: dict[str, str], *, strict: bool = True) -> Schema:
         fm = self.field_map()
-        missing = set(mapping.keys()).difference(fm.keys())
-        if missing:
-            raise PlanFrameSchemaError(f"Cannot rename missing columns: {sorted(missing)}")
+        if strict:
+            missing = set(mapping.keys()).difference(fm.keys())
+            if missing:
+                raise PlanFrameSchemaError(f"Cannot rename missing columns: {sorted(missing)}")
+            effective = dict(mapping)
+        else:
+            effective = {k: v for k, v in mapping.items() if k in fm}
 
         new_names = list(self.names())
         for i, old in enumerate(new_names):
-            if old in mapping:
-                new_names[i] = mapping[old]
+            if old in effective:
+                new_names[i] = effective[old]
 
         if len(set(new_names)) != len(new_names):
             raise PlanFrameSchemaError("Rename would create duplicate column names.")
 
         out_fields: list[Field] = []
         for f in self.fields:
-            out_fields.append(Field(name=mapping.get(f.name, f.name), dtype=f.dtype))
+            out_fields.append(Field(name=effective.get(f.name, f.name), dtype=f.dtype))
         return Schema(fields=tuple(out_fields))
 
     def with_column(self, name: str, dtype: PFType) -> Schema:

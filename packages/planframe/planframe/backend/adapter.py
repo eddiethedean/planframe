@@ -33,7 +33,17 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         ...
 
     @abstractmethod
-    def rename(self, df: BackendFrameT, mapping: dict[str, str]) -> BackendFrameT: ...
+    def rename(
+        self, df: BackendFrameT, mapping: dict[str, str], *, strict: bool = True
+    ) -> BackendFrameT:
+        """Rename columns according to *mapping*.
+
+        When *strict* is True (default), implementations must raise if any key in *mapping*
+        is not a column of *df*.
+        When *strict* is False, implementations must ignore mapping entries whose keys are
+        not present in *df*.
+        """
+        ...
 
     @abstractmethod
     def with_column(self, df: BackendFrameT, name: str, expr: BackendExprT) -> BackendFrameT: ...

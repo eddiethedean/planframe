@@ -30,8 +30,10 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     ) -> PolarsBackendFrame:
         return df.drop(*columns, strict=strict)
 
-    def rename(self, df: PolarsBackendFrame, mapping: dict[str, str]) -> PolarsBackendFrame:
-        return df.rename(mapping)
+    def rename(
+        self, df: PolarsBackendFrame, mapping: dict[str, str], *, strict: bool = True
+    ) -> PolarsBackendFrame:
+        return df.rename(mapping, strict=strict)
 
     def with_column(self, df: PolarsBackendFrame, name: str, expr: pl.Expr) -> PolarsBackendFrame:
         return df.with_columns(expr.alias(name))

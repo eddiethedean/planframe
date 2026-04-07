@@ -33,6 +33,7 @@ class Drop(PlanNode):
 class Rename(PlanNode):
     prev: PlanNode
     mapping: dict[str, str]
+    strict: bool = True
 
 
 @dataclass(frozen=True, slots=True)

@@ -123,7 +123,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if isinstance(node, Drop):
             return self._adapter.drop(self._eval(node.prev), node.columns, strict=node.strict)
         if isinstance(node, Rename):
-            return self._adapter.rename(self._eval(node.prev), node.mapping)
+            return self._adapter.rename(
+                self._eval(node.prev), node.mapping, strict=node.strict
+            )
         if isinstance(node, WithColumn):
             prev = self._eval(node.prev)
             bexpr = self._compile(node.expr)
@@ -379,14 +381,16 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
-    def rename(self, **mapping: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def rename(
+        self, *, strict: bool = True, **mapping: str
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if not mapping:
             return self
-        schema2 = self._schema.rename(mapping)
+        schema2 = self._schema.rename(mapping, strict=strict)
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Rename(self._plan, mapping),
+            _plan=Rename(self._plan, mapping, strict=strict),
             _schema=schema2,
         )
 

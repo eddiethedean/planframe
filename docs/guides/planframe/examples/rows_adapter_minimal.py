@@ -26,12 +26,16 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
         cols = set(columns) if strict else set(columns) & keys
         return [{k: v for k, v in row.items() if k not in cols} for row in df]
 
-    def rename(self, df: RowsFrame, mapping: dict[str, str]) -> RowsFrame:
+    def rename(
+        self, df: RowsFrame, mapping: dict[str, str], *, strict: bool = True
+    ) -> RowsFrame:
+        keys = set(df[0].keys()) if df else set()
+        effective = dict(mapping) if strict else {k: v for k, v in mapping.items() if k in keys}
         out: RowsFrame = []
         for row in df:
             r = {}
             for k, v in row.items():
-                r[mapping.get(k, k)] = v
+                r[effective.get(k, k)] = v
             out.append(r)
         return out
 
