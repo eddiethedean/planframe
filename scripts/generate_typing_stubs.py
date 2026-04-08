@@ -1,9 +1,35 @@
 from __future__ import annotations
 
 import argparse
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _ruff_format_pyi(path: Path, content: str) -> str:
+    """Match `ruff format` so ``ruff format --check`` passes on generated stubs."""
+
+    stdin_fn = f"--stdin-filename={path.relative_to(REPO_ROOT)}"
+    ruff_exe = shutil.which("ruff")
+    cmd = (
+        [ruff_exe, "format", "-", stdin_fn]
+        if ruff_exe
+        else [sys.executable, "-m", "ruff", "format", "-", stdin_fn]
+    )
+    proc = subprocess.run(
+        cmd,
+        input=content,
+        text=True,
+        capture_output=True,
+        cwd=REPO_ROOT,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr or "ruff format failed")
+    return proc.stdout
 
 
 def _write_if_changed(path: Path, content: str) -> None:
@@ -346,8 +372,17 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a(
         '    def collect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ...) -> list[Any]: ...'
     )
+    a("    @overload")
+    a("    async def acollect(self) -> BackendFrameT: ...")
+    a("")
+    a("    @overload")
+    a(
+        '    async def acollect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ...) -> list[Any]: ...'
+    )
     a("    def to_dicts(self) -> list[dict[str, object]]: ...")
     a("    def to_dict(self) -> dict[str, list[object]]: ...")
+    a("    async def ato_dicts(self) -> list[dict[str, object]]: ...")
+    a("    async def ato_dict(self) -> dict[str, list[object]]: ...")
     a("    def write_parquet(")
     a("        self,")
     a("        path: str,")
@@ -436,11 +471,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     frame_pyi_path = REPO_ROOT / "packages" / "planframe" / "planframe" / "frame.pyi"
-    frame_pyi = _render_frame_pyi(max_arity=args.max_arity)
+    frame_pyi = _ruff_format_pyi(frame_pyi_path, _render_frame_pyi(max_arity=args.max_arity))
     schema_types_pyi_path = (
         REPO_ROOT / "packages" / "planframe" / "planframe" / "typing" / "_schema_types.pyi"
     )
-    schema_types_pyi = _render_schema_types_pyi()
+    schema_types_pyi = _ruff_format_pyi(schema_types_pyi_path, _render_schema_types_pyi())
 
     if args.check:
         changed: list[str] = []

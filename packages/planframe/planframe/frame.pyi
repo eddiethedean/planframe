@@ -19,7 +19,6 @@ BackendExprT = TypeVar("BackendExprT")
 OtherSchemaT = TypeVar("OtherSchemaT")
 T = TypeVar("T")
 
-
 class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     _data: BackendFrameT
     _adapter: BackendAdapter[BackendFrameT, BackendExprT]
@@ -33,7 +32,6 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         _plan: PlanNode,
         _schema: Schema,
     ) -> None: ...
-
     @classmethod
     def source(
         cls,
@@ -42,7 +40,6 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         adapter: BackendAdapter[BackendFrameT, BackendExprT],
         schema: type[SchemaT],
     ) -> Self: ...
-
     def schema(self) -> Schema: ...
     def plan(self) -> PlanNode: ...
 
@@ -55,143 +52,517 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     @overload
     def select(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString) -> Self: ...
     @overload
-    def select(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString) -> Self: ...
+    def select(
+        self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString
+    ) -> Self: ...
     @overload
-    def select(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString) -> Self: ...
+    def select(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+    ) -> Self: ...
     @overload
-    def select(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString) -> Self: ...
+    def select(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+    ) -> Self: ...
     @overload
-    def select(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString) -> Self: ...
+    def select(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+    ) -> Self: ...
     @overload
-    def select(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString) -> Self: ...
+    def select(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+    ) -> Self: ...
     @overload
-    def select(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString) -> Self: ...
+    def select(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+    ) -> Self: ...
     @overload
-    def select(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString, __c10: LiteralString) -> Self: ...
+    def select(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+        __c10: LiteralString,
+    ) -> Self: ...
     @overload
     def select(self, *columns: LiteralString) -> Self: ...
     @overload
     def select(self, *columns: LiteralString | tuple[str, Expr[Any]]) -> Self: ...
     def select(self, *columns: Any) -> Self: ...
-
     def select_prefix(self, prefix: str) -> Self: ...
     def select_suffix(self, suffix: str) -> Self: ...
     def select_regex(self, pattern: str) -> Self: ...
-
     @overload
     def select_exclude(self, __c1: LiteralString) -> Self: ...
     @overload
     def select_exclude(self, __c1: LiteralString, __c2: LiteralString) -> Self: ...
     @overload
-    def select_exclude(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString) -> Self: ...
+    def select_exclude(
+        self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString
+    ) -> Self: ...
     @overload
-    def select_exclude(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString) -> Self: ...
+    def select_exclude(
+        self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString
+    ) -> Self: ...
     @overload
-    def select_exclude(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString) -> Self: ...
+    def select_exclude(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_exclude(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString) -> Self: ...
+    def select_exclude(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_exclude(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString) -> Self: ...
+    def select_exclude(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_exclude(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString) -> Self: ...
+    def select_exclude(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_exclude(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString) -> Self: ...
+    def select_exclude(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_exclude(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString, __c10: LiteralString) -> Self: ...
+    def select_exclude(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+        __c10: LiteralString,
+    ) -> Self: ...
     def select_exclude(self, *columns: LiteralString) -> Self: ...
-
     @overload
     def drop(self, __c1: LiteralString, *, strict: bool = True) -> Self: ...
     @overload
     def drop(self, __c1: LiteralString, __c2: LiteralString, *, strict: bool = True) -> Self: ...
     @overload
-    def drop(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, *, strict: bool = True) -> Self: ...
+    def drop(
+        self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, *, strict: bool = True
+    ) -> Self: ...
     @overload
-    def drop(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, *, strict: bool = True) -> Self: ...
+    def drop(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        *,
+        strict: bool = True,
+    ) -> Self: ...
     @overload
-    def drop(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, *, strict: bool = True) -> Self: ...
+    def drop(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        *,
+        strict: bool = True,
+    ) -> Self: ...
     @overload
-    def drop(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, *, strict: bool = True) -> Self: ...
+    def drop(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        *,
+        strict: bool = True,
+    ) -> Self: ...
     @overload
-    def drop(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, *, strict: bool = True) -> Self: ...
+    def drop(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        *,
+        strict: bool = True,
+    ) -> Self: ...
     @overload
-    def drop(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, *, strict: bool = True) -> Self: ...
+    def drop(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        *,
+        strict: bool = True,
+    ) -> Self: ...
     @overload
-    def drop(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString, *, strict: bool = True) -> Self: ...
+    def drop(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+        *,
+        strict: bool = True,
+    ) -> Self: ...
     @overload
-    def drop(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString, __c10: LiteralString, *, strict: bool = True) -> Self: ...
+    def drop(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+        __c10: LiteralString,
+        *,
+        strict: bool = True,
+    ) -> Self: ...
     def drop(self, *columns: LiteralString, strict: bool = True) -> Self: ...
-
     def drop_prefix(self, prefix: str) -> Self: ...
     def drop_suffix(self, suffix: str) -> Self: ...
     def drop_regex(self, pattern: str) -> Self: ...
-
     @overload
     def reorder_columns(self, __c1: LiteralString) -> Self: ...
     @overload
     def reorder_columns(self, __c1: LiteralString, __c2: LiteralString) -> Self: ...
     @overload
-    def reorder_columns(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString) -> Self: ...
+    def reorder_columns(
+        self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString
+    ) -> Self: ...
     @overload
-    def reorder_columns(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString) -> Self: ...
+    def reorder_columns(
+        self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString
+    ) -> Self: ...
     @overload
-    def reorder_columns(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString) -> Self: ...
+    def reorder_columns(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+    ) -> Self: ...
     @overload
-    def reorder_columns(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString) -> Self: ...
+    def reorder_columns(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+    ) -> Self: ...
     @overload
-    def reorder_columns(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString) -> Self: ...
+    def reorder_columns(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+    ) -> Self: ...
     @overload
-    def reorder_columns(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString) -> Self: ...
+    def reorder_columns(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+    ) -> Self: ...
     @overload
-    def reorder_columns(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString) -> Self: ...
+    def reorder_columns(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+    ) -> Self: ...
     @overload
-    def reorder_columns(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString, __c10: LiteralString) -> Self: ...
+    def reorder_columns(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+        __c10: LiteralString,
+    ) -> Self: ...
     def reorder_columns(self, *columns: LiteralString) -> Self: ...
-
     @overload
     def select_first(self, __c1: LiteralString) -> Self: ...
     @overload
     def select_first(self, __c1: LiteralString, __c2: LiteralString) -> Self: ...
     @overload
-    def select_first(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString) -> Self: ...
+    def select_first(
+        self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString
+    ) -> Self: ...
     @overload
-    def select_first(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString) -> Self: ...
+    def select_first(
+        self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString
+    ) -> Self: ...
     @overload
-    def select_first(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString) -> Self: ...
+    def select_first(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_first(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString) -> Self: ...
+    def select_first(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_first(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString) -> Self: ...
+    def select_first(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_first(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString) -> Self: ...
+    def select_first(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_first(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString) -> Self: ...
+    def select_first(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_first(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString, __c10: LiteralString) -> Self: ...
+    def select_first(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+        __c10: LiteralString,
+    ) -> Self: ...
     def select_first(self, *columns: LiteralString) -> Self: ...
-
     @overload
     def select_last(self, __c1: LiteralString) -> Self: ...
     @overload
     def select_last(self, __c1: LiteralString, __c2: LiteralString) -> Self: ...
     @overload
-    def select_last(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString) -> Self: ...
+    def select_last(
+        self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString
+    ) -> Self: ...
     @overload
-    def select_last(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString) -> Self: ...
+    def select_last(
+        self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString
+    ) -> Self: ...
     @overload
-    def select_last(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString) -> Self: ...
+    def select_last(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_last(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString) -> Self: ...
+    def select_last(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_last(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString) -> Self: ...
+    def select_last(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_last(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString) -> Self: ...
+    def select_last(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_last(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString) -> Self: ...
+    def select_last(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+    ) -> Self: ...
     @overload
-    def select_last(self, __c1: LiteralString, __c2: LiteralString, __c3: LiteralString, __c4: LiteralString, __c5: LiteralString, __c6: LiteralString, __c7: LiteralString, __c8: LiteralString, __c9: LiteralString, __c10: LiteralString) -> Self: ...
+    def select_last(
+        self,
+        __c1: LiteralString,
+        __c2: LiteralString,
+        __c3: LiteralString,
+        __c4: LiteralString,
+        __c5: LiteralString,
+        __c6: LiteralString,
+        __c7: LiteralString,
+        __c8: LiteralString,
+        __c9: LiteralString,
+        __c10: LiteralString,
+    ) -> Self: ...
     def select_last(self, *columns: LiteralString) -> Self: ...
-
     def move(
         self,
         column: LiteralString,
@@ -199,19 +570,15 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         before: LiteralString | None = ...,
         after: LiteralString | None = ...,
     ) -> Self: ...
-
     def rename(self, *, strict: bool = ..., **mapping: str) -> Self: ...
-
     def rename_prefix(self, prefix: str, *subset: LiteralString) -> Self: ...
     def rename_suffix(self, suffix: str, *subset: LiteralString) -> Self: ...
     def rename_replace(self, old: str, new: str, *subset: LiteralString) -> Self: ...
-
     def with_column(
         self,
         name: LiteralString,
         expr: Expr[T],
     ) -> Self: ...
-
     @overload
     def cast(self, name: LiteralString, dtype: type[T]) -> Self: ...
     @overload
@@ -227,63 +594,108 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     @overload
     def sort(
         self,
-        __k1: LiteralString, __k2: LiteralString,
+        __k1: LiteralString,
+        __k2: LiteralString,
         descending: bool | Sequence[bool] = ...,
         nulls_last: bool | Sequence[bool] = ...,
     ) -> Self: ...
     @overload
     def sort(
         self,
-        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString,
+        __k1: LiteralString,
+        __k2: LiteralString,
+        __k3: LiteralString,
         descending: bool | Sequence[bool] = ...,
         nulls_last: bool | Sequence[bool] = ...,
     ) -> Self: ...
     @overload
     def sort(
         self,
-        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString,
+        __k1: LiteralString,
+        __k2: LiteralString,
+        __k3: LiteralString,
+        __k4: LiteralString,
         descending: bool | Sequence[bool] = ...,
         nulls_last: bool | Sequence[bool] = ...,
     ) -> Self: ...
     @overload
     def sort(
         self,
-        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString,
+        __k1: LiteralString,
+        __k2: LiteralString,
+        __k3: LiteralString,
+        __k4: LiteralString,
+        __k5: LiteralString,
         descending: bool | Sequence[bool] = ...,
         nulls_last: bool | Sequence[bool] = ...,
     ) -> Self: ...
     @overload
     def sort(
         self,
-        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString, __k6: LiteralString,
+        __k1: LiteralString,
+        __k2: LiteralString,
+        __k3: LiteralString,
+        __k4: LiteralString,
+        __k5: LiteralString,
+        __k6: LiteralString,
         descending: bool | Sequence[bool] = ...,
         nulls_last: bool | Sequence[bool] = ...,
     ) -> Self: ...
     @overload
     def sort(
         self,
-        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString, __k6: LiteralString, __k7: LiteralString,
+        __k1: LiteralString,
+        __k2: LiteralString,
+        __k3: LiteralString,
+        __k4: LiteralString,
+        __k5: LiteralString,
+        __k6: LiteralString,
+        __k7: LiteralString,
         descending: bool | Sequence[bool] = ...,
         nulls_last: bool | Sequence[bool] = ...,
     ) -> Self: ...
     @overload
     def sort(
         self,
-        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString, __k6: LiteralString, __k7: LiteralString, __k8: LiteralString,
+        __k1: LiteralString,
+        __k2: LiteralString,
+        __k3: LiteralString,
+        __k4: LiteralString,
+        __k5: LiteralString,
+        __k6: LiteralString,
+        __k7: LiteralString,
+        __k8: LiteralString,
         descending: bool | Sequence[bool] = ...,
         nulls_last: bool | Sequence[bool] = ...,
     ) -> Self: ...
     @overload
     def sort(
         self,
-        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString, __k6: LiteralString, __k7: LiteralString, __k8: LiteralString, __k9: LiteralString,
+        __k1: LiteralString,
+        __k2: LiteralString,
+        __k3: LiteralString,
+        __k4: LiteralString,
+        __k5: LiteralString,
+        __k6: LiteralString,
+        __k7: LiteralString,
+        __k8: LiteralString,
+        __k9: LiteralString,
         descending: bool | Sequence[bool] = ...,
         nulls_last: bool | Sequence[bool] = ...,
     ) -> Self: ...
     @overload
     def sort(
         self,
-        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString, __k6: LiteralString, __k7: LiteralString, __k8: LiteralString, __k9: LiteralString, __k10: LiteralString,
+        __k1: LiteralString,
+        __k2: LiteralString,
+        __k3: LiteralString,
+        __k4: LiteralString,
+        __k5: LiteralString,
+        __k6: LiteralString,
+        __k7: LiteralString,
+        __k8: LiteralString,
+        __k9: LiteralString,
+        __k10: LiteralString,
         descending: bool | Sequence[bool] = ...,
         nulls_last: bool | Sequence[bool] = ...,
     ) -> Self: ...
@@ -333,52 +745,101 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     @overload
     def group_by(
         self,
-        __gk1: LiteralString, __gk2: LiteralString,
+        __gk1: LiteralString,
+        __gk2: LiteralString,
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
         self,
-        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString,
+        __gk1: LiteralString,
+        __gk2: LiteralString,
+        __gk3: LiteralString,
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
         self,
-        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString,
+        __gk1: LiteralString,
+        __gk2: LiteralString,
+        __gk3: LiteralString,
+        __gk4: LiteralString,
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
         self,
-        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString,
+        __gk1: LiteralString,
+        __gk2: LiteralString,
+        __gk3: LiteralString,
+        __gk4: LiteralString,
+        __gk5: LiteralString,
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
         self,
-        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString, __gk6: LiteralString,
+        __gk1: LiteralString,
+        __gk2: LiteralString,
+        __gk3: LiteralString,
+        __gk4: LiteralString,
+        __gk5: LiteralString,
+        __gk6: LiteralString,
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
         self,
-        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString, __gk6: LiteralString, __gk7: LiteralString,
+        __gk1: LiteralString,
+        __gk2: LiteralString,
+        __gk3: LiteralString,
+        __gk4: LiteralString,
+        __gk5: LiteralString,
+        __gk6: LiteralString,
+        __gk7: LiteralString,
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
         self,
-        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString, __gk6: LiteralString, __gk7: LiteralString, __gk8: LiteralString,
+        __gk1: LiteralString,
+        __gk2: LiteralString,
+        __gk3: LiteralString,
+        __gk4: LiteralString,
+        __gk5: LiteralString,
+        __gk6: LiteralString,
+        __gk7: LiteralString,
+        __gk8: LiteralString,
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
         self,
-        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString, __gk6: LiteralString, __gk7: LiteralString, __gk8: LiteralString, __gk9: LiteralString,
+        __gk1: LiteralString,
+        __gk2: LiteralString,
+        __gk3: LiteralString,
+        __gk4: LiteralString,
+        __gk5: LiteralString,
+        __gk6: LiteralString,
+        __gk7: LiteralString,
+        __gk8: LiteralString,
+        __gk9: LiteralString,
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
         self,
-        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString, __gk6: LiteralString, __gk7: LiteralString, __gk8: LiteralString, __gk9: LiteralString, __gk10: LiteralString,
+        __gk1: LiteralString,
+        __gk2: LiteralString,
+        __gk3: LiteralString,
+        __gk4: LiteralString,
+        __gk5: LiteralString,
+        __gk6: LiteralString,
+        __gk7: LiteralString,
+        __gk8: LiteralString,
+        __gk9: LiteralString,
+        __gk10: LiteralString,
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
-    def group_by(self, *keys: LiteralString) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    def group_by(
+        self, *keys: LiteralString
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
-    def group_by(self, *keys: LiteralString | Expr[Any]) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    def group_by(
+        self, *keys: LiteralString | Expr[Any]
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     def group_by(self, *keys: Any) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     def drop_nulls(self, *subset: LiteralString) -> Self: ...
     def fill_null(self, value: Any, *subset: LiteralString) -> Self: ...
@@ -390,7 +851,6 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         variable_name: str = ...,
         value_name: str = ...,
     ) -> Self: ...
-
     def slice(self, offset: int, length: int | None = ...) -> Self: ...
     def limit(self, n: int) -> Self: ...
     def head(self, n: int) -> Self: ...
@@ -420,7 +880,6 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         shuffle: bool = ...,
         seed: int | None = ...,
     ) -> Self: ...
-
     @overload
     def join(
         self,
@@ -569,11 +1028,18 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> Frame[Any, BackendFrameT, BackendExprT]: ...
     @overload
     def collect(self) -> BackendFrameT: ...
-
     @overload
     def collect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ...) -> list[Any]: ...
+    @overload
+    async def acollect(self) -> BackendFrameT: ...
+    @overload
+    async def acollect(
+        self, *, kind: Literal["dataclass", "pydantic"], name: str = ...
+    ) -> list[Any]: ...
     def to_dicts(self) -> list[dict[str, object]]: ...
     def to_dict(self) -> dict[str, list[object]]: ...
+    async def ato_dicts(self) -> list[dict[str, object]]: ...
+    async def ato_dict(self) -> dict[str, list[object]]: ...
     def write_parquet(
         self,
         path: str,
@@ -622,7 +1088,6 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         compression: Literal["uncompressed", "snappy", "deflate"] = ...,
         name: str = ...,
     ) -> None: ...
-
     def materialize_model(
         self,
         name: str,

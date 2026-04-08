@@ -11,6 +11,8 @@ Core package for PlanFrame (typed planning layer). Import as `planframe`.
 ### Note on backends
 `planframe` is backend-agnostic. It does not execute anything until `collect()` (even for eager backends). To execute plans you need an adapter package (e.g. `planframe-polars`).
 
+For async stacks, `Frame.acollect()`, `Frame.ato_dicts()`, and `Frame.ato_dict()` await adapter hooks (`BaseAdapter.acollect` and friends); defaults run sync methods in a thread pool. See `docs/planframe_backend_adapter_design.md`.
+
 ### Typing
 PlanFrame includes `py.typed` plus generated stubs (notably `planframe/frame.pyi`) to improve static typing in editors and Pyright.
 

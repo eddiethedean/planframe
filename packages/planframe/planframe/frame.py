@@ -975,6 +975,32 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend collect(kind={kind!r}) failed for {self._adapter.name}"
             ) from e
 
+    async def acollect(
+        self,
+        *,
+        kind: Literal["dataclass", "pydantic"] | None = None,
+        name: str = "Row",
+    ) -> BackendFrameT | list[Any]:
+        try:
+            planned = self._eval(self._plan)
+            out = await self._adapter.acollect(planned)
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(
+                f"Backend acollect failed for {self._adapter.name}"
+            ) from e
+
+        if kind is None:
+            return out
+
+        Model = materialize_model(name=name, schema=self._schema, kind=kind)
+        try:
+            rows = self._adapter.to_dicts(out)
+            return [Model(**r) for r in rows]
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(
+                f"Backend acollect(kind={kind!r}) failed for {self._adapter.name}"
+            ) from e
+
     def to_dicts(self) -> list[dict[str, object]]:
         try:
             planned = self._eval(self._plan)
@@ -990,6 +1016,24 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             return self._adapter.to_dict(planned)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(f"Backend to_dict failed for {self._adapter.name}") from e
+
+    async def ato_dicts(self) -> list[dict[str, object]]:
+        try:
+            planned = self._eval(self._plan)
+            return await self._adapter.ato_dicts(planned)
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(
+                f"Backend ato_dicts failed for {self._adapter.name}"
+            ) from e
+
+    async def ato_dict(self) -> dict[str, list[object]]:
+        try:
+            planned = self._eval(self._plan)
+            return await self._adapter.ato_dict(planned)
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(
+                f"Backend ato_dict failed for {self._adapter.name}"
+            ) from e
 
     def write_parquet(
         self,

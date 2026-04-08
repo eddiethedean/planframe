@@ -5,5 +5,4 @@ from typing import Generic, TypeVar
 LeftSchemaT = TypeVar("LeftSchemaT")
 RightSchemaT = TypeVar("RightSchemaT")
 
-class JoinedSchema(Generic[LeftSchemaT, RightSchemaT]):
-    ...
+class JoinedSchema(Generic[LeftSchemaT, RightSchemaT]): ...
