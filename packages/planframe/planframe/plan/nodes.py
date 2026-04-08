@@ -16,6 +16,7 @@ class PlanNode:
 @dataclass(frozen=True, slots=True)
 class Source(PlanNode):
     schema_type: type[object]
+    ir_version: int = 1
 
 
 @dataclass(frozen=True, slots=True)

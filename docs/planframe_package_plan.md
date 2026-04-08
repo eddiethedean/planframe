@@ -66,6 +66,11 @@ In practice, a `Frame` holds a **source backend object** plus a **logical plan**
 - Join[Left, Right, left_on, right_on] (column and/or expression keys)
 - GroupBy[Prev, keys] then Agg[GroupBy, named_aggs] — keys are column names or expressions; aggregations are `(op, column)` and/or `AggExpr` wrappers (`agg_sum(inner)`, …)
 
+### IR versioning
+
+`Source` carries an `ir_version` integer (default `1`) to make long-lived plans and cross-process
+pipelines versionable. Increment this when making breaking changes to `PlanNode` shapes.
+
 ---
 
 # 4. Expression System

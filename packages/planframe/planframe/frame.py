@@ -110,7 +110,10 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema_ir = schema_from_type(schema)
         return cls(
-            _data=data, _adapter=adapter, _plan=Source(schema_type=schema), _schema=schema_ir
+            _data=data,
+            _adapter=adapter,
+            _plan=Source(schema_type=schema, ir_version=1),
+            _schema=schema_ir,
         )
 
     def schema(self) -> Schema:
