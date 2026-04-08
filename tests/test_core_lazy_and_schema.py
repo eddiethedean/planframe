@@ -148,8 +148,8 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         self.calls.append(("filter", predicate))
         return df[:1]
 
-    def compile_expr(self, expr: Any) -> object:
-        self.calls.append(("compile_expr", type(expr).__name__))
+    def compile_expr(self, expr: Any, *, schema: Any = None) -> object:
+        self.calls.append(("compile_expr", (type(expr).__name__, schema is not None)))
         return expr
 
     def sort(
@@ -1241,10 +1241,10 @@ def test_write_methods_execute_and_are_boundaries(tmp_path: Any) -> None:
 
 def test_backend_compile_expr_type_guard() -> None:
     class StrictAdapter(SpyAdapter):
-        def compile_expr(self, expr: Any) -> object:
+        def compile_expr(self, expr: Any, *, schema: Any = None) -> object:
             if not isinstance(expr, Expr):
                 raise TypeError("Expected Expr")
-            return super().compile_expr(expr)
+            return super().compile_expr(expr, schema=schema)
 
     adapter = StrictAdapter()
     pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)

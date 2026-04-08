@@ -121,7 +121,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         mask = df.select(mask_expr.alias(out_name))[out_name]
         return pl.DataFrame({out_name: mask})
 
-    def compile_expr(self, expr: Any) -> pl.Expr:
+    def compile_expr(self, expr: Any, *, schema: Any = None) -> pl.Expr:
         if not isinstance(expr, Expr):
             raise TypeError(f"Expected PlanFrame Expr, got {type(expr)!r}")
         return compile_expr(expr)
