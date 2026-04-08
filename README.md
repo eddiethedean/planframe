@@ -77,6 +77,7 @@ Common primitives added recently:
 - Multi-column helpers: `cast_many`, `cast_subset`, `fill_null_subset`, `fill_null_many`.
 - Rename helpers: `rename_upper`, `rename_lower`, `rename_title`, `rename_strip`.
 - Reshape helpers: `pivot_longer`, `pivot_wider`.
+- Execution hints: `ExecutionOptions(...)` at materialization time and join hints via `JoinOptions(allow_parallel=..., force_parallel=...)`.
 
 ### Learn more
 

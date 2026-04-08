@@ -12,7 +12,7 @@ This guide covers the intended public usage pattern:
 Run:
 
 ```bash
-./.venv/bin/python docs/planframe_pandas/guides/examples/basic_usage.py
+./.venv310/bin/python docs/planframe_pandas/guides/examples/basic_usage.py
 ```
 
 Expected output:

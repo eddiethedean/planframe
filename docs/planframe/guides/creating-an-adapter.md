@@ -25,7 +25,7 @@ It’s not fast, but it’s a good template: each adapter method is a pure trans
 Run:
 
 ```bash
-./.venv/bin/python docs/planframe/guides/examples/rows_adapter_minimal.py
+./.venv310/bin/python docs/planframe/guides/examples/rows_adapter_minimal.py
 ```
 
 Expected output:
@@ -48,7 +48,9 @@ dict={'id': [1, 2], 'age': [10, 20]}
 
 `BaseAdapter.join` receives **`left_on`** and **`right_on`** tuples of equal length (for symmetric joins they are identical). For a **`how="cross"`** join from `Frame.join`, both tuples are empty—there are no key columns.
 
-Optional **`JoinOptions`** (`planframe.plan.join_options`) carries backend-specific hints (`coalesce`, `validate`, `join_nulls`, `maintain_order`, `streaming`). Adapters may ignore any field they do not support; omit kwargs when the option is `None` so the engine keeps its defaults.
+Optional **`JoinOptions`** (`planframe.plan.join_options`) carries backend-specific hints (`coalesce`, `validate`, `join_nulls`, `maintain_order`, `streaming`, `allow_parallel`, `force_parallel`).
+
+These are **execution hints**, not relational semantics. Adapters may ignore any field they do not support; omit kwargs when the option is `None` so the engine keeps its defaults.
 
 ## `group_by_agg`
 

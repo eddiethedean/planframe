@@ -124,16 +124,20 @@ class BackendAdapter(Protocol, Generic[BackendFrameT, BackendExprT]):
     def compile_expr(self, expr: Any, *, schema: Any | None = None) -> BackendExprT:
         ...
 
-    def collect(self, df: BackendFrameT) -> BackendFrameT:
+    def collect(self, df: BackendFrameT, *, options: ExecutionOptions | None = None) -> BackendFrameT:
         ...
 
-    async def acollect(self, df: BackendFrameT) -> BackendFrameT:
+    async def acollect(self, df: BackendFrameT, *, options: ExecutionOptions | None = None) -> BackendFrameT:
         ...
 
-    async def ato_dicts(self, df: BackendFrameT) -> list[dict[str, object]]:
+    async def ato_dicts(
+        self, df: BackendFrameT, *, options: ExecutionOptions | None = None
+    ) -> list[dict[str, object]]:
         ...
 
-    async def ato_dict(self, df: BackendFrameT) -> dict[str, list[object]]:
+    async def ato_dict(
+        self, df: BackendFrameT, *, options: ExecutionOptions | None = None
+    ) -> dict[str, list[object]]:
         ...
 ```
 
@@ -262,7 +266,8 @@ class PolarsAdapter:
     def compile_expr(self, expr: Any, *, schema: Any | None = None) -> pl.Expr:
         ...
 
-    def collect(self, df: pl.DataFrame | pl.LazyFrame):
+    def collect(self, df: pl.DataFrame | pl.LazyFrame, *, options=None):
+        _ = options
         return df.collect() if isinstance(df, pl.LazyFrame) else df
 ```
 
@@ -349,7 +354,8 @@ class PandasAdapter:
     def compile_expr(self, expr: Any, *, schema: Any | None = None) -> Any:
         ...
 
-    def collect(self, df: pd.DataFrame) -> pd.DataFrame:
+    def collect(self, df: pd.DataFrame, *, options=None) -> pd.DataFrame:
+        _ = options
         return df
 ```
 
@@ -357,7 +363,7 @@ class PandasAdapter:
 
 ## 10. Join Support
 
-Joins are **implemented** in the shipped `BaseAdapter`: symmetric `on` or asymmetric `left_on` / `right_on`, each key a column name or compiled expression (`CompiledJoinKey`), optional `JoinOptions`, and schema merge / suffix rules owned by core PlanFrame.
+Joins are **implemented** in the shipped `BaseAdapter`: symmetric `on` or asymmetric `left_on` / `right_on`, each key a column name or compiled expression (`CompiledJoinKey`), optional `JoinOptions` (including execution hints like `allow_parallel` / `force_parallel`), and schema merge / suffix rules owned by core PlanFrame.
 
 Historical note: early drafts deferred joins until collision semantics were fixed; the current protocol and Polars adapter reflect the merged design.
 

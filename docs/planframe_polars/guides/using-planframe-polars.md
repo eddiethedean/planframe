@@ -12,7 +12,7 @@ This guide covers the intended public usage pattern:
 Run:
 
 ```bash
-./.venv/bin/python docs/planframe_polars/guides/examples/basic_usage.py
+./.venv310/bin/python docs/planframe_polars/guides/examples/basic_usage.py
 ```
 
 Expected output:
@@ -92,7 +92,7 @@ out = (
 Runnable script (from repo root):
 
 ```bash
-./.venv/bin/python docs/planframe_polars/guides/examples/group_by_usage.py
+./.venv310/bin/python docs/planframe_polars/guides/examples/group_by_usage.py
 ```
 
 Expected output:
