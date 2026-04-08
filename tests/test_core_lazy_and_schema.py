@@ -1441,6 +1441,32 @@ def test_cast_many_and_cast_subset_are_lazy() -> None:
     assert [c[0] for c in adapter.calls] == ["cast", "cast", "collect"]
 
 
+def test_rename_case_helpers_are_lazy_and_detect_collisions() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S:
+        foo: int
+        bar: int
+
+    pf = Frame.source([{"foo": 1, "bar": 2}], adapter=adapter, schema=S)
+
+    out = pf.rename_upper(strict=True)
+    assert adapter.calls == []
+    rows = out.collect()
+    assert rows == [{"FOO": 1, "BAR": 2}]
+    assert [c[0] for c in adapter.calls] == ["rename", "collect"]
+
+    @dataclass(frozen=True)
+    class S2:
+        a: int
+        A: int
+
+    pf2 = Frame.source([{"a": 1, "A": 2}], adapter=adapter, schema=S2)
+    with pytest.raises(PlanFrameSchemaError, match="duplicate"):
+        _ = pf2.rename_upper(strict=True)
+
+
 def test_clip_is_lazy_and_clips_selected_columns() -> None:
     adapter = SpyAdapter()
 

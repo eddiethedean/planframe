@@ -347,6 +347,21 @@ def test_execute_plan_fill_null_subset_and_many_lower_to_fill_null() -> None:
     assert res == [{"id": 1, "a": 0, "b": 2}]
 
 
+def test_execute_plan_rename_case_helpers_lower_to_rename() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S2:
+        id: int
+        foo: int
+
+    pf = Frame.source([{"id": 1, "foo": 2}], adapter=adapter, schema=S2)
+    out = pf.rename_lower()
+    res, calls = _run(out)
+    assert calls == ["rename"]
+    assert res == [{"id": 1, "foo": 2}]
+
+
 def test_execute_plan_posexplode() -> None:
     adapter = SpyAdapter()
 
