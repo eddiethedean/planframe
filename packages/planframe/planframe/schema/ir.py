@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from dataclasses import dataclass, fields, is_dataclass
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field, fields, is_dataclass
+from types import MappingProxyType
 from typing import Any
 
 from planframe.backend.errors import PlanFrameSchemaError
@@ -40,22 +41,33 @@ class Field:
 @dataclass(frozen=True, slots=True)
 class Schema:
     fields: tuple[Field, ...]
+    _field_map: Mapping[str, Field] = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        # Cache a mapping view for hot-path lookups/validation.
+        fm = {f.name: f for f in self.fields}
+        object.__setattr__(self, "_field_map", MappingProxyType(fm))
 
     def names(self) -> tuple[str, ...]:
         return tuple(f.name for f in self.fields)
 
-    def field_map(self) -> dict[str, Field]:
-        return {f.name: f for f in self.fields}
+    def field_map(self) -> Mapping[str, Field]:
+        """Map column name -> Field.
+
+        This is cached per Schema instance to avoid repeated O(n) dict rebuilds.
+        """
+
+        return self._field_map
 
     def get(self, name: str) -> Field:
-        fm = self.field_map()
+        fm = self._field_map
         try:
             return fm[name]
         except KeyError as e:
             raise PlanFrameSchemaError(f"Unknown column: {name}") from e
 
     def select(self, columns: Iterable[str]) -> Schema:
-        fm = self.field_map()
+        fm = self._field_map
         out: list[Field] = []
         for c in columns:
             if c not in fm:
@@ -65,7 +77,7 @@ class Schema:
 
     def project(self, items: tuple[ProjectPick | ProjectExpr, ...]) -> Schema:
         """Output schema for a mixed projection (see :class:`planframe.plan.nodes.Project`)."""
-        fm = self.field_map()
+        fm = self._field_map
         out: list[Field] = []
         seen: set[str] = set()
         for it in items:
@@ -86,7 +98,7 @@ class Schema:
 
     def drop(self, columns: Iterable[str], *, strict: bool = True) -> Schema:
         drop_set = set(columns)
-        fm = self.field_map()
+        fm = self._field_map
         if strict:
             missing = drop_set.difference(fm.keys())
             if missing:
@@ -97,7 +109,7 @@ class Schema:
         return Schema(fields=tuple(f for f in self.fields if f.name not in to_drop))
 
     def rename(self, mapping: dict[str, str], *, strict: bool = True) -> Schema:
-        fm = self.field_map()
+        fm = self._field_map
         if strict:
             missing = set(mapping.keys()).difference(fm.keys())
             if missing:
@@ -120,7 +132,7 @@ class Schema:
         return Schema(fields=tuple(out_fields))
 
     def with_column(self, name: str, dtype: PFType) -> Schema:
-        fm = self.field_map()
+        fm = self._field_map
         if name in fm:
             out = [
                 Field(name=f.name, dtype=(dtype if f.name == name else f.dtype))
@@ -130,13 +142,13 @@ class Schema:
         return Schema(fields=tuple([*self.fields, Field(name=name, dtype=dtype)]))
 
     def cast(self, name: str, dtype: PFType) -> Schema:
-        if name not in self.field_map():
+        if name not in self._field_map:
             raise PlanFrameSchemaError(f"Cannot cast missing column: {name}")
         return self.with_column(name=name, dtype=dtype)
 
     def select_exclude(self, columns: Iterable[str]) -> Schema:
         drop_set = set(columns)
-        fm = self.field_map()
+        fm = self._field_map
         missing = drop_set.difference(fm.keys())
         if missing:
             raise PlanFrameSchemaError(f"Cannot exclude missing columns: {sorted(missing)}")
@@ -144,7 +156,7 @@ class Schema:
 
     def reorder_columns(self, columns: Iterable[str]) -> Schema:
         cols = tuple(columns)
-        fm = self.field_map()
+        fm = self._field_map
         missing = set(cols).difference(fm.keys())
         if missing:
             raise PlanFrameSchemaError(f"Cannot reorder with missing columns: {sorted(missing)}")
@@ -160,7 +172,7 @@ class Schema:
 
     def select_first(self, columns: Iterable[str]) -> Schema:
         cols = tuple(columns)
-        fm = self.field_map()
+        fm = self._field_map
         missing = set(cols).difference(fm.keys())
         if missing:
             raise PlanFrameSchemaError(f"Cannot select_first missing columns: {sorted(missing)}")
@@ -171,7 +183,7 @@ class Schema:
 
     def select_last(self, columns: Iterable[str]) -> Schema:
         cols = tuple(columns)
-        fm = self.field_map()
+        fm = self._field_map
         missing = set(cols).difference(fm.keys())
         if missing:
             raise PlanFrameSchemaError(f"Cannot select_last missing columns: {sorted(missing)}")
@@ -183,7 +195,7 @@ class Schema:
     def move(self, column: str, *, before: str | None = None, after: str | None = None) -> Schema:
         if (before is None) == (after is None):
             raise PlanFrameSchemaError("move requires exactly one of before= or after=")
-        fm = self.field_map()
+        fm = self._field_map
         if column not in fm:
             raise PlanFrameSchemaError(f"Cannot move missing column: {column}")
         anchor = before if before is not None else after
@@ -270,7 +282,7 @@ class Schema:
         right_map = right.field_map()
 
         def _validate_side(
-            keys: tuple[JoinKeyColumn | JoinKeyExpr, ...], fm: dict[str, Field], side: str
+            keys: tuple[JoinKeyColumn | JoinKeyExpr, ...], fm: Mapping[str, Field], side: str
         ) -> None:
             for k in keys:
                 if isinstance(k, JoinKeyColumn):
