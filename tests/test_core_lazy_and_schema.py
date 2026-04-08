@@ -19,7 +19,7 @@ from planframe.backend.errors import (
     PlanFrameSchemaError,
 )
 from planframe.expr import Expr, add, col, eq, lit, mul, over
-from planframe.expr.api import Add, Col, Lit, Mul, StrLower, Sub
+from planframe.expr.api import Add, AggExpr, Col, Lit, Mul, StrLower, Sub, TrueDiv
 from planframe.frame import Frame
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import Project
@@ -37,29 +37,42 @@ class UserPD(BaseModel):
     age: int
 
 
-def _spy_sort_scalar_from_expr(row: dict[str, Any], expr: Any) -> Any:
-    """Minimal PlanFrame expr evaluation for SpyAdapter.sort expression keys."""
+def _spy_row_expr(row: dict[str, Any], expr: Any) -> Any:
+    """Minimal PlanFrame expr evaluation for SpyAdapter (sort keys, group keys, agg inners)."""
 
     if isinstance(expr, Col):
         return row[expr.name]
     if isinstance(expr, Lit):
         return expr.value
     if isinstance(expr, Add):
-        return _spy_sort_scalar_from_expr(row, expr.left) + _spy_sort_scalar_from_expr(
-            row, expr.right
-        )
+        return _spy_row_expr(row, expr.left) + _spy_row_expr(row, expr.right)
     if isinstance(expr, Sub):
-        return _spy_sort_scalar_from_expr(row, expr.left) - _spy_sort_scalar_from_expr(
-            row, expr.right
-        )
+        return _spy_row_expr(row, expr.left) - _spy_row_expr(row, expr.right)
     if isinstance(expr, Mul):
-        return _spy_sort_scalar_from_expr(row, expr.left) * _spy_sort_scalar_from_expr(
-            row, expr.right
-        )
+        return _spy_row_expr(row, expr.left) * _spy_row_expr(row, expr.right)
+    if isinstance(expr, TrueDiv):
+        return _spy_row_expr(row, expr.left) / _spy_row_expr(row, expr.right)
     if isinstance(expr, StrLower):
-        v = _spy_sort_scalar_from_expr(row, expr.value)
+        v = _spy_row_expr(row, expr.value)
         return v.lower() if isinstance(v, str) else v
-    raise NotImplementedError(f"SpyAdapter.sort expr not supported: {type(expr).__name__}")
+    raise NotImplementedError(f"SpyAdapter expr not supported: {type(expr).__name__}")
+
+
+def _spy_agg_reduce(values: list[Any], op: str) -> Any:
+    non_null = [v for v in values if v is not None]
+    if op == "count":
+        return len(non_null)
+    if op == "sum":
+        return sum(non_null)
+    if op == "mean":
+        return sum(non_null) / len(non_null) if non_null else float("nan")
+    if op == "min":
+        return min(non_null) if non_null else None
+    if op == "max":
+        return max(non_null) if non_null else None
+    if op == "n_unique":
+        return len(set(non_null))
+    raise ValueError(f"unknown agg op: {op!r}")
 
 
 class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
@@ -172,8 +185,8 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
                 if k.column is not None:
                     va, vb = ra.get(k.column), rb.get(k.column)
                 else:
-                    va = _spy_sort_scalar_from_expr(ra, k.expr)
-                    vb = _spy_sort_scalar_from_expr(rb, k.expr)
+                    va = _spy_row_expr(ra, k.expr)
+                    vb = _spy_row_expr(rb, k.expr)
                 r = cmp_vals(va, vb, desc, nl)
                 if r != 0:
                     return r
@@ -255,7 +268,7 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         df: list[dict[str, Any]],
         *,
         keys: tuple[CompiledJoinKey[object], ...],
-        named_aggs: dict[str, tuple[str, str]],
+        named_aggs: dict[str, tuple[str, str] | AggExpr],
     ) -> list[dict[str, Any]]:
         self.calls.append(("group_by_agg", (keys, dict(named_aggs))))
         out_names = tuple(
@@ -269,7 +282,7 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
                 if k.column is not None:
                     parts.append(row[k.column])
                 else:
-                    parts.append(_spy_sort_scalar_from_expr(row, k.expr))
+                    parts.append(_spy_row_expr(row, k.expr))
             return tuple(parts)
 
         groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
@@ -279,14 +292,21 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         out: list[dict[str, Any]] = []
         for pk, rows in groups.items():
             base = {out_names[i]: pk[i] for i in range(len(keys))}
-            for out_name, (op, col_name) in named_aggs.items():
-                vals = [r[col_name] for r in rows]
-                if op == "count":
-                    base[out_name] = len(vals)
-                elif op == "sum":
-                    base[out_name] = sum(vals)  # type: ignore[arg-type]
+            for out_name, spec in named_aggs.items():
+                if isinstance(spec, tuple):
+                    op, col_name = spec
+                    vals = [r[col_name] for r in rows]
+                    if op == "count":
+                        base[out_name] = len(vals)
+                    elif op == "sum":
+                        base[out_name] = sum(vals)  # type: ignore[arg-type]
+                    else:
+                        base[out_name] = None
+                elif isinstance(spec, AggExpr):
+                    inner_vals = [_spy_row_expr(r, spec.inner) for r in rows]
+                    base[out_name] = _spy_agg_reduce(inner_vals, spec.op)
                 else:
-                    base[out_name] = None
+                    raise TypeError(f"unsupported named agg spec: {type(spec)!r}")
             out.append(dict(base))
         return out
 
@@ -361,7 +381,7 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
                 if k.column is not None:
                     parts.append(row[k.column])
                 else:
-                    parts.append(_spy_sort_scalar_from_expr(row, k.expr))
+                    parts.append(_spy_row_expr(row, k.expr))
             return tuple(parts)
 
         right_skip: set[str] = set()
@@ -918,6 +938,47 @@ def test_group_by_expr_rejects_unknown_column() -> None:
     pf = Frame.source([{"id": 1}], adapter=adapter, schema=UserDC)
     with pytest.raises(PlanFrameSchemaError):
         pf.group_by(lower(col("nope")))
+
+
+def test_group_by_agg_expr_sum_ratio_spy() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class Row:
+        id: int
+        rev: int
+        clicks: int
+
+    from planframe.expr import agg_sum, truediv
+
+    pf = Frame.source(
+        [
+            {"id": 1, "rev": 10, "clicks": 2},
+            {"id": 1, "rev": 30, "clicks": 2},
+            {"id": 2, "rev": 100, "clicks": 5},
+        ],
+        adapter=adapter,
+        schema=Row,
+    )
+    out = (
+        pf.group_by("id")
+        .agg(
+            total_rev=("sum", "rev"),
+            rpc=agg_sum(truediv(col("rev"), col("clicks"))),
+        )
+        .sort("id")
+    )
+    rows = out.collect()
+    assert rows[0]["rpc"] == 20
+    assert rows[0]["total_rev"] == 40
+    assert rows[1]["rpc"] == 20
+
+
+def test_group_by_agg_rejects_non_agg_expression() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": 10}], adapter=adapter, schema=UserDC)
+    with pytest.raises(PlanFrameSchemaError, match="agg expects"):
+        pf.group_by("id").agg(x=col("age"))
 
 
 def test_join_expression_keys_inner() -> None:

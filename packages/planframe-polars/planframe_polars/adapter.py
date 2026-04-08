@@ -131,7 +131,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         df: PolarsBackendFrame,
         *,
         keys: tuple[CompiledJoinKey[pl.Expr], ...],
-        named_aggs: dict[str, tuple[str, str]],
+        named_aggs: dict[str, tuple[str, str] | pl.Expr],
     ) -> PolarsBackendFrame:
         if not keys:
             raise ValueError("keys must be non-empty")
@@ -144,23 +144,27 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
             else:
                 raise ValueError("CompiledJoinKey requires column or expr")
         agg_exprs: list[pl.Expr] = []
-        for out_name, (op, col) in named_aggs.items():
-            e = pl.col(col)
-            if op == "count":
-                ex = e.count()
-            elif op == "sum":
-                ex = e.sum()
-            elif op == "mean":
-                ex = e.mean()
-            elif op == "min":
-                ex = e.min()
-            elif op == "max":
-                ex = e.max()
-            elif op == "n_unique":
-                ex = e.n_unique()
+        for out_name, spec in named_aggs.items():
+            if isinstance(spec, tuple):
+                op, col = spec
+                e = pl.col(col)
+                if op == "count":
+                    ex = e.count()
+                elif op == "sum":
+                    ex = e.sum()
+                elif op == "mean":
+                    ex = e.mean()
+                elif op == "min":
+                    ex = e.min()
+                elif op == "max":
+                    ex = e.max()
+                elif op == "n_unique":
+                    ex = e.n_unique()
+                else:
+                    raise ValueError(f"Unsupported agg op: {op!r}")
+                agg_exprs.append(ex.alias(out_name))
             else:
-                raise ValueError(f"Unsupported agg op: {op!r}")
-            agg_exprs.append(ex.alias(out_name))
+                agg_exprs.append(spec.alias(out_name))
         return df.group_by(*by_exprs).agg(agg_exprs)
 
     def drop_nulls(

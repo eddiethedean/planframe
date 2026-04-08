@@ -335,6 +335,15 @@ def test_group_by_expression_key_polars() -> None:
     assert collected["total"].to_list() == [3, 10]
 
 
+def test_group_by_agg_expression_polars() -> None:
+    from planframe.expr import agg_sum, truediv
+
+    pf = User({"id": [1, 1, 2], "age": [10, 20, 15], "name": ["a", "b", "c"]})
+    out = pf.group_by("id").agg(s=agg_sum(truediv(col("age"), col("id")))).sort("id")
+    collected = out.collect()
+    assert collected["s"].to_list() == [30.0, 7.5]
+
+
 def test_sort_descending() -> None:
     pf = User({"id": [2, 1, 3], "name": ["b", "a", "c"], "age": [20, 10, 30]})
     out = pf.sort("id", descending=True).collect()

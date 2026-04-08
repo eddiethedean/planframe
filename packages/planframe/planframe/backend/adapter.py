@@ -138,9 +138,13 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         df: BackendFrameT,
         *,
         keys: tuple[CompiledJoinKey[BackendExprT], ...],
-        named_aggs: dict[str, tuple[str, str]],
+        named_aggs: dict[str, tuple[str, str] | BackendExprT],
     ) -> BackendFrameT:
-        """Group *df* by *keys* (column or compiled expression per slot), then apply *named_aggs*."""
+        """Group *df* by *keys*, then apply *named_aggs*.
+
+        Each aggregation is either ``(op, column_name)`` or a compiled backend expression
+        produced from :class:`planframe.expr.api.AggExpr` (already an aggregation expr).
+        """
         ...
 
     @abstractmethod

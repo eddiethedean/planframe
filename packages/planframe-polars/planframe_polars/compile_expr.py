@@ -8,6 +8,7 @@ from planframe.backend.errors import PlanFrameExpressionError
 from planframe.expr.api import (
     Abs,
     Add,
+    AggExpr,
     And,
     Between,
     Ceil,
@@ -175,5 +176,20 @@ def compile_expr(expr: Expr[Any]) -> pl.Expr:
         return compile_expr(expr.value).sqrt()
     if isinstance(expr, IsFinite):
         return compile_expr(expr.value).is_finite()
+    if isinstance(expr, AggExpr):
+        inner = compile_expr(expr.inner)
+        if expr.op == "count":
+            return inner.count()
+        if expr.op == "sum":
+            return inner.sum()
+        if expr.op == "mean":
+            return inner.mean()
+        if expr.op == "min":
+            return inner.min()
+        if expr.op == "max":
+            return inner.max()
+        if expr.op == "n_unique":
+            return inner.n_unique()
+        raise PlanFrameExpressionError(f"Unsupported aggregation op: {expr.op!r}")
 
     raise PlanFrameExpressionError(f"Unsupported expr node: {type(expr)!r}")

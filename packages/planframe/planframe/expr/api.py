@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from planframe.backend.errors import PlanFrameExpressionError
 
@@ -270,6 +270,17 @@ class IsFinite(Expr[bool]):
     value: Expr[object]
 
 
+AggOpLiteral = Literal["count", "sum", "mean", "min", "max", "n_unique"]
+
+
+@dataclass(frozen=True, slots=True)
+class AggExpr(Expr[object]):
+    """Apply an aggregation *op* to *inner* inside :meth:`~planframe.groupby.GroupedFrame.agg`."""
+
+    op: AggOpLiteral
+    inner: Expr[object]
+
+
 def col(name: str) -> Col[object]:
     return Col(name=name)
 
@@ -472,6 +483,30 @@ def is_finite(value: Expr[object]) -> IsFinite:
     return IsFinite(value=value)
 
 
+def agg_count(inner: Expr[object]) -> AggExpr:
+    return AggExpr(op="count", inner=inner)
+
+
+def agg_sum(inner: Expr[object]) -> AggExpr:
+    return AggExpr(op="sum", inner=inner)
+
+
+def agg_mean(inner: Expr[object]) -> AggExpr:
+    return AggExpr(op="mean", inner=inner)
+
+
+def agg_min(inner: Expr[object]) -> AggExpr:
+    return AggExpr(op="min", inner=inner)
+
+
+def agg_max(inner: Expr[object]) -> AggExpr:
+    return AggExpr(op="max", inner=inner)
+
+
+def agg_n_unique(inner: Expr[object]) -> AggExpr:
+    return AggExpr(op="n_unique", inner=inner)
+
+
 def _assert_bool(expr: Expr[object]) -> Expr[bool]:
     if isinstance(
         expr,
@@ -558,6 +593,12 @@ def infer_dtype(expr: Expr[Any]) -> Any:
     ):
         return object
     if isinstance(expr, (StrLen, DtYear, DtMonth, DtDay)):
+        return object
+    if isinstance(expr, AggExpr):
+        if expr.op in {"count", "n_unique"}:
+            return int
+        if expr.op == "mean":
+            return float
         return object
     if isinstance(expr, Col):
         return Any

@@ -1,7 +1,14 @@
 from planframe.expr.api import (
+    AggExpr,
     Expr,
     abs_,
     add,
+    agg_count,
+    agg_max,
+    agg_mean,
+    agg_min,
+    agg_n_unique,
+    agg_sum,
     and_,
     between,
     ceil,
@@ -49,8 +56,15 @@ from planframe.expr.api import (
 )
 
 __all__ = [
+    "AggExpr",
     "Expr",
     "add",
+    "agg_count",
+    "agg_max",
+    "agg_mean",
+    "agg_min",
+    "agg_n_unique",
+    "agg_sum",
     "abs_",
     "and_",
     "between",

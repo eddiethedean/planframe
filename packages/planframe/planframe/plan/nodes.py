@@ -140,7 +140,7 @@ class GroupBy(PlanNode):
 @dataclass(frozen=True, slots=True)
 class Agg(PlanNode):
     prev: PlanNode
-    named_aggs: dict[str, tuple[str, str]]
+    named_aggs: dict[str, tuple[str, str] | Expr[Any]]
 
 
 @dataclass(frozen=True, slots=True)
