@@ -482,15 +482,19 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
                 out.append(r2)
         return out
 
-    def unnest(self, df: list[dict[str, Any]], column: str) -> list[dict[str, Any]]:
-        self.calls.append(("unnest", column))
+    def unnest(
+        self, df: list[dict[str, Any]], column: str, *, fields: tuple[str, ...]
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("unnest", (column, fields)))
         out: list[dict[str, Any]] = []
         for r in df:
             s = r.get(column) or {}
             r2 = dict(r)
             r2.pop(column, None)
             if isinstance(s, dict):
-                r2.update(s)
+                for k in fields:
+                    if k in s:
+                        r2[k] = s[k]
             out.append(r2)
         return out
 
@@ -1205,6 +1209,20 @@ def test_new_transforms_are_lazy() -> None:
     )
     assert adapter.calls == []
     _ = out.collect()
+
+
+def test_unnest_plan_node_carries_fields() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S:
+        id: int
+        s: object
+
+    pf = Frame.source([{"id": 1, "s": {"a": 1, "b": 2}}], adapter=adapter, schema=S)
+    out = pf.unnest("s", fields=("a", "b")).collect()
+    assert out == [{"id": 1, "a": 1, "b": 2}]
+    assert ("unnest", ("s", ("a", "b"))) in adapter.calls
 
 
 def test_write_methods_execute_and_are_boundaries(tmp_path: Any) -> None:

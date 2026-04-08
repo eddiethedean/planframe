@@ -312,7 +312,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if isinstance(node, Explode):
             return self._adapter.explode(self._eval(node.prev), node.column)
         if isinstance(node, Unnest):
-            return self._adapter.unnest(self._eval(node.prev), node.column)
+            return self._adapter.unnest(self._eval(node.prev), node.column, fields=node.fields)
         if isinstance(node, ConcatHorizontal):
             left_df = self._eval(node.prev)
             other_frame = node.other
@@ -908,7 +908,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Unnest(self._plan, column=column),
+            _plan=Unnest(self._plan, column=column, fields=fields),
             _schema=schema2,
         )
 

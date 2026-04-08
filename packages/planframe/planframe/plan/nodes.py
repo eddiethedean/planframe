@@ -222,6 +222,7 @@ class Explode(PlanNode):
 class Unnest(PlanNode):
     prev: PlanNode
     column: str
+    fields: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
