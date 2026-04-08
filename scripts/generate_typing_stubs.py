@@ -98,6 +98,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("")
     a("    def schema(self) -> Schema: ...")
     a("    def plan(self) -> PlanNode: ...")
+    a("    def optimize(self, *, level: Literal[0, 1, 2] = ...) -> Self: ...")
     a("")
     a("    # NOTE: Pyright's behavior around LiteralString vs str can be permissive.")
     a("    # Overloads here are intended to encourage literal call sites and improve IDE help.")
