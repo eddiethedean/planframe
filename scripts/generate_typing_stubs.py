@@ -237,7 +237,9 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a(
         "    def group_by(self, *keys: Any) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ..."
     )
-    a("    def drop_nulls(self, *subset: LiteralString) -> Self: ...")
+    a(
+        '    def drop_nulls(self, *subset: LiteralString, how: Literal["any", "all"] = ..., threshold: int | None = ...) -> Self: ...'
+    )
     a("    def fill_null(self, value: Any, *subset: LiteralString) -> Self: ...")
     a("    def melt(")
     a("        self,")

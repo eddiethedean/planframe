@@ -248,7 +248,12 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 named_aggs=compiled_aggs,
             )
         if isinstance(node, DropNulls):
-            return self._adapter.drop_nulls(self._eval(node.prev), node.subset)
+            return self._adapter.drop_nulls(
+                self._eval(node.prev),
+                node.subset,
+                how=node.how,
+                threshold=node.threshold,
+            )
         if isinstance(node, FillNull):
             return self._adapter.fill_null(self._eval(node.prev), node.value, node.subset)
         if isinstance(node, Melt):
@@ -700,15 +705,24 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _key_items=items,
         )
 
-    def drop_nulls(self, *subset: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def drop_nulls(
+        self,
+        *subset: str,
+        how: Literal["any", "all"] = "any",
+        threshold: int | None = None,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         sub = tuple(subset) if subset else None
+        if how not in ("any", "all"):
+            raise ValueError("drop_nulls how must be 'any' or 'all'")
+        if threshold is not None and threshold < 0:
+            raise ValueError("drop_nulls threshold must be non-negative")
         if sub is not None:
             self._schema.select(sub)  # validate
         schema2 = self._schema.drop_nulls()
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=DropNulls(self._plan, subset=sub),
+            _plan=DropNulls(self._plan, subset=sub, how=how, threshold=threshold),
             _schema=schema2,
         )
 

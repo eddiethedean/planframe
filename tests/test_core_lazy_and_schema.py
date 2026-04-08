@@ -310,11 +310,36 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         return out
 
     def drop_nulls(
-        self, df: list[dict[str, Any]], subset: tuple[str, ...] | None
+        self,
+        df: list[dict[str, Any]],
+        subset: tuple[str, ...] | None,
+        *,
+        how: str = "any",
+        threshold: int | None = None,
     ) -> list[dict[str, Any]]:
-        self.calls.append(("drop_nulls", subset))
-        cols = subset or tuple(df[0].keys())
-        return [r for r in df if all(r.get(c) is not None for c in cols)]
+        self.calls.append(("drop_nulls", (subset, how, threshold)))
+        if how not in ("any", "all"):
+            raise ValueError("how must be 'any' or 'all'")
+        if threshold is not None and threshold < 0:
+            raise ValueError("threshold must be non-negative")
+
+        cols = subset or (tuple(df[0].keys()) if df else ())
+        if not cols:
+            return list(df)
+
+        out: list[dict[str, Any]] = []
+        for r in df:
+            vals = [r.get(c) for c in cols]
+            non_null = sum(v is not None for v in vals)
+            if threshold is not None:
+                keep = non_null >= threshold
+            elif how == "all":
+                keep = any(v is not None for v in vals)
+            else:  # how == "any"
+                keep = all(v is not None for v in vals)
+            if keep:
+                out.append(r)
+        return out
 
     def fill_null(
         self, df: list[dict[str, Any]], value: Any, subset: tuple[str, ...] | None

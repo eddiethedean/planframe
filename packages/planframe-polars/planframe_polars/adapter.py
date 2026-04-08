@@ -175,11 +175,46 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         return df.group_by(*by_exprs).agg(agg_exprs)
 
     def drop_nulls(
-        self, df: PolarsBackendFrame, subset: tuple[str, ...] | None
+        self,
+        df: PolarsBackendFrame,
+        subset: tuple[str, ...] | None,
+        *,
+        how: Literal["any", "all"] = "any",
+        threshold: int | None = None,
     ) -> PolarsBackendFrame:
-        if subset is None:
-            return df.drop_nulls()
-        return df.drop_nulls(list(subset))
+        if how not in ("any", "all"):
+            raise ValueError("drop_nulls how must be 'any' or 'all'")
+        if threshold is not None and threshold < 0:
+            raise ValueError("drop_nulls threshold must be non-negative")
+
+        if subset is not None:
+            cols = list(subset)
+        elif isinstance(df, pl.LazyFrame):
+            cols = list(df.collect_schema().names())
+        else:
+            cols = list(df.columns)
+
+        # Fast path: Polars has built-in drop_nulls = "any" semantics.
+        if how == "any" and threshold is None:
+            if subset is None:
+                return df.drop_nulls()
+            return df.drop_nulls(cols)
+
+        if not cols:
+            return df
+
+        # Keep rows based on row-wise null logic.
+        if threshold is not None:
+            # Keep if non-null count >= threshold.
+            nn = pl.sum_horizontal([pl.col(c).is_not_null().cast(pl.Int64) for c in cols])
+            return df.filter(nn >= threshold)
+
+        if how == "all":
+            all_null = pl.all_horizontal([pl.col(c).is_null() for c in cols])
+            return df.filter(~all_null)
+
+        # (how == "any", threshold is None) handled earlier.
+        return df
 
     def fill_null(
         self, df: PolarsBackendFrame, value: Any, subset: tuple[str, ...] | None

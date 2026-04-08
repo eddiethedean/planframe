@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
@@ -147,6 +147,8 @@ class Agg(PlanNode):
 class DropNulls(PlanNode):
     prev: PlanNode
     subset: tuple[str, ...] | None
+    how: Literal["any", "all"] = "any"
+    threshold: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

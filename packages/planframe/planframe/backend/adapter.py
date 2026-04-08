@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from planframe.plan.join_options import JoinOptions
 from planframe.schema.ir import Schema
@@ -154,6 +154,9 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         self,
         df: BackendFrameT,
         subset: tuple[str, ...] | None,
+        *,
+        how: Literal["any", "all"] = "any",
+        threshold: int | None = None,
     ) -> BackendFrameT: ...
 
     @abstractmethod
