@@ -6,6 +6,7 @@ from typing import Any, Generic, Literal, TypeVar
 
 from planframe.backend.adapter import (
     BackendAdapter,
+    CompiledJoinKey,
     CompiledProjectItem,
     CompiledSortKey,
 )
@@ -32,6 +33,8 @@ from planframe.plan.nodes import (
     GroupBy,
     Head,
     Join,
+    JoinKeyColumn,
+    JoinKeyExpr,
     Melt,
     Pivot,
     PlanNode,
@@ -123,6 +126,33 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             raise PlanFrameBackendError(
                 f"Failed to compile expression for backend {self._adapter.name}"
             ) from e
+
+    def _compile_join_keys_tuple(
+        self, keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
+    ) -> tuple[CompiledJoinKey[BackendExprT], ...]:
+        out: list[CompiledJoinKey[BackendExprT]] = []
+        for k in keys:
+            if isinstance(k, JoinKeyColumn):
+                out.append(CompiledJoinKey(column=k.name, expr=None))
+            else:
+                out.append(CompiledJoinKey(column=None, expr=self._compile(k.expr)))
+        return tuple(out)
+
+    def _normalize_join_keys(
+        self, items: tuple[str | Expr[Any], ...]
+    ) -> tuple[JoinKeyColumn | JoinKeyExpr, ...]:
+        out: list[JoinKeyColumn | JoinKeyExpr] = []
+        for x in items:
+            if isinstance(x, str):
+                out.append(JoinKeyColumn(name=x))
+            elif isinstance(x, Expr):
+                out.append(JoinKeyExpr(expr=x))
+            else:
+                raise TypeError(
+                    "join keys must be column names (str) or Expr, "
+                    f"got {type(x).__name__!r}"
+                )
+        return tuple(out)
 
     def _eval(self, node: PlanNode) -> BackendFrameT:
         if isinstance(node, Source):
@@ -226,11 +256,17 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             if right_frame._adapter.name != self._adapter.name:
                 raise PlanFrameBackendError("Cannot join frames from different backends")
             right_df = right_frame._eval(right_frame._plan)
+            if node.left_keys is node.right_keys:
+                compiled = self._compile_join_keys_tuple(node.left_keys)
+                lo = ro = compiled
+            else:
+                lo = self._compile_join_keys_tuple(node.left_keys)
+                ro = self._compile_join_keys_tuple(node.right_keys)
             return self._adapter.join(
                 left_df,
                 right_df,
-                left_on=node.left_keys,
-                right_on=node.right_keys,
+                left_on=lo,
+                right_on=ro,
                 how=node.how,
                 suffix=node.suffix,
                 options=node.options,
@@ -691,9 +727,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self,
         other: Frame[Any, BackendFrameT, BackendExprT],
         *,
-        on: tuple[str, ...] | None = None,
-        left_on: tuple[str, ...] | None = None,
-        right_on: tuple[str, ...] | None = None,
+        on: tuple[str | Expr[Any], ...] | None = None,
+        left_on: tuple[str | Expr[Any], ...] | None = None,
+        right_on: tuple[str | Expr[Any], ...] | None = None,
         how: Literal["inner", "left", "right", "full", "semi", "anti", "cross"] = "inner",
         suffix: str = "_right",
         options: JoinOptions | None = None,
@@ -702,15 +738,16 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             if on is not None or left_on is not None or right_on is not None:
                 raise ValueError("cross join must not specify join keys (on, left_on, or right_on)")
             schema2 = self._schema.join_merge_cross(other._schema, suffix=suffix)
-            lk: tuple[str, ...] = ()
-            rk: tuple[str, ...] = ()
+            lk: tuple[JoinKeyColumn | JoinKeyExpr, ...] = ()
+            rk: tuple[JoinKeyColumn | JoinKeyExpr, ...] = ()
         else:
             if on is not None:
                 if left_on is not None or right_on is not None:
                     raise ValueError("join(): pass either on= or left_on=/right_on=, not both")
-                lk = rk = tuple(on)
+                lk = rk = self._normalize_join_keys(tuple(on))
             elif left_on is not None and right_on is not None:
-                lk, rk = tuple(left_on), tuple(right_on)
+                lk = self._normalize_join_keys(tuple(left_on))
+                rk = self._normalize_join_keys(tuple(right_on))
             elif left_on is not None or right_on is not None:
                 raise ValueError("join(): left_on and right_on must be provided together")
             else:

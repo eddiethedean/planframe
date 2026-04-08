@@ -481,6 +481,38 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         options: JoinOptions | None = ...,
     ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
     @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        on: tuple[LiteralString | Expr[Any], ...],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        left_on: tuple[LiteralString | Expr[Any], ...],
+        right_on: tuple[LiteralString | Expr[Any], ...],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        on: tuple[Any, ...] | None = ...,
+        left_on: tuple[Any, ...] | None = ...,
+        right_on: tuple[Any, ...] | None = ...,
+        how: Any = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[Any, BackendFrameT, BackendExprT]: ...
+    @overload
     def collect(self) -> BackendFrameT: ...
 
     @overload

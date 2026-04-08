@@ -7,17 +7,23 @@ from typing import Any, cast
 import pytest
 from pydantic import BaseModel
 
-from planframe.backend.adapter import BackendAdapter, CompiledProjectItem, CompiledSortKey
+from planframe.backend.adapter import (
+    BackendAdapter,
+    CompiledJoinKey,
+    CompiledProjectItem,
+    CompiledSortKey,
+)
 from planframe.backend.errors import (
     PlanFrameBackendError,
     PlanFrameExpressionError,
     PlanFrameSchemaError,
 )
 from planframe.expr import Expr, add, col, eq, lit, mul, over
-from planframe.expr.api import Add, Col, Lit, Mul, Sub
+from planframe.expr.api import Add, Col, Lit, Mul, StrLower, Sub
 from planframe.frame import Frame
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import Project
+from planframe.schema.ir import collect_col_names_in_expr
 
 
 @dataclass(frozen=True)
@@ -50,6 +56,9 @@ def _spy_sort_scalar_from_expr(row: dict[str, Any], expr: Any) -> Any:
         return _spy_sort_scalar_from_expr(row, expr.left) * _spy_sort_scalar_from_expr(
             row, expr.right
         )
+    if isinstance(expr, StrLower):
+        v = _spy_sort_scalar_from_expr(row, expr.value)
+        return v.lower() if isinstance(v, str) else v
     raise NotImplementedError(f"SpyAdapter.sort expr not supported: {type(expr).__name__}")
 
 
@@ -310,8 +319,8 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         left: list[dict[str, Any]],
         right: list[dict[str, Any]],
         *,
-        left_on: tuple[str, ...],
-        right_on: tuple[str, ...],
+        left_on: tuple[CompiledJoinKey[object], ...],
+        right_on: tuple[CompiledJoinKey[object], ...],
         how: str = "inner",
         suffix: str = "_right",
         options: JoinOptions | None = None,
@@ -331,18 +340,35 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
             return out
         if how != "inner":
             raise NotImplementedError("SpyAdapter only implements inner and cross join for tests")
+
+        def join_key(row: dict[str, Any], keys: tuple[CompiledJoinKey[object], ...]) -> tuple[Any, ...]:
+            parts: list[Any] = []
+            for k in keys:
+                if k.column is not None:
+                    parts.append(row[k.column])
+                else:
+                    parts.append(_spy_sort_scalar_from_expr(row, k.expr))
+            return tuple(parts)
+
+        right_skip: set[str] = set()
+        for k in right_on:
+            if k.column is not None:
+                right_skip.add(k.column)
+            elif k.expr is not None:
+                right_skip.update(collect_col_names_in_expr(k.expr))
+
         right_index: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
         for r in right:
-            k = tuple(r[c] for c in right_on)
-            right_index.setdefault(k, []).append(r)
+            rk = join_key(r, right_on)
+            right_index.setdefault(rk, []).append(r)
         out2: list[dict[str, Any]] = []
         for left_row in left:
-            lk = tuple(left_row[c] for c in left_on)
+            lk = join_key(left_row, left_on)
             matches = right_index.get(lk, [])
             for r in matches:
                 row = dict(left_row)
                 for rk, rv in r.items():
-                    if rk in right_on:
+                    if rk in right_skip:
                         continue
                     out_key = rk
                     if out_key in row:
@@ -834,8 +860,44 @@ def test_join_asymmetric_keys_inner() -> None:
 
     collected = out.collect()
     assert collected == [{"user_id": 1, "x": 10, "y": 100}]
-    assert adapter.calls[0][1][0] == ("user_id",)
-    assert adapter.calls[0][1][1] == ("id",)
+    assert adapter.calls[0][1][0] == (CompiledJoinKey(column="user_id", expr=None),)
+    assert adapter.calls[0][1][1] == (CompiledJoinKey(column="id", expr=None),)
+
+
+def test_join_expression_keys_inner() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class Left:
+        id: int
+        email: str
+
+    @dataclass(frozen=True)
+    class Right:
+        id: int
+        email_norm: str
+
+    left = Frame.source(
+        [{"id": 1, "email": "A@x.com"}, {"id": 2, "email": "b@x.com"}],
+        adapter=adapter,
+        schema=Left,
+    )
+    right = Frame.source(
+        [{"id": 10, "email_norm": "a@x.com"}, {"id": 20, "email_norm": "b@x.com"}],
+        adapter=adapter,
+        schema=Right,
+    )
+    from planframe.expr import lower
+
+    out = left.join(
+        right,
+        left_on=(lower(col("email")),),
+        right_on=(lower(col("email_norm")),),
+        how="inner",
+    )
+    collected = out.collect()
+    assert len(collected) == 2
+    assert {r["id"] for r in collected} == {1, 2}
 
 
 def test_join_cross_is_lazy_and_cartesian_in_spy() -> None:

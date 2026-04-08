@@ -4,7 +4,12 @@ from typing import Any, Literal, cast
 
 import polars as pl
 
-from planframe.backend.adapter import BaseAdapter, CompiledProjectItem, CompiledSortKey
+from planframe.backend.adapter import (
+    BaseAdapter,
+    CompiledJoinKey,
+    CompiledProjectItem,
+    CompiledSortKey,
+)
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
 from planframe_polars.compile_expr import compile_expr
@@ -187,8 +192,8 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         left: PolarsBackendFrame,
         right: PolarsBackendFrame,
         *,
-        left_on: tuple[str, ...],
-        right_on: tuple[str, ...],
+        left_on: tuple[CompiledJoinKey[pl.Expr], ...],
+        right_on: tuple[CompiledJoinKey[pl.Expr], ...],
         how: str = "inner",
         suffix: str = "_right",
         options: JoinOptions | None = None,
@@ -218,13 +223,21 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
             how,
         )
         join_kwargs: dict[str, Any] = {"how": how_lit, "suffix": suffix}
+
+        def to_polars_key(k: CompiledJoinKey[pl.Expr]) -> str | pl.Expr:
+            if k.column is not None:
+                return k.column
+            if k.expr is not None:
+                return k.expr
+            raise ValueError("CompiledJoinKey requires column or expr")
+
         if how == "cross":
             pass
-        elif left_on == right_on:
-            join_kwargs["on"] = list(left_on)
+        elif left_on is right_on:
+            join_kwargs["on"] = [to_polars_key(k) for k in left_on]
         else:
-            join_kwargs["left_on"] = list(left_on)
-            join_kwargs["right_on"] = list(right_on)
+            join_kwargs["left_on"] = [to_polars_key(k) for k in left_on]
+            join_kwargs["right_on"] = [to_polars_key(k) for k in right_on]
 
         if options is not None:
             if options.coalesce is not None:

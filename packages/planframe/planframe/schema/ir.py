@@ -1,14 +1,31 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Any
 
 from planframe.backend.errors import PlanFrameSchemaError
-from planframe.expr.api import infer_dtype
-from planframe.plan.nodes import ProjectExpr, ProjectPick
+from planframe.expr.api import Col, Expr, infer_dtype
+from planframe.plan.nodes import JoinKeyColumn, JoinKeyExpr, ProjectExpr, ProjectPick
 
 PFType = Any
+
+
+def collect_col_names_in_expr(expr: Expr[Any]) -> frozenset[str]:
+    """Column names referenced by *expr* (for join-key validation and right-key projection)."""
+
+    if isinstance(expr, Col):
+        return frozenset({expr.name})
+    names: set[str] = set()
+    for f in fields(expr):
+        v = getattr(expr, f.name)
+        if isinstance(v, Expr):
+            names |= collect_col_names_in_expr(v)
+        elif isinstance(v, tuple):
+            for item in v:
+                if isinstance(item, Expr):
+                    names |= collect_col_names_in_expr(item)
+    return frozenset(names)
 
 
 @dataclass(frozen=True, slots=True)
@@ -239,8 +256,8 @@ class Schema:
         self,
         right: Schema,
         *,
-        left_on: tuple[str, ...],
-        right_on: tuple[str, ...],
+        left_on: tuple[JoinKeyColumn | JoinKeyExpr, ...],
+        right_on: tuple[JoinKeyColumn | JoinKeyExpr, ...],
         suffix: str = "_right",
     ) -> Schema:
         if not left_on or not right_on:
@@ -251,16 +268,34 @@ class Schema:
         left_map = self.field_map()
         right_map = right.field_map()
 
-        missing_left = set(left_on).difference(left_map.keys())
-        missing_right = set(right_on).difference(right_map.keys())
-        if missing_left:
-            raise PlanFrameSchemaError(f"Join keys missing on left: {sorted(missing_left)}")
-        if missing_right:
-            raise PlanFrameSchemaError(f"Join keys missing on right: {sorted(missing_right)}")
+        def _validate_side(
+            keys: tuple[JoinKeyColumn | JoinKeyExpr, ...], fm: dict[str, Field], side: str
+        ) -> None:
+            for k in keys:
+                if isinstance(k, JoinKeyColumn):
+                    if k.name not in fm:
+                        raise PlanFrameSchemaError(
+                            f"Join keys missing on {side}: {sorted({k.name})}"
+                        )
+                else:
+                    missing = collect_col_names_in_expr(k.expr).difference(fm.keys())
+                    if missing:
+                        raise PlanFrameSchemaError(
+                            f"Join expression references unknown columns on {side}: "
+                            f"{sorted(missing)}"
+                        )
+
+        _validate_side(left_on, left_map, "left")
+        _validate_side(right_on, right_map, "right")
 
         out_fields: list[Field] = list(self.fields)
         out_names = {f.name for f in out_fields}
-        right_keys_drop = set(right_on)
+        right_keys_drop: set[str] = set()
+        for k in right_on:
+            if isinstance(k, JoinKeyColumn):
+                right_keys_drop.add(k.name)
+            else:
+                right_keys_drop.update(collect_col_names_in_expr(k.expr))
 
         for rf in right.fields:
             if rf.name in right_keys_drop:

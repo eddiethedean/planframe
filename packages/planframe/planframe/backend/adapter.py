@@ -35,6 +35,10 @@ class CompiledSortKey(Generic[BackendExprT]):
     expr: BackendExprT | None = None
 
 
+# Join uses the same column-or-compiled-expr shape as sort keys.
+CompiledJoinKey = CompiledSortKey
+
+
 class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     """Backend execution base class.
 
@@ -169,16 +173,19 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         left: BackendFrameT,
         right: BackendFrameT,
         *,
-        left_on: tuple[str, ...],
-        right_on: tuple[str, ...],
+        left_on: tuple[CompiledJoinKey[BackendExprT], ...],
+        right_on: tuple[CompiledJoinKey[BackendExprT], ...],
         how: str = "inner",
         suffix: str = "_right",
         options: JoinOptions | None = None,
     ) -> BackendFrameT:
         """Join *right* to *left*.
 
-        For symmetric keys, *left_on* and *right_on* are identical. For a cross join, both are
-        empty tuples. *options* is backend-specific and may be ignored.
+        Each position in *left_on* pairs with the same index in *right_on*. Each entry is either
+        a column name or a compiled expression key (see :class:`CompiledJoinKey`).
+
+        For symmetric keys, *left_on* and *right_on* may be the same tuple object (``on=`` case).
+        For a cross join, both are empty tuples. *options* is backend-specific and may be ignored.
         """
         ...
 

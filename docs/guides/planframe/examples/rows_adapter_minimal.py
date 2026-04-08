@@ -3,7 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from planframe.backend.adapter import BaseAdapter, CompiledProjectItem, CompiledSortKey
+from planframe.backend.adapter import (
+    BaseAdapter,
+    CompiledJoinKey,
+    CompiledProjectItem,
+    CompiledSortKey,
+)
 from planframe.expr.api import Expr, Lit
 from planframe.frame import Frame
 from planframe.plan.join_options import JoinOptions
@@ -132,8 +137,8 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
         left: RowsFrame,
         right: RowsFrame,
         *,
-        left_on: tuple[str, ...],
-        right_on: tuple[str, ...],
+        left_on: tuple[CompiledJoinKey[Expr[object]], ...],
+        right_on: tuple[CompiledJoinKey[Expr[object]], ...],
         how: str = "inner",
         suffix: str = "_right",
         options: JoinOptions | None = None,
