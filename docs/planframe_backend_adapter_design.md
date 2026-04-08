@@ -416,6 +416,12 @@ The **shipped** `BaseAdapter` in this repository extends that surface (joins, so
 
 Adapter tests should be split into two groups.
 
+### Plan introspection (tooling)
+
+Tool builders and adapter authors can walk a plan tree using `planframe.plan.iter_plan_nodes`.
+By default it traverses only the primary `prev` chain; pass `include_side_frames=True` to
+also descend into join/concat side frames (RHS/other frame plans) in a deterministic order.
+
 ### Conformance tests
 These test that every backend satisfies the same logical behavior.
 

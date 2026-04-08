@@ -19,6 +19,7 @@ from planframe.plan.nodes import (
     Unique,
     WithColumn,
 )
+from planframe.plan.walk import iter_plan_nodes
 
 __all__ = [
     "JoinOptions",
@@ -40,4 +41,5 @@ __all__ = [
     "Source",
     "Unique",
     "WithColumn",
+    "iter_plan_nodes",
 ]
