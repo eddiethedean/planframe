@@ -26,6 +26,11 @@ class User(PolarsFrame):
 pf = User(pl.DataFrame({"id": [1], "age": [2]}))
 df = pf.select("id").collect()
 
+# Common transforms
+#
+# PlanFrame is always lazy; these build a plan until `collect()`.
+pf3 = pf.with_row_count(name="row_nr").clip(lower=0, subset=("age",))
+
 # Or construct from python data:
 pf2 = User({"id": [1], "age": [2]})
 ```

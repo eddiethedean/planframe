@@ -32,6 +32,13 @@ row_models=[('Row', 1, 'a', 11)]
 
 If you need advanced construction, use `Frame.source(...)` with a backend frame (this is intentionally “escape hatch” territory).
 
+## Row numbering and clamping
+
+Two common primitives:
+
+- `with_row_count(name="row_nr", offset=0)` adds a monotonically increasing row number column.
+- `clip(lower=..., upper=..., subset=...)` clamps numeric columns (if `subset=None`, PlanFrame clamps all numeric schema fields).
+
 ## Defaults for missing columns
 
 If your schema defines defaults, PlanFrame will fill **missing input keys/columns** on construction.

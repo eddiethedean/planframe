@@ -60,11 +60,19 @@ out = (
     pf.select("id", "name", "age")
     .with_column("age_plus_one", add(col("age"), lit(1)))
     .rename(name="full_name")
+    .with_row_count(name="row_nr")
 )
 
 Output = out.materialize_model("Output", kind="dataclass")
 df = out.collect()
 ```
+
+### New in v0.4.x
+
+Common primitives added recently:
+
+- `Frame.with_row_count(name="row_nr", offset=0)` to add a monotonically increasing row number column (lazy).
+- `Frame.clip(lower=..., upper=..., subset=...)` to clamp numeric columns (lazy; `subset=None` clamps all numeric schema fields).
 
 ### Learn more
 
@@ -101,6 +109,12 @@ Run tests:
 ```bash
 source .venv/bin/activate
 pytest
+```
+
+Run tests in parallel (optional):
+
+```bash
+pytest -n 10
 ```
 
 Run subsets:

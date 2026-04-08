@@ -14,6 +14,11 @@ Choose a path:
 - [planframe-polars](planframe_polars/index.md)
 - [planframe-pandas](planframe_pandas/index.md)
 
+## What’s new (high-level)
+
+- `Frame.with_row_count(...)`: add a monotonically increasing row-number column (lazy).
+- `Frame.clip(...)`: clamp numeric columns (lazy).
+
 ## Adding a new adapter
 
 If you’re creating a new adapter, start with:

@@ -15,3 +15,8 @@ Documentation (ReadTheDocs):
 
 - PlanFrame is **always lazy**: chaining does not touch backend data; execution happens at `collect()` boundaries.
 
+### Common transforms
+
+- `with_row_count(name="row_nr", offset=0)`: add a monotonically increasing row number column.
+- `clip(lower=..., upper=..., subset=...)`: clamp numeric columns (if `subset=None`, clamps all numeric schema fields).
+

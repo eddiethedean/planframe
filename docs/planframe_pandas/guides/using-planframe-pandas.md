@@ -38,6 +38,13 @@ PlanFrame is always lazy:
 - Chaining methods (like `.select(...)`) does **not** run pandas operations.
 - `collect()` evaluates the full plan by calling adapter methods on demand.
 
+## Row numbering and clamping
+
+Two common primitives:
+
+- `with_row_count(name="row_nr", offset=0)` adds a monotonically increasing row number column.
+- `clip(lower=..., upper=..., subset=...)` clamps numeric columns (if `subset=None`, PlanFrame clamps all numeric schema fields).
+
 ## Grouping and aggregation
 
 `group_by` takes one or more **keys**, each either a column name (`str`) or a **`planframe.expr`** expression (same general idea as `sort` / `join` keys). Keys that are expressions are not named after a single input column; in the aggregated result they appear as **`__pf_g0`**, **`__pf_g1`**, … by position in the key list.
