@@ -13,6 +13,7 @@ from planframe.backend.adapter import (
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
 from planframe_polars.compile_expr import compile_expr
+from planframe.typing.scalars import Scalar
 
 PolarsBackendFrame = pl.DataFrame | pl.LazyFrame
 
@@ -219,7 +220,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     def fill_null(
         self,
         df: PolarsBackendFrame,
-        value: Any | pl.Expr | None,
+        value: Scalar | pl.Expr | None,
         subset: tuple[str, ...] | None,
         *,
         strategy: str | None = None,

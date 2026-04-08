@@ -12,6 +12,7 @@ from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import PlanNode
 from planframe.schema.ir import Schema
 from planframe.typing._schema_types import JoinedSchema
+from planframe.typing.scalars import Scalar
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
@@ -845,7 +846,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self, *subset: LiteralString, how: Literal["any", "all"] = ..., threshold: int | None = ...
     ) -> Self: ...
     @overload
-    def fill_null(self, value: Any, *subset: LiteralString) -> Self: ...
+    def fill_null(self, value: Scalar, *subset: LiteralString) -> Self: ...
     @overload
     def fill_null(self, value: Expr[Any], *subset: LiteralString) -> Self: ...
     @overload

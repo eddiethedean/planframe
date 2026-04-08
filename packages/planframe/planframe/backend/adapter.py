@@ -7,6 +7,7 @@ from typing import Any, Generic, Literal, TypeVar
 
 from planframe.plan.join_options import JoinOptions
 from planframe.schema.ir import Schema
+from planframe.typing.scalars import Scalar
 
 BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
@@ -163,7 +164,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def fill_null(
         self,
         df: BackendFrameT,
-        value: Any | BackendExprT | None,
+        value: Scalar | BackendExprT | None,
         subset: tuple[str, ...] | None,
         *,
         strategy: str | None = None,

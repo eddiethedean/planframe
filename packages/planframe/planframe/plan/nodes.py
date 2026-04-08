@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
+from planframe.typing.scalars import Scalar
 
 
 class PlanNode:
@@ -157,7 +158,7 @@ class FillNull(PlanNode):
     # One of value or strategy must be provided.
     # - value may be a literal or an Expr (for per-cell fill)
     # - strategy names a backend-defined fill strategy (forward/backward/etc.)
-    value: Any | Expr[Any] | None
+    value: Scalar | Expr[Any] | None
     subset: tuple[str, ...] | None
     strategy: str | None = None
 

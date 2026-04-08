@@ -57,6 +57,7 @@ from planframe.plan.nodes import (
 from planframe.schema.ir import Field, Schema, collect_col_names_in_expr
 from planframe.schema.materialize import materialize_model
 from planframe.schema.source import schema_from_type
+from planframe.typing.scalars import Scalar
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
@@ -750,7 +751,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def fill_null(
         self,
-        value: Any | Expr[Any] | None = None,
+        value: Scalar | Expr[Any] | None = None,
         *subset: str,
         strategy: str | None = None,
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:

@@ -63,6 +63,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("from planframe.plan.nodes import PlanNode")
     a("from planframe.schema.ir import Schema")
     a("from planframe.typing._schema_types import JoinedSchema")
+    a("from planframe.typing.scalars import Scalar")
     a("")
     a('SchemaT = TypeVar("SchemaT")')
     a('BackendFrameT = TypeVar("BackendFrameT")')
@@ -241,7 +242,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
         '    def drop_nulls(self, *subset: LiteralString, how: Literal["any", "all"] = ..., threshold: int | None = ...) -> Self: ...'
     )
     a("    @overload")
-    a("    def fill_null(self, value: Any, *subset: LiteralString) -> Self: ...")
+    a("    def fill_null(self, value: Scalar, *subset: LiteralString) -> Self: ...")
     a("    @overload")
     a("    def fill_null(self, value: Expr[Any], *subset: LiteralString) -> Self: ...")
     a("    @overload")
