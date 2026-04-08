@@ -67,7 +67,7 @@ Output = out.materialize_model("Output", kind="dataclass")
 df = out.collect()
 ```
 
-### New in v0.5.x
+### New in v0.6.x
 
 Common primitives added recently:
 
