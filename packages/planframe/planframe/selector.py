@@ -10,7 +10,12 @@ from planframe.schema.ir import Schema
 
 @runtime_checkable
 class ColumnSelector(Protocol):
-    """Schema-only column selection protocol (no backend dependency)."""
+    """Schema-only column selection protocol (no backend dependency).
+
+    This protocol is :func:`typing.runtime_checkable`, so ``isinstance(obj, ColumnSelector)``
+    works for built-in selector types and for structural matches (objects exposing a
+    compatible ``select(self, schema: Schema) -> tuple[str, ...]`` method).
+    """
 
     def select(self, schema: Schema) -> tuple[str, ...]: ...
 
