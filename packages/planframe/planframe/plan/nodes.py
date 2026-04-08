@@ -154,8 +154,12 @@ class DropNulls(PlanNode):
 @dataclass(frozen=True, slots=True)
 class FillNull(PlanNode):
     prev: PlanNode
-    value: Any
+    # One of value or strategy must be provided.
+    # - value may be a literal or an Expr (for per-cell fill)
+    # - strategy names a backend-defined fill strategy (forward/backward/etc.)
+    value: Any | Expr[Any] | None
     subset: tuple[str, ...] | None
+    strategy: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

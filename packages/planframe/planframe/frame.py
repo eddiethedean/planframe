@@ -255,7 +255,17 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 threshold=node.threshold,
             )
         if isinstance(node, FillNull):
-            return self._adapter.fill_null(self._eval(node.prev), node.value, node.subset)
+            prev = self._eval(node.prev)
+            if node.value is not None and isinstance(node.value, Expr):
+                compiled_value: Any | BackendExprT = self._compile(node.value)
+            else:
+                compiled_value = node.value
+            return self._adapter.fill_null(
+                prev,
+                compiled_value,
+                node.subset,
+                strategy=node.strategy,
+            )
         if isinstance(node, Melt):
             return self._adapter.melt(
                 self._eval(node.prev),
@@ -738,15 +748,22 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def fill_null(self, value: Any, *subset: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def fill_null(
+        self,
+        value: Any | Expr[Any] | None = None,
+        *subset: str,
+        strategy: str | None = None,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         sub = tuple(subset) if subset else None
+        if (value is None) == (strategy is None):
+            raise ValueError("fill_null requires exactly one of value= or strategy=")
         if sub is not None:
             self._schema.select(sub)  # validate
         schema2 = self._schema.fill_null()
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=FillNull(self._plan, value=value, subset=sub),
+            _plan=FillNull(self._plan, value=value, subset=sub, strategy=strategy),
             _schema=schema2,
         )
 

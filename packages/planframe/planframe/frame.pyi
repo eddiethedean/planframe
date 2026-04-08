@@ -844,7 +844,17 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def drop_nulls(
         self, *subset: LiteralString, how: Literal["any", "all"] = ..., threshold: int | None = ...
     ) -> Self: ...
+    @overload
     def fill_null(self, value: Any, *subset: LiteralString) -> Self: ...
+    @overload
+    def fill_null(self, value: Expr[Any], *subset: LiteralString) -> Self: ...
+    @overload
+    def fill_null(
+        self,
+        value: None = ...,
+        *subset: LiteralString,
+        strategy: str,
+    ) -> Self: ...
     def melt(
         self,
         *,

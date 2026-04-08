@@ -163,8 +163,10 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def fill_null(
         self,
         df: BackendFrameT,
-        value: Any,
+        value: Any | BackendExprT | None,
         subset: tuple[str, ...] | None,
+        *,
+        strategy: str | None = None,
     ) -> BackendFrameT: ...
 
     @abstractmethod

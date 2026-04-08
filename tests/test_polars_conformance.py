@@ -391,6 +391,15 @@ def test_drop_nulls_fill_null_and_melt() -> None:
     collected = out.collect()
     assert collected["a"].to_list() == [0, 5]
 
+    # strategy-based fill (forward fill)
+    ff = S({"id": [1, 2, 3], "a": [None, 5, None], "b": [10, 20, 30]})
+    ff_out = ff.fill_null(None, "a", strategy="forward").collect()
+    assert ff_out["a"].to_list() == [None, 5, 5]
+
+    # expression fill value
+    expr_fill = pf.fill_null(add(col("b"), lit(1)), "a").collect()
+    assert expr_fill["a"].to_list() == [11, 5]
+
     melted = pf.melt(id_vars=("id",), value_vars=("a", "b"), variable_name="k", value_name="v")
     m = melted.collect()
     assert m.columns == ["id", "k", "v"]

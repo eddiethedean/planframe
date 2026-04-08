@@ -240,7 +240,17 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a(
         '    def drop_nulls(self, *subset: LiteralString, how: Literal["any", "all"] = ..., threshold: int | None = ...) -> Self: ...'
     )
+    a("    @overload")
     a("    def fill_null(self, value: Any, *subset: LiteralString) -> Self: ...")
+    a("    @overload")
+    a("    def fill_null(self, value: Expr[Any], *subset: LiteralString) -> Self: ...")
+    a("    @overload")
+    a("    def fill_null(")
+    a("        self,")
+    a("        value: None = ...,")
+    a("        *subset: LiteralString,")
+    a("        strategy: str,")
+    a("    ) -> Self: ...")
     a("    def melt(")
     a("        self,")
     a("        *,")

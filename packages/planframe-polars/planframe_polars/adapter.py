@@ -217,11 +217,27 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         return df
 
     def fill_null(
-        self, df: PolarsBackendFrame, value: Any, subset: tuple[str, ...] | None
+        self,
+        df: PolarsBackendFrame,
+        value: Any | pl.Expr | None,
+        subset: tuple[str, ...] | None,
+        *,
+        strategy: str | None = None,
     ) -> PolarsBackendFrame:
+        if (value is None) == (strategy is None):
+            raise ValueError("fill_null requires exactly one of value or strategy")
+
+        if strategy is not None:
+            if subset is None:
+                # Polars supports strategy-based fill on eager and lazy frames.
+                return df.fill_null(strategy=strategy)  # type: ignore[call-arg]
+            exprs = [pl.col(c).fill_null(strategy=strategy) for c in subset]  # type: ignore[call-arg]
+            return df.with_columns(exprs)
+
+        # value-based fill (literal or Expr)
         if subset is None:
-            return df.fill_null(value)
-        exprs = [pl.col(c).fill_null(value) for c in subset]
+            return df.fill_null(value)  # type: ignore[arg-type]
+        exprs = [pl.col(c).fill_null(value) for c in subset]  # type: ignore[arg-type]
         return df.with_columns(exprs)
 
     def melt(
