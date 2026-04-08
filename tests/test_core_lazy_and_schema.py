@@ -831,6 +831,17 @@ def test_fill_null_strategy_forward_fill() -> None:
     assert out == [{"id": 1, "age": None}, {"id": 2, "age": 10}, {"id": 3, "age": 10}]
 
 
+def test_fill_null_subset_and_many_are_lazy() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1, "age": None}, {"id": 2, "age": 10}]
+    pf = Frame.source(data, adapter=adapter, schema=UserDC)
+
+    out = pf.fill_null_subset(0, "age").fill_null_many({"age": 1})
+    assert adapter.calls == []
+    _ = out.collect()
+    assert [c[0] for c in adapter.calls] == ["fill_null", "fill_null", "collect"]
+
+
 def test_fill_null_rejects_ambiguous_or_missing_args() -> None:
     adapter = SpyAdapter()
     pf = Frame.source([{"id": 1, "age": None}], adapter=adapter, schema=UserDC)
