@@ -3,7 +3,7 @@ from __future__ import annotations
 import numbers
 import os
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, Generic, Literal, TypeVar, cast
 
 from planframe.backend.adapter import (
@@ -483,6 +483,46 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _plan=Cast(self._plan, name=name, dtype=dtype),
             _schema=schema2,
         )
+
+    def cast_many(
+        self,
+        mapping: Mapping[str, object],
+        *,
+        strict: bool = True,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        if not mapping:
+            raise ValueError("cast_many requires non-empty mapping")
+
+        out: Frame[SchemaT, BackendFrameT, BackendExprT] = self
+        for name, dtype in mapping.items():
+            if strict:
+                out._schema.get(name)
+                out = out.cast(name, dtype)
+            else:
+                if name in out._schema.field_map():
+                    out = out.cast(name, dtype)
+        return out
+
+    def cast_subset(
+        self,
+        *columns: str,
+        dtype: object,
+        strict: bool = True,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        if not columns:
+            raise ValueError("cast_subset requires at least one column")
+        if len(set(columns)) != len(columns):
+            raise ValueError("cast_subset columns must be unique")
+
+        out: Frame[SchemaT, BackendFrameT, BackendExprT] = self
+        for name in columns:
+            if strict:
+                out._schema.get(name)
+                out = out.cast(name, dtype)
+            else:
+                if name in out._schema.field_map():
+                    out = out.cast(name, dtype)
+        return out
 
     def with_row_count(
         self, *, name: str = "row_nr", offset: int = 0

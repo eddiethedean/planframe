@@ -1419,6 +1419,17 @@ def test_with_row_count_is_lazy_and_respects_offset() -> None:
     assert [c[0] for c in adapter.calls] == ["select", "with_row_count", "collect"]
 
 
+def test_cast_many_and_cast_subset_are_lazy() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1, "age": 2}, {"id": 2, "age": 3}]
+    pf = Frame.source(data, adapter=adapter, schema=UserDC)
+
+    out = pf.cast_many({"age": float}).cast_subset("age", dtype=int)
+    assert adapter.calls == []
+    _ = out.collect()
+    assert [c[0] for c in adapter.calls] == ["cast", "cast", "collect"]
+
+
 def test_clip_is_lazy_and_clips_selected_columns() -> None:
     adapter = SpyAdapter()
 

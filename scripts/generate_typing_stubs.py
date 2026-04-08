@@ -51,7 +51,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
 
     a("from __future__ import annotations")
     a("")
-    a("from collections.abc import Sequence")
+    a("from collections.abc import Mapping, Sequence")
     a("from typing import Any, Generic, Literal, TypeVar, overload")
     a("")
     a("from typing_extensions import LiteralString, Self")
@@ -230,6 +230,14 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        upper: Expr[object] | Scalar | None = ...,")
     a("        subset: Sequence[LiteralString] | None = ...,")
     a("    ) -> Self: ...")
+    a("")
+    a(
+        "    def cast_many(self, mapping: Mapping[LiteralString, object], *, strict: bool = ...) -> Self: ..."
+    )
+    a("")
+    a(
+        "    def cast_subset(self, *columns: LiteralString, dtype: object, strict: bool = ...) -> Self: ..."
+    )
     a("")
     a("    @overload")
     a("    def cast(self, name: LiteralString, dtype: type[T]) -> Self: ...")
