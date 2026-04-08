@@ -10,6 +10,7 @@ ENV/
 env/
 .env/
 .release-venv/
+.pandas-smoke-venv/
 
 # Packaging / build artifacts
 build/
