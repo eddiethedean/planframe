@@ -79,9 +79,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("    @overload")
     a("    def select(self, *columns: LiteralString) -> Self: ...")
     a("    @overload")
-    a(
-        "    def select(self, *columns: LiteralString | tuple[str, Expr[Any]]) -> Self: ..."
-    )
+    a("    def select(self, *columns: LiteralString | tuple[str, Expr[Any]]) -> Self: ...")
     a("    def select(self, *columns: Any) -> Self: ...")
     a("")
     a("    def select_prefix(self, prefix: str) -> Self: ...")

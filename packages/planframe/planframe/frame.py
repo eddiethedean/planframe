@@ -160,8 +160,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 out.append(JoinKeyExpr(expr=x))
             else:
                 raise TypeError(
-                    "join keys must be column names (str) or Expr, "
-                    f"got {type(x).__name__!r}"
+                    f"join keys must be column names (str) or Expr, got {type(x).__name__!r}"
                 )
         return tuple(out)
 
@@ -176,9 +175,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             for it in node.items:
                 if isinstance(it, ProjectPick):
                     parts.append(
-                        CompiledProjectItem(
-                            name=it.column, from_column=it.column, expr=None
-                        )
+                        CompiledProjectItem(name=it.column, from_column=it.column, expr=None)
                     )
                 else:
                     parts.append(
@@ -192,9 +189,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if isinstance(node, Drop):
             return self._adapter.drop(self._eval(node.prev), node.columns, strict=node.strict)
         if isinstance(node, Rename):
-            return self._adapter.rename(
-                self._eval(node.prev), node.mapping, strict=node.strict
-            )
+            return self._adapter.rename(self._eval(node.prev), node.mapping, strict=node.strict)
         if isinstance(node, WithColumn):
             prev = self._eval(node.prev)
             bexpr = self._compile(node.expr)
@@ -212,9 +207,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 if isinstance(k, SortColumnKey):
                     compiled.append(CompiledSortKey(column=k.name, expr=None))
                 else:
-                    compiled.append(
-                        CompiledSortKey(column=None, expr=self._compile(k.expr))
-                    )
+                    compiled.append(CompiledSortKey(column=None, expr=self._compile(k.expr)))
             return self._adapter.sort(
                 prev,
                 tuple(compiled),
@@ -575,8 +568,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 sort_keys.append(SortExprKey(expr=k))
             else:
                 raise TypeError(
-                    "sort keys must be column names (str) or Expr, "
-                    f"got {type(k).__name__!r}"
+                    f"sort keys must be column names (str) or Expr, got {type(k).__name__!r}"
                 )
         key_tuple = tuple(sort_keys)
         des = _coerce_sort_flags("descending", len(key_tuple), descending)
@@ -675,8 +667,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 missing = collect_col_names_in_expr(k.expr).difference(fm.keys())
                 if missing:
                     raise PlanFrameSchemaError(
-                        "group_by expression references unknown columns: "
-                        f"{sorted(missing)}"
+                        f"group_by expression references unknown columns: {sorted(missing)}"
                     )
         return GroupedFrame(
             _data=self._data,

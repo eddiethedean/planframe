@@ -47,9 +47,7 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             if isinstance(k, JoinKeyColumn):
                 out_fields.append(self._schema.get(k.name))
             else:
-                out_fields.append(
-                    Field(name=f"__pf_g{i}", dtype=infer_dtype(k.expr))
-                )
+                out_fields.append(Field(name=f"__pf_g{i}", dtype=infer_dtype(k.expr)))
         fm = self._schema.field_map()
         for out_name, spec in named_aggs.items():
             if isinstance(spec, tuple):
@@ -63,8 +61,7 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 missing = collect_col_names_in_expr(spec.inner).difference(fm.keys())
                 if missing:
                     raise PlanFrameSchemaError(
-                        "aggregation expression references unknown columns: "
-                        f"{sorted(missing)}"
+                        f"aggregation expression references unknown columns: {sorted(missing)}"
                     )
                 out_fields.append(Field(name=out_name, dtype=infer_dtype(spec)))
             else:
@@ -73,9 +70,7 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                     f"over an expression, got {type(spec).__name__!r}"
                 )
         schema2 = Schema(fields=tuple(out_fields))
-        plan2 = Agg(
-            GroupBy(self._plan, keys=self._key_items), named_aggs=dict(named_aggs)
-        )
+        plan2 = Agg(GroupBy(self._plan, keys=self._key_items), named_aggs=dict(named_aggs))
         from planframe.frame import Frame  # avoid cycle
 
         return Frame(_data=self._data, _adapter=self._adapter, _plan=plan2, _schema=schema2)

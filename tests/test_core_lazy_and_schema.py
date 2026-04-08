@@ -272,8 +272,7 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
     ) -> list[dict[str, Any]]:
         self.calls.append(("group_by_agg", (keys, dict(named_aggs))))
         out_names = tuple(
-            k.column if k.column is not None else f"__pf_g{i}"
-            for i, k in enumerate(keys)
+            k.column if k.column is not None else f"__pf_g{i}" for i, k in enumerate(keys)
         )
 
         def part_key(row: dict[str, Any]) -> tuple[Any, ...]:
@@ -375,7 +374,9 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         if how != "inner":
             raise NotImplementedError("SpyAdapter only implements inner and cross join for tests")
 
-        def join_key(row: dict[str, Any], keys: tuple[CompiledJoinKey[object], ...]) -> tuple[Any, ...]:
+        def join_key(
+            row: dict[str, Any], keys: tuple[CompiledJoinKey[object], ...]
+        ) -> tuple[Any, ...]:
             parts: list[Any] = []
             for k in keys:
                 if k.column is not None:

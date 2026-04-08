@@ -70,9 +70,7 @@ class Schema:
                 if it.column not in fm:
                     raise PlanFrameSchemaError(f"Cannot project missing column: {it.column}")
                 if it.column in seen:
-                    raise PlanFrameSchemaError(
-                        f"project repeats output column name: {it.column!r}"
-                    )
+                    raise PlanFrameSchemaError(f"project repeats output column name: {it.column!r}")
                 seen.add(it.column)
                 out.append(fm[it.column])
             else:

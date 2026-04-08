@@ -75,9 +75,7 @@ def test_drop_strict_false_ignores_unknown_polars_columns() -> None:
 
 def test_rename_strict_false_ignores_unknown_polars_columns() -> None:
     pf = User({"id": [1], "name": ["a"], "age": [10]})
-    out = pf.select("id", "name", "age").rename(
-        name="full_name", not_a_column="x", strict=False
-    )
+    out = pf.select("id", "name", "age").rename(name="full_name", not_a_column="x", strict=False)
     df = out.collect()
     assert df.columns == ["id", "full_name", "age"]
 
