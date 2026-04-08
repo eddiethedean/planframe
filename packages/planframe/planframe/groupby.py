@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any, Generic, Literal, TypeVar
 
 from planframe.backend.errors import PlanFrameSchemaError
-from planframe.expr.api import infer_dtype
+from planframe.expr.api import AggExpr, Expr, infer_dtype
 from planframe.plan.nodes import Agg, GroupBy, JoinKeyColumn, JoinKeyExpr, PlanNode
-from planframe.schema.ir import Field, Schema
+from planframe.schema.ir import Field, Schema, collect_col_names_in_expr
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
@@ -38,7 +38,7 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self._schema = _schema
         self._key_items = _key_items
 
-    def agg(self, **named_aggs: tuple[AggOp, str]) -> Any:
+    def agg(self, **named_aggs: tuple[AggOp, str] | Expr[Any]) -> Any:
         if not named_aggs:
             raise PlanFrameSchemaError("agg requires at least one named aggregation")
         # Schema: keys + named aggs (types are conservative)
@@ -50,12 +50,28 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 out_fields.append(
                     Field(name=f"__pf_g{i}", dtype=infer_dtype(k.expr))
                 )
-        for out_name, (op, col) in named_aggs.items():
-            self._schema.get(col)  # validate
-            dtype: Any = object
-            if op in {"count", "n_unique"}:
-                dtype = int
-            out_fields.append(Field(name=out_name, dtype=dtype))
+        fm = self._schema.field_map()
+        for out_name, spec in named_aggs.items():
+            if isinstance(spec, tuple):
+                op, col = spec
+                self._schema.get(col)  # validate
+                dtype: Any = object
+                if op in {"count", "n_unique"}:
+                    dtype = int
+                out_fields.append(Field(name=out_name, dtype=dtype))
+            elif isinstance(spec, AggExpr):
+                missing = collect_col_names_in_expr(spec.inner).difference(fm.keys())
+                if missing:
+                    raise PlanFrameSchemaError(
+                        "aggregation expression references unknown columns: "
+                        f"{sorted(missing)}"
+                    )
+                out_fields.append(Field(name=out_name, dtype=infer_dtype(spec)))
+            else:
+                raise PlanFrameSchemaError(
+                    "agg expects (op, column_name) tuples or agg_sum/agg_mean/...(...) "
+                    f"over an expression, got {type(spec).__name__!r}"
+                )
         schema2 = Schema(fields=tuple(out_fields))
         plan2 = Agg(
             GroupBy(self._plan, keys=self._key_items), named_aggs=dict(named_aggs)

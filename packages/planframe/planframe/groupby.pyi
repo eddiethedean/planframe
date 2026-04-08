@@ -5,6 +5,7 @@ from typing import Generic, Literal, TypeVar
 from typing_extensions import LiteralString
 
 from planframe.backend.adapter import BackendAdapter
+from planframe.expr.api import AggExpr
 from planframe.frame import Frame
 from planframe.plan.nodes import JoinKeyColumn, JoinKeyExpr, PlanNode
 from planframe.schema.ir import Schema
@@ -26,5 +27,5 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         _key_items: tuple[JoinKeyColumn | JoinKeyExpr, ...],
     ) -> None: ...
     def agg(
-        self, **named_aggs: tuple[AggOp, LiteralString]
+        self, **named_aggs: tuple[AggOp, LiteralString] | AggExpr
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]: ...

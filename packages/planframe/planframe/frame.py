@@ -138,6 +138,17 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 out.append(CompiledJoinKey(column=None, expr=self._compile(k.expr)))
         return tuple(out)
 
+    def _compile_named_aggs(
+        self, named_aggs: dict[str, tuple[str, str] | Expr[Any]]
+    ) -> dict[str, tuple[str, str] | BackendExprT]:
+        out: dict[str, tuple[str, str] | BackendExprT] = {}
+        for name, spec in named_aggs.items():
+            if isinstance(spec, tuple):
+                out[name] = spec
+            else:
+                out[name] = self._compile(spec)
+        return out
+
     def _normalize_join_keys(
         self, items: tuple[str | Expr[Any], ...]
     ) -> tuple[JoinKeyColumn | JoinKeyExpr, ...]:
@@ -232,10 +243,11 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             if not isinstance(node.prev, GroupBy):
                 raise PlanFrameBackendError("Agg must follow GroupBy")
             compiled_keys = self._compile_join_keys_tuple(node.prev.keys)
+            compiled_aggs = self._compile_named_aggs(node.named_aggs)
             return self._adapter.group_by_agg(
                 self._eval(node.prev.prev),
                 keys=compiled_keys,
-                named_aggs=node.named_aggs,
+                named_aggs=compiled_aggs,
             )
         if isinstance(node, DropNulls):
             return self._adapter.drop_nulls(self._eval(node.prev), node.subset)
