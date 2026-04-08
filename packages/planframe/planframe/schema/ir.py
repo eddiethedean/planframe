@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, is_dataclass
 from typing import Any
 
 from planframe.backend.errors import PlanFrameSchemaError
@@ -16,6 +16,9 @@ def collect_col_names_in_expr(expr: Expr[Any]) -> frozenset[str]:
 
     if isinstance(expr, Col):
         return frozenset({expr.name})
+    if not is_dataclass(expr):
+        # Defensive: Expr base is not a dataclass, but all IR nodes should be.
+        return frozenset()
     names: set[str] = set()
     for f in fields(expr):
         v = getattr(expr, f.name)

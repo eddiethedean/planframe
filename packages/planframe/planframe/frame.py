@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Generic, Literal, TypeVar, cast
 
 from planframe.backend.adapter import (
     BackendAdapter,
@@ -143,8 +143,13 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> dict[str, tuple[str, str] | BackendExprT]:
         out: dict[str, tuple[str, str] | BackendExprT] = {}
         for name, spec in named_aggs.items():
-            if isinstance(spec, tuple):
-                out[name] = spec
+            if (
+                isinstance(spec, tuple)
+                and len(spec) == 2
+                and isinstance(spec[0], str)
+                and isinstance(spec[1], str)
+            ):
+                out[name] = cast(tuple[str, str], spec)
             else:
                 out[name] = self._compile(spec)
         return out
@@ -344,7 +349,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 _schema=schema2,
             )
         if all(isinstance(c, str) for c in columns):
-            cols = tuple(columns)  # type: ignore[arg-type]
+            cols = cast(tuple[str, ...], tuple(columns))
             schema2 = self._schema.select(cols)
             return Frame(
                 _data=self._data,
@@ -508,21 +513,39 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         names = subset if subset else self._schema.names()
         mapping = {n: f"{prefix}{n}" for n in names}
-        return self.rename(**mapping)
+        schema2 = self._schema.rename(mapping, strict=True)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Rename(self._plan, mapping, strict=True),
+            _schema=schema2,
+        )
 
     def rename_suffix(
         self, suffix: str, *subset: str
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         names = subset if subset else self._schema.names()
         mapping = {n: f"{n}{suffix}" for n in names}
-        return self.rename(**mapping)
+        schema2 = self._schema.rename(mapping, strict=True)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Rename(self._plan, mapping, strict=True),
+            _schema=schema2,
+        )
 
     def rename_replace(
         self, old: str, new: str, *subset: str
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         names = subset if subset else self._schema.names()
         mapping = {n: n.replace(old, new) for n in names}
-        return self.rename(**mapping)
+        schema2 = self._schema.rename(mapping, strict=True)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Rename(self._plan, mapping, strict=True),
+            _schema=schema2,
+        )
 
     def with_column(
         self, name: str, expr: Expr[Any]

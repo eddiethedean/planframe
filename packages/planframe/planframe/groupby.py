@@ -50,8 +50,14 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 out_fields.append(Field(name=f"__pf_g{i}", dtype=infer_dtype(k.expr)))
         fm = self._schema.field_map()
         for out_name, spec in named_aggs.items():
-            if isinstance(spec, tuple):
-                op, col = spec
+            if (
+                isinstance(spec, tuple)
+                and len(spec) == 2
+                and isinstance(spec[0], str)
+                and isinstance(spec[1], str)
+            ):
+                op = spec[0]
+                col = spec[1]
                 self._schema.get(col)  # validate
                 dtype: Any = object
                 if op in {"count", "n_unique"}:

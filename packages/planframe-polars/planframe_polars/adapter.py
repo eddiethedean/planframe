@@ -145,8 +145,14 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
                 raise ValueError("CompiledJoinKey requires column or expr")
         agg_exprs: list[pl.Expr] = []
         for out_name, spec in named_aggs.items():
-            if isinstance(spec, tuple):
-                op, col = spec
+            if (
+                isinstance(spec, tuple)
+                and len(spec) == 2
+                and isinstance(spec[0], str)
+                and isinstance(spec[1], str)
+            ):
+                op = spec[0]
+                col: str = spec[1]
                 e = pl.col(col)
                 if op == "count":
                     ex = e.count()
@@ -164,7 +170,8 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
                     raise ValueError(f"Unsupported agg op: {op!r}")
                 agg_exprs.append(ex.alias(out_name))
             else:
-                agg_exprs.append(spec.alias(out_name))
+                expr = cast(pl.Expr, spec)
+                agg_exprs.append(expr.alias(out_name))
         return df.group_by(*by_exprs).agg(agg_exprs)
 
     def drop_nulls(

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any, Generic, Literal, TypeVar, overload
+
 from typing_extensions import LiteralString, Self
 
 from planframe.backend.adapter import BackendAdapter
 from planframe.expr.api import Expr
 from planframe.groupby import GroupedFrame
-from planframe.plan.nodes import PlanNode
 from planframe.plan.join_options import JoinOptions
+from planframe.plan.nodes import PlanNode
 from planframe.schema.ir import Schema
 from planframe.typing._schema_types import JoinedSchema
 
