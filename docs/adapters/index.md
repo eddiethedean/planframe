@@ -5,6 +5,7 @@ PlanFrame is backend-agnostic. Execution is provided by **adapters**.
 ## Official adapters
 
 - **planframe-polars**: Polars backend adapter (end-user docs live under the `planframe-polars` track).
+- **planframe-pandas**: pandas backend adapter (end-user docs live under the `planframe-pandas` track).
 
 ## Adding a new adapter
 

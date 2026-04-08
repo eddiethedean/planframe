@@ -16,4 +16,6 @@ python:
       path: packages/planframe
     - method: pip
       path: packages/planframe-polars
+    - method: pip
+      path: packages/planframe-pandas
 

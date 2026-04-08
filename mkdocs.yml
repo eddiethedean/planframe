@@ -48,6 +48,12 @@ nav:
           - Using planframe-polars: planframe_polars/guides/using-planframe-polars.md
       - Reference:
           - API (light): planframe_polars/reference/api.md
+  - planframe-pandas:
+      - Overview: planframe_pandas/index.md
+      - Guides:
+          - Using planframe-pandas: planframe_pandas/guides/using-planframe-pandas.md
+      - Reference:
+          - API (light): planframe_pandas/reference/api.md
   - Adapters:
       - Adapter catalog: adapters/index.md
       - Adapter docs template: adapters/template/README.md

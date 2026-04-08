@@ -28,7 +28,7 @@
  
  [project.urls]
  Repository = "https://github.com/eddiethedean/planframe"
- Documentation = "https://planframe.readthedocs.io/en/latest/adapters/"
+Documentation = "https://planframe.readthedocs.io/en/latest/planframe_pandas/"
  Issues = "https://github.com/eddiethedean/planframe/issues"
  
  [tool.hatch.build.targets.wheel]
