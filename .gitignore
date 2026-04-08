@@ -9,6 +9,7 @@ venv/
 ENV/
 env/
 .env/
+.release-venv/
 
 # Packaging / build artifacts
 build/
