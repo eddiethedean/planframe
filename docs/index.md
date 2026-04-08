@@ -6,11 +6,13 @@ Choose a path:
 
 - **PlanFrame (core)**: build a statically-typed adapter for a backend engine.
 - **planframe-polars**: use PlanFrame on top of Polars.
+- **planframe-pandas**: use PlanFrame on top of Pandas.
 
 ## Start here
 
 - [PlanFrame (core)](planframe/index.md)
 - [planframe-polars](planframe_polars/index.md)
+- [planframe-pandas](planframe_pandas/index.md)
 
 ## Adding a new adapter
 
