@@ -254,17 +254,31 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         self,
         df: list[dict[str, Any]],
         *,
-        keys: tuple[str, ...],
+        keys: tuple[CompiledJoinKey[object], ...],
         named_aggs: dict[str, tuple[str, str]],
     ) -> list[dict[str, Any]]:
         self.calls.append(("group_by_agg", (keys, dict(named_aggs))))
+        out_names = tuple(
+            k.column if k.column is not None else f"__pf_g{i}"
+            for i, k in enumerate(keys)
+        )
+
+        def part_key(row: dict[str, Any]) -> tuple[Any, ...]:
+            parts: list[Any] = []
+            for k in keys:
+                if k.column is not None:
+                    parts.append(row[k.column])
+                else:
+                    parts.append(_spy_sort_scalar_from_expr(row, k.expr))
+            return tuple(parts)
+
         groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
         for row in df:
-            k = tuple(row[x] for x in keys)
-            groups.setdefault(k, []).append(row)
+            pk = part_key(row)
+            groups.setdefault(pk, []).append(row)
         out: list[dict[str, Any]] = []
-        for k, rows in groups.items():
-            base = {keys[i]: k[i] for i in range(len(keys))}
+        for pk, rows in groups.items():
+            base = {out_names[i]: pk[i] for i in range(len(keys))}
             for out_name, (op, col_name) in named_aggs.items():
                 vals = [r[col_name] for r in rows]
                 if op == "count":
@@ -862,6 +876,48 @@ def test_join_asymmetric_keys_inner() -> None:
     assert collected == [{"user_id": 1, "x": 10, "y": 100}]
     assert adapter.calls[0][1][0] == (CompiledJoinKey(column="user_id", expr=None),)
     assert adapter.calls[0][1][1] == (CompiledJoinKey(column="id", expr=None),)
+
+
+def test_group_by_expression_key_spy() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class Row:
+        g: str
+        v: int
+
+    from planframe.expr import lower
+
+    pf = Frame.source(
+        [
+            {"g": "A", "v": 1},
+            {"g": "a", "v": 2},
+            {"g": "B", "v": 10},
+        ],
+        adapter=adapter,
+        schema=Row,
+    )
+    out = pf.group_by(lower(col("g"))).agg(n=("count", "v"), total=("sum", "v"))
+    collected = out.collect()
+    assert len(collected) == 2
+    by_g0 = {r["__pf_g0"]: r for r in collected}
+    assert by_g0["a"]["n"] == 2
+    assert by_g0["a"]["total"] == 3
+    assert by_g0["b"]["n"] == 1
+    assert by_g0["b"]["total"] == 10
+    gb_call = next(c for c in adapter.calls if c[0] == "group_by_agg")
+    keys = gb_call[1][0]
+    assert keys[0].column is None
+    assert keys[0].expr is not None
+
+
+def test_group_by_expr_rejects_unknown_column() -> None:
+    adapter = SpyAdapter()
+    from planframe.expr import lower
+
+    pf = Frame.source([{"id": 1}], adapter=adapter, schema=UserDC)
+    with pytest.raises(PlanFrameSchemaError):
+        pf.group_by(lower(col("nope")))
 
 
 def test_join_expression_keys_inner() -> None:

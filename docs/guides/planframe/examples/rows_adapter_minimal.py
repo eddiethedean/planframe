@@ -110,7 +110,7 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
         self,
         df: RowsFrame,
         *,
-        keys: tuple[str, ...],
+        keys: tuple[CompiledJoinKey[Expr[object]], ...],
         named_aggs: dict[str, tuple[str, str]],
     ) -> RowsFrame:
         raise NotImplementedError("RowsAdapter example does not implement group_by_agg")

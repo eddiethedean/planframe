@@ -194,8 +194,23 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a('        keep: Literal["first", "last"] | bool = ...,')
     a("        out_name: str = ...,")
     a("    ) -> Self: ...")
+    for n in range(1, max_arity + 1):
+        params = ", ".join([f"__gk{i}: LiteralString" for i in range(1, n + 1)])
+        a("    @overload")
+        a("    def group_by(")
+        a("        self,")
+        a(f"        {params},")
+        a("    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...")
+    a("    @overload")
     a(
         "    def group_by(self, *keys: LiteralString) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ..."
+    )
+    a("    @overload")
+    a(
+        "    def group_by(self, *keys: LiteralString | Expr[Any]) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ..."
+    )
+    a(
+        "    def group_by(self, *keys: Any) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ..."
     )
     a("    def drop_nulls(self, *subset: LiteralString) -> Self: ...")
     a("    def fill_null(self, value: Any, *subset: LiteralString) -> Self: ...")

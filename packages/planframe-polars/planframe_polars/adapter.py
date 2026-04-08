@@ -130,11 +130,19 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         self,
         df: PolarsBackendFrame,
         *,
-        keys: tuple[str, ...],
+        keys: tuple[CompiledJoinKey[pl.Expr], ...],
         named_aggs: dict[str, tuple[str, str]],
     ) -> PolarsBackendFrame:
         if not keys:
             raise ValueError("keys must be non-empty")
+        by_exprs: list[pl.Expr] = []
+        for i, k in enumerate(keys):
+            if k.column is not None:
+                by_exprs.append(pl.col(k.column))
+            elif k.expr is not None:
+                by_exprs.append(k.expr.alias(f"__pf_g{i}"))
+            else:
+                raise ValueError("CompiledJoinKey requires column or expr")
         agg_exprs: list[pl.Expr] = []
         for out_name, (op, col) in named_aggs.items():
             e = pl.col(col)
@@ -153,7 +161,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
             else:
                 raise ValueError(f"Unsupported agg op: {op!r}")
             agg_exprs.append(ex.alias(out_name))
-        return df.group_by(list(keys)).agg(agg_exprs)
+        return df.group_by(*by_exprs).agg(agg_exprs)
 
     def drop_nulls(
         self, df: PolarsBackendFrame, subset: tuple[str, ...] | None

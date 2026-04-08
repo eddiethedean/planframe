@@ -118,9 +118,23 @@ class Duplicated(PlanNode):
 
 
 @dataclass(frozen=True, slots=True)
+class JoinKeyColumn:
+    """Existing column name as a join or group-by key."""
+
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class JoinKeyExpr:
+    """Expression as a join or group-by key."""
+
+    expr: Expr[Any]
+
+
+@dataclass(frozen=True, slots=True)
 class GroupBy(PlanNode):
     prev: PlanNode
-    keys: tuple[str, ...]
+    keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,20 +163,6 @@ class Melt(PlanNode):
     value_vars: tuple[str, ...]
     variable_name: str
     value_name: str
-
-
-@dataclass(frozen=True, slots=True)
-class JoinKeyColumn:
-    """Join predicate uses this existing column name on one side."""
-
-    name: str
-
-
-@dataclass(frozen=True, slots=True)
-class JoinKeyExpr:
-    """Join predicate compares this expression to the paired key on the other side."""
-
-    expr: Expr[Any]
 
 
 @dataclass(frozen=True, slots=True)
