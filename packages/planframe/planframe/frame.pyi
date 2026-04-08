@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, Generic, Literal, TypeVar, overload
 
 from typing_extensions import LiteralString, Self
@@ -641,6 +641,8 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         upper: Expr[object] | Scalar | None = ...,
         subset: Sequence[LiteralString] | None = ...,
     ) -> Self: ...
+    def cast_many(self, mapping: Mapping[LiteralString, object], *, strict: bool = ...) -> Self: ...
+    def cast_subset(self, *columns: LiteralString, dtype: object, strict: bool = ...) -> Self: ...
     @overload
     def cast(self, name: LiteralString, dtype: type[T]) -> Self: ...
     @overload

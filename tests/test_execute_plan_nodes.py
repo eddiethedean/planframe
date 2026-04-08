@@ -313,6 +313,16 @@ def test_execute_plan_with_row_count() -> None:
     assert res == [{"id": 1, "rn": 7}, {"id": 2, "rn": 8}, {"id": 3, "rn": 9}]
 
 
+def test_execute_plan_cast_many_and_subset_lower_to_cast() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "a": None, "b": 2}], adapter=adapter, schema=S)
+
+    out = pf.cast_many({"b": float}).cast_subset("b", dtype=int)
+    res, calls = _run(out)
+    assert calls == ["cast", "cast"]
+    assert res == [{"id": 1, "a": None, "b": 2}]
+
+
 def test_execute_plan_select_schema_lowers_to_select() -> None:
     adapter = SpyAdapter()
     data = [{"id": 1, "a": 10, "b": 20}]
