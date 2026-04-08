@@ -14,6 +14,7 @@ from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
 from planframe_polars.compile_expr import compile_expr
 from planframe.typing.scalars import Scalar
+from planframe.typing.storage import StorageOptions
 
 PolarsBackendFrame = pl.DataFrame | pl.LazyFrame
 
@@ -59,7 +60,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     def with_column(self, df: PolarsBackendFrame, name: str, expr: pl.Expr) -> PolarsBackendFrame:
         return df.with_columns(expr.alias(name))
 
-    def cast(self, df: PolarsBackendFrame, name: str, dtype: Any) -> PolarsBackendFrame:
+    def cast(self, df: PolarsBackendFrame, name: str, dtype: object) -> PolarsBackendFrame:
         return df.with_columns(pl.col(name).cast(dtype))
 
     def filter(self, df: PolarsBackendFrame, predicate: pl.Expr) -> PolarsBackendFrame:
@@ -122,7 +123,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         mask = df.select(mask_expr.alias(out_name))[out_name]
         return pl.DataFrame({out_name: mask})
 
-    def compile_expr(self, expr: Any, *, schema: Any = None) -> pl.Expr:
+    def compile_expr(self, expr: object, *, schema: Any = None) -> pl.Expr:
         if not isinstance(expr, Expr):
             raise TypeError(f"Expected PlanFrame Expr, got {type(expr)!r}")
         return compile_expr(expr)
@@ -430,7 +431,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         compression: str = "zstd",
         row_group_size: int | None = None,
         partition_by: tuple[str, ...] | None = None,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         out = self._collect_df(df)
         if compression not in {"uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"}:
@@ -454,7 +455,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         *,
         separator: str = ",",
         include_header: bool = True,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         out = self._collect_df(df)
         out.write_csv(
@@ -465,7 +466,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         )
 
     def write_ndjson(
-        self, df: PolarsBackendFrame, path: str, *, storage_options: dict[str, Any] | None = None
+        self, df: PolarsBackendFrame, path: str, *, storage_options: StorageOptions | None = None
     ) -> None:
         out = self._collect_df(df)
         # Polars write_ndjson does not currently accept storage_options.
@@ -478,7 +479,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         path: str,
         *,
         compression: str = "uncompressed",
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         out = self._collect_df(df)
         if compression not in {"uncompressed", "lz4", "zstd"}:
@@ -492,7 +493,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         df: PolarsBackendFrame,
         *,
         table_name: str,
-        connection: Any,
+        connection: object,
         if_table_exists: str = "fail",
         engine: str | None = None,
     ) -> None:
@@ -512,7 +513,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         target: str,
         *,
         mode: str = "error",
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         out = self._collect_df(df)
         if mode not in {"error", "append", "overwrite", "ignore"}:

@@ -58,6 +58,7 @@ from planframe.schema.ir import Field, Schema, collect_col_names_in_expr
 from planframe.schema.materialize import materialize_model
 from planframe.schema.source import schema_from_type
 from planframe.typing.scalars import Scalar
+from planframe.typing.storage import StorageOptions
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
@@ -120,7 +121,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def plan(self) -> PlanNode:
         return self._plan
 
-    def _compile(self, expr: Any) -> BackendExprT:
+    def _compile(self, expr: object) -> BackendExprT:
         try:
             return self._adapter.compile_expr(expr, schema=self._schema)
         except Exception as e:  # noqa: BLE001
@@ -258,7 +259,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if isinstance(node, FillNull):
             prev = self._eval(node.prev)
             if node.value is not None and isinstance(node.value, Expr):
-                compiled_value: Any | BackendExprT = self._compile(node.value)
+                compiled_value: BackendExprT = self._compile(node.value)
             else:
                 compiled_value = node.value
             return self._adapter.fill_null(
@@ -575,7 +576,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def cast(self, name: str, dtype: Any) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def cast(self, name: str, dtype: object) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.cast(name, dtype=dtype)
         return Frame(
             _data=self._data,
@@ -1074,7 +1075,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = "zstd",
         row_group_size: int | None = None,
         partition_by: tuple[str, ...] | None = None,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         try:
             planned = self._eval(self._plan)
@@ -1097,7 +1098,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         separator: str = ",",
         include_header: bool = True,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         try:
             planned = self._eval(self._plan)
@@ -1113,7 +1114,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend write_csv failed for {self._adapter.name}"
             ) from e
 
-    def write_ndjson(self, path: str, *, storage_options: dict[str, Any] | None = None) -> None:
+    def write_ndjson(self, path: str, *, storage_options: StorageOptions | None = None) -> None:
         try:
             planned = self._eval(self._plan)
             self._adapter.write_ndjson(planned, path, storage_options=storage_options)
@@ -1127,7 +1128,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         path: str,
         *,
         compression: Literal["uncompressed", "lz4", "zstd"] = "uncompressed",
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         try:
             planned = self._eval(self._plan)
@@ -1143,7 +1144,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self,
         table_name: str,
         *,
-        connection: Any,
+        connection: object,
         if_table_exists: Literal["fail", "replace", "append"] = "fail",
         engine: str | None = None,
     ) -> None:
@@ -1175,7 +1176,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         target: str,
         *,
         mode: Literal["error", "append", "overwrite", "ignore", "merge"] = "error",
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         try:
             planned = self._eval(self._plan)

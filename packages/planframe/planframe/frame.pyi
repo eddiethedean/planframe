@@ -13,6 +13,7 @@ from planframe.plan.nodes import PlanNode
 from planframe.schema.ir import Schema
 from planframe.typing._schema_types import JoinedSchema
 from planframe.typing.scalars import Scalar
+from planframe.typing.storage import StorageOptions
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
@@ -583,7 +584,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     @overload
     def cast(self, name: LiteralString, dtype: type[T]) -> Self: ...
     @overload
-    def cast(self, name: LiteralString, dtype: Any) -> Self: ...
+    def cast(self, name: LiteralString, dtype: object) -> Self: ...
     def filter(self, predicate: Expr[bool]) -> Self: ...
     @overload
     def sort(
@@ -1060,7 +1061,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = ...,
         row_group_size: int | None = ...,
         partition_by: tuple[LiteralString, ...] | None = ...,
-        storage_options: dict[str, Any] | None = ...,
+        storage_options: StorageOptions | None = ...,
     ) -> None: ...
     def write_csv(
         self,
@@ -1068,21 +1069,21 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         separator: str = ...,
         include_header: bool = ...,
-        storage_options: dict[str, Any] | None = ...,
+        storage_options: StorageOptions | None = ...,
     ) -> None: ...
-    def write_ndjson(self, path: str, *, storage_options: dict[str, Any] | None = ...) -> None: ...
+    def write_ndjson(self, path: str, *, storage_options: StorageOptions | None = ...) -> None: ...
     def write_ipc(
         self,
         path: str,
         *,
         compression: Literal["uncompressed", "lz4", "zstd"] = ...,
-        storage_options: dict[str, Any] | None = ...,
+        storage_options: StorageOptions | None = ...,
     ) -> None: ...
     def write_database(
         self,
         table_name: str,
         *,
-        connection: Any,
+        connection: object,
         if_table_exists: Literal["fail", "replace", "append"] = ...,
         engine: str | None = ...,
     ) -> None: ...
@@ -1092,7 +1093,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         target: str,
         *,
         mode: Literal["error", "append", "overwrite", "ignore", "merge"] = ...,
-        storage_options: dict[str, Any] | None = ...,
+        storage_options: StorageOptions | None = ...,
     ) -> None: ...
     def write_avro(
         self,

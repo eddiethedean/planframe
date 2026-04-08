@@ -14,7 +14,7 @@ class PlanNode:
 
 @dataclass(frozen=True, slots=True)
 class Source(PlanNode):
-    schema_type: type[Any]
+    schema_type: type[object]
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,7 +71,7 @@ class WithColumn(PlanNode):
 class Cast(PlanNode):
     prev: PlanNode
     name: str
-    dtype: Any
+    dtype: object
 
 
 @dataclass(frozen=True, slots=True)
@@ -175,7 +175,7 @@ class Melt(PlanNode):
 @dataclass(frozen=True, slots=True)
 class Join(PlanNode):
     prev: PlanNode
-    right: Any
+    right: object
     left_keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
     right_keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
     how: str = "inner"
@@ -205,7 +205,7 @@ class Tail(PlanNode):
 @dataclass(frozen=True, slots=True)
 class ConcatVertical(PlanNode):
     prev: PlanNode
-    other: Any
+    other: object
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,7 +235,7 @@ class Unnest(PlanNode):
 @dataclass(frozen=True, slots=True)
 class ConcatHorizontal(PlanNode):
     prev: PlanNode
-    other: Any
+    other: object
 
 
 @dataclass(frozen=True, slots=True)
