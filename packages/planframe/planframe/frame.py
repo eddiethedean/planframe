@@ -463,6 +463,77 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
+    def rename_upper(
+        self, *subset: str, strict: bool = True
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        names = subset if subset else self._schema.names()
+        if not strict:
+            names = tuple(n for n in names if n in self._schema.field_map())
+        mapping = {n: n.upper() for n in names}
+        if not mapping:
+            return self
+        schema2 = self._schema.rename(mapping, strict=strict)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Rename(self._plan, mapping, strict=strict),
+            _schema=schema2,
+        )
+
+    def rename_lower(
+        self, *subset: str, strict: bool = True
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        names = subset if subset else self._schema.names()
+        if not strict:
+            names = tuple(n for n in names if n in self._schema.field_map())
+        mapping = {n: n.lower() for n in names}
+        if not mapping:
+            return self
+        schema2 = self._schema.rename(mapping, strict=strict)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Rename(self._plan, mapping, strict=strict),
+            _schema=schema2,
+        )
+
+    def rename_title(
+        self, *subset: str, strict: bool = True
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        names = subset if subset else self._schema.names()
+        if not strict:
+            names = tuple(n for n in names if n in self._schema.field_map())
+        mapping = {n: n.title() for n in names}
+        if not mapping:
+            return self
+        schema2 = self._schema.rename(mapping, strict=strict)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Rename(self._plan, mapping, strict=strict),
+            _schema=schema2,
+        )
+
+    def rename_strip(
+        self,
+        *subset: str,
+        chars: str | None = None,
+        strict: bool = True,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        names = subset if subset else self._schema.names()
+        if not strict:
+            names = tuple(n for n in names if n in self._schema.field_map())
+        mapping = {n: n.strip(chars) for n in names}
+        if not mapping:
+            return self
+        schema2 = self._schema.rename(mapping, strict=strict)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Rename(self._plan, mapping, strict=strict),
+            _schema=schema2,
+        )
+
     def with_column(
         self, name: str, expr: Expr[Any]
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
