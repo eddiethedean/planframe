@@ -44,13 +44,77 @@ dict={'id': [1, 2], 'age': [10, 20]}
 - **Always-lazy**: return lazy objects from transforms; only execute inside `collect`/`to_dicts`/writes
 - **I/O**: implement `write_*` (or raise a clear error if not supported)
 
+## Execution boundaries and `ExecutionOptions`
+
+Materialization and row export happen only at execution boundaries. On `BaseAdapter`, these methods take an optional **`options: ExecutionOptions | None`** (`planframe.execution_options`):
+
+| Method | Role |
+| --- | --- |
+| `collect(df, *, options=...)` | Eager materialization (or no-op for eager backends). |
+| `to_dicts(df, *, options=...)` | Row-oriented export. |
+| `to_dict(df, *, options=...)` | Column-oriented export. |
+| `acollect` / `ato_dicts` / `ato_dict` | Async variants; same `options=` contract (defaults delegate to the sync methods). |
+
+`ExecutionOptions` currently exposes:
+
+- **`streaming`**: user-level streaming hint (meaning is backend-defined).
+- **`engine_streaming`**: engine-level streaming hint (distinct from `streaming` where the backend distinguishes them).
+
+**Contract:** adapters should **accept** `options` on these signatures so the public API stays stable. Forward only the hints your engine understands into the backend’s `collect()` / export APIs; ignore the rest. If you do not support any hints yet, it is fine to `options` unused (as many shipped adapters do today), but keep the parameter.
+
+`Frame.collect`, `Frame.to_dicts`, `Frame.to_dict`, and the async counterparts accept the same `ExecutionOptions` and pass them through to the adapter.
+
+### Example: accept and forward hints
+
+```python
+from planframe.execution_options import ExecutionOptions
+
+def collect(self, df: MyFrame, *, options: ExecutionOptions | None = None) -> MyFrame:
+    kwargs = {}
+    if options is not None:
+        if options.streaming is not None:
+            kwargs["streaming"] = options.streaming
+        if options.engine_streaming is not None:
+            kwargs["engine_streaming"] = options.engine_streaming
+    return df.collect(**kwargs) if kwargs else df.collect()
+```
+
 ## `join`
 
 `BaseAdapter.join` receives **`left_on`** and **`right_on`** tuples of equal length (for symmetric joins they are identical). For a **`how="cross"`** join from `Frame.join`, both tuples are empty—there are no key columns.
 
-Optional **`JoinOptions`** (`planframe.plan.join_options`) carries backend-specific hints (`coalesce`, `validate`, `join_nulls`, `maintain_order`, `streaming`, `engine_streaming`, `allow_parallel`, `force_parallel`).
+The last argument is optional **`options: JoinOptions | None`** (`planframe.plan.join_options`). **`JoinOptions`** fields are **execution hints** (not relational join semantics). Current fields:
 
-These are **execution hints**, not relational semantics. Adapters may ignore any field they do not support; omit kwargs when the option is `None` so the engine keeps its defaults.
+| Field | Purpose (hint) |
+| --- | --- |
+| `coalesce` | Backend-specific key coalescing. |
+| `validate` | Join validation strategy (backend-defined strings). |
+| `join_nulls` | Whether nulls compare equal in keys. |
+| `maintain_order` | Preserve input order where supported. |
+| `streaming` | User-level streaming / execution style hint. |
+| `engine_streaming` | Engine-level streaming (pairs with `ExecutionOptions.engine_streaming` conceptually). |
+| `allow_parallel` | Allow parallel join execution. |
+| `force_parallel` | Prefer forcing parallel execution. |
+
+**Omit-`None` rule:** only pass through kwargs for fields that are **not** `None`, so the engine’s defaults apply. Adapters may ignore hints they do not support.
+
+### Example: join with hints
+
+```python
+from planframe.plan.join_options import JoinOptions
+
+# Call site (conceptual): Frame.join(..., options=JoinOptions(...))
+def join(self, left, right, *, left_on, right_on, how="inner", suffix="_right", options=None):
+    if options is None:
+        return backend_join(left, right, left_on=left_on, right_on=right_on, how=how, suffix=suffix)
+    kwargs = {}
+    if options.coalesce is not None:
+        kwargs["coalesce"] = options.coalesce
+    if options.engine_streaming is not None:
+        kwargs["engine_streaming"] = options.engine_streaming
+    # ... other non-None fields ...
+    return backend_join(left, right, left_on=left_on, right_on=right_on, how=how, suffix=suffix, **kwargs)
+```
 
 ## `group_by_agg`
 
