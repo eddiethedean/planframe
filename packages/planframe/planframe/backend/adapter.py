@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
@@ -338,6 +339,28 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
 
     @abstractmethod
     def to_dict(self, df: BackendFrameT) -> dict[str, list[object]]: ...
+
+    async def acollect(self, df: BackendFrameT) -> BackendFrameT:
+        """Materialize *df* asynchronously.
+
+        Default: run :meth:`collect` in a worker thread via :func:`asyncio.to_thread`
+        so synchronous backends do not block the event loop.
+
+        Async-native backends (HTTP drivers, asyncio clients) should override this
+        instead of blocking in :meth:`collect`.
+        """
+
+        return await asyncio.to_thread(self.collect, df)
+
+    async def ato_dicts(self, df: BackendFrameT) -> list[dict[str, object]]:
+        """Like :meth:`to_dicts`, but awaitable. Default uses :func:`asyncio.to_thread`."""
+
+        return await asyncio.to_thread(self.to_dicts, df)
+
+    async def ato_dict(self, df: BackendFrameT) -> dict[str, list[object]]:
+        """Like :meth:`to_dict`, but awaitable. Default uses :func:`asyncio.to_thread`."""
+
+        return await asyncio.to_thread(self.to_dict, df)
 
 
 # Backwards-compatible name for older imports.

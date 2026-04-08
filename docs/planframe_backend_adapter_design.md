@@ -126,12 +126,36 @@ class BackendAdapter(Protocol, Generic[BackendFrameT, BackendExprT]):
 
     def collect(self, df: BackendFrameT) -> BackendFrameT:
         ...
+
+    async def acollect(self, df: BackendFrameT) -> BackendFrameT:
+        ...
+
+    async def ato_dicts(self, df: BackendFrameT) -> list[dict[str, object]]:
+        ...
+
+    async def ato_dict(self, df: BackendFrameT) -> dict[str, list[object]]:
+        ...
 ```
 
 ### Notes
 - `compile_expr` converts PlanFrame expression IR into backend-native expression objects.
 - `collect` may be a no-op for eager backends like pandas.
 - `BackendFrameT` may be a DataFrame or LazyFrame depending on backend strategy.
+
+### Async materialization ([issue #15](https://github.com/eddiethedean/planframe/issues/15))
+
+PlanFrame stays **synchronous for lazy chaining**: building a `Frame` only updates the logical plan. **Materialization** can be sync or async:
+
+| API | Role |
+| --- | --- |
+| `Frame.collect()`, `Frame.to_dicts()`, `Frame.to_dict()` | Blocking; call from sync code or from `asyncio.to_thread`. |
+| `Frame.acollect()`, `Frame.ato_dicts()`, `Frame.ato_dict()` | Awaitable; use in async code. |
+
+`BaseAdapter` provides default `acollect` / `ato_dicts` / `ato_dict` that run the matching sync method in `asyncio.to_thread`, so existing adapters work without changes. Backends backed by asyncio-only clients should **override** `acollect` (and optionally `ato_dicts` / `ato_dict`) to await their native I/O instead of blocking a thread.
+
+**Plan evaluation** (`_eval` / applying select/filter/… to the plan) remains synchronous on the event-loop thread; only adapter execution at the boundary is async. Async backends should keep plan translation fast and perform I/O inside `acollect` (or related hooks).
+
+**Thread safety:** default async methods may invoke the adapter from multiple thread-pool workers concurrently if several `acollect` tasks run in parallel. Adapters that mutate shared connection state should document constraints or serialize; thread-local or per-task clients are typical.
 
 ---
 
@@ -167,7 +191,7 @@ Each method:
 3. returns a new immutable `Frame`
 
 Execution is deferred:
-- adapter methods like `select(...)` / `filter(...)` are applied when the plan is evaluated (typically inside `collect()`), not during chaining.
+- adapter methods like `select(...)` / `filter(...)` are applied when the plan is evaluated (typically inside `collect()` / `acollect()`), not during chaining.
 
 ---
 
