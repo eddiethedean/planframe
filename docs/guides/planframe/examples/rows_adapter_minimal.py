@@ -1,3 +1,11 @@
+"""Minimal `BaseAdapter` example for `list[dict]` "frames".
+
+See `../creating-an-adapter.md` for the full adapter checklist. `group_by_agg` is
+stubbed: a real implementation must handle `CompiledJoinKey` tuples for *keys*
+and `named_aggs` values that are either `(op, column)` or a compiled aggregation
+expression from `AggExpr` (see `planframe.backend.adapter.BaseAdapter.group_by_agg`).
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

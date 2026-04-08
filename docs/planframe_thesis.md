@@ -108,6 +108,7 @@ PlanFrame is:
 - a schema evolution engine
 - a backend-agnostic execution layer
 - a bridge between dynamic data processing and static typing
+- capable of expressing **grouped analytics** with the same typed expression IR used elsewhere (e.g. expression group keys and `AggExpr`-wrapped reductions like `agg_sum(truediv(col("a"), col("b")))`)
 
 ---
 

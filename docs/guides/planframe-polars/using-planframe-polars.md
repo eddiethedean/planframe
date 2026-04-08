@@ -48,3 +48,38 @@ class User(PolarsFrame):
 
 If the input data omits `active`, it will be filled with `True` for all rows.
 
+## Grouping and aggregation
+
+`group_by` takes one or more **keys**, each either a column name (`str`) or a **`planframe.expr`** expression (same general idea as `sort` / `join` keys). Keys that are expressions are not named after a single input column; in the aggregated result they appear as **`__pf_g0`**, **`__pf_g1`**, … by position in the key list.
+
+`agg` takes keyword arguments **`name=value`** where each value is either:
+
+- **Tuple form**: `("op", "column")` with `op` one of `count`, `sum`, `mean`, `min`, `max`, `n_unique`.
+- **Aggregation expression**: wrap any supported inner expression with **`agg_sum`**, **`agg_mean`**, **`agg_min`**, **`agg_max`**, **`agg_count`**, or **`agg_n_unique`** from `planframe.expr` (these produce `AggExpr` IR). You cannot pass a bare `col(...)` here; use e.g. `agg_sum(col("x"))` or the tuple form.
+
+Example (assuming `pf` has columns `name`, `id`, `revenue`, and `clicks`):
+
+```python
+from planframe.expr import agg_sum, col, lower, truediv
+
+out = (
+    pf.group_by(lower(col("name")))
+    .agg(
+        n=("count", "id"),
+        revenue_per_click=agg_sum(truediv(col("revenue"), col("clicks"))),
+    )
+)
+```
+
+Runnable script (from repo root):
+
+```bash
+./.venv/bin/python docs/guides/planframe-polars/examples/group_by_usage.py
+```
+
+Expected output:
+
+```text
+columns=['__pf_g0', 'n', 'rpc']
+{'__pf_g0': ['a', 'b'], 'n': [2, 1], 'rpc': [20.0, 20.0]}
+```

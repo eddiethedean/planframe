@@ -255,6 +255,7 @@ class Col(Expr[T]): ...
 class Lit(Expr[T]): ...
 class Add(Expr[int]): ...
 class Eq(Expr[bool]): ...
+class AggExpr(Expr[object]): ...  # op + inner; compiled to per-group reductions in agg context
 ```
 
 ### Compiler sketch
@@ -332,28 +333,9 @@ class PandasAdapter:
 
 ## 10. Join Support
 
-Join support should be deferred until the adapter contract for column collision handling is fully specified.
+Joins are **implemented** in the shipped `BaseAdapter`: symmetric `on` or asymmetric `left_on` / `right_on`, each key a column name or compiled expression (`CompiledJoinKey`), optional `JoinOptions`, and schema merge / suffix rules owned by core PlanFrame.
 
-When added, the adapter must support:
-- left/right/inner joins
-- deterministic column collision naming rules
-- backend-specific join compilation
-- schema IR merge logic owned by core
-
-### Future protocol extension
-```python
-def join(
-    self,
-    left: BackendFrameT,
-    right: BackendFrameT,
-    on: tuple[str, ...],
-    how: str = "inner",
-) -> BackendFrameT:
-    ...
-```
-
-MVP recommendation:
-- do not ship joins until schema collision behavior is locked down
+Historical note: early drafts deferred joins until collision semantics were fixed; the current protocol and Polars adapter reflect the merged design.
 
 ---
 
@@ -391,7 +373,7 @@ The promise is:
 
 ## 13. Recommended v1 Adapter Surface
 
-For v1, the adapter interface should support only:
+The original v1 sketch listed only:
 
 - `select`
 - `drop`
@@ -402,7 +384,7 @@ For v1, the adapter interface should support only:
 - `compile_expr`
 - `collect`
 
-That is enough to prove the architecture without exploding the backend contract.
+The **shipped** `BaseAdapter` in this repository extends that surface (joins, sort, `unique`, **`group_by_agg`**, reshape helpers, I/O, etc.). Third-party adapters should implement the full abstract API in `packages/planframe/planframe/backend/adapter.py`.
 
 ---
 
@@ -428,20 +410,33 @@ Examples:
 
 ---
 
-## 15. Final Recommendation
+## 15. Grouping and aggregation (`group_by_agg`)
 
-Start with:
+PlanFrame represents **`Frame.group_by(...).agg(...)`** as plan nodes **`GroupBy`** then **`Agg`**. At execution time the adapter receives **`group_by_agg(df, keys=..., named_aggs=...)`** where **`df`** is the input frame *before* grouping.
 
-1. `planframe-core`
-2. `planframe-polars`
-3. no joins in the first iteration
-4. a minimal expression compiler
-5. a strict safe subset only
+### Group keys (`keys`)
 
-This keeps the package:
-- coherent
-- portable
-- type-safe
-- realistically shippable
+Same structural contract as join/sort keys: a tuple of **`CompiledJoinKey[BackendExprT]`** (alias of **`CompiledSortKey`**), each slot either a column name or a compiled expression. Expression slots correspond to synthetic output names **`__pf_g0`**, **`__pf_g1`**, … in the derived schema.
 
-The backend adapter layer should remain small, explicit, and boring. That is a strength, not a weakness.
+### Aggregations (`named_aggs`)
+
+A mapping from output column name to either:
+
+1. **`(op, column_name)`** with `op` in `count`, `sum`, `mean`, `min`, `max`, `n_unique`.
+2. A **compiled backend expression** that is already a valid per-group aggregation for that engine (PlanFrame obtains this by compiling **`AggExpr`** IR such as `agg_sum(inner)`).
+
+Adapters should respect dict insertion order when building the backend’s aggregation list.
+
+---
+
+## 16. Final Recommendation
+
+The project followed an incremental path:
+
+1. **`planframe`** (core) plus **`planframe-polars`** as the first backend
+2. A **minimal expression compiler**, then growth of the IR (including **`AggExpr`** for grouped reductions)
+3. A **strict, typed subset** of dataframe operations—still intentionally smaller than “all of Polars”
+
+The adapter layer has grown to include **join**, **sort**, **grouping** (`group_by_agg`), and other operations, but the design goal is unchanged: keep the protocol **explicit and boring**, with schema semantics owned by core and execution owned by adapters.
+
+This keeps the package coherent, portable, and realistically shippable.

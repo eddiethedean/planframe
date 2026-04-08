@@ -63,7 +63,8 @@ In practice, a `Frame` holds a **source backend object** plus a **logical plan**
 - WithColumn[Prev, Name, Expr]
 - Rename[Prev, Mapping]
 - Drop[Prev, Keys]
-- Join[Left, Right, On]
+- Join[Left, Right, left_on, right_on] (column and/or expression keys)
+- GroupBy[Prev, keys] then Agg[GroupBy, named_aggs] — keys are column names or expressions; aggregations are `(op, column)` and/or `AggExpr` wrappers (`agg_sum(inner)`, …)
 
 ---
 
@@ -82,6 +83,7 @@ Supported operations:
 - add(a, b)
 - eq(a, b)
 - logical ops
+- **AggExpr**: `agg_sum(expr)`, `agg_mean(expr)`, … for use only inside `group_by(...).agg(...)`
 
 Expressions are backend-agnostic and compiled by adapters.
 
@@ -184,6 +186,7 @@ Supported operations:
 - cast
 - filter
 - join (basic)
+- group_by / agg (expression group keys; tuple reductions and `AggExpr` aggregations)
 
 ---
 

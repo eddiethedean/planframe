@@ -21,6 +21,7 @@ we need to answer questions like:
 - What is the type of column `"id"` after `select("id", "name")`?
 - What is the type of `"age_plus_one"` after `with_column("age_plus_one", add(col("age"), lit(1)))`?
 - What happens after `rename(name="full_name")`?
+- What are the result column names and dtypes after `group_by` with expression keys (`__pf_g0`, …) and `agg` with both `(op, column)` tuples and `AggExpr` values?
 - How do we preserve static typing without forcing the user to define every intermediate schema?
 
 This is the job of `Resolve`.
