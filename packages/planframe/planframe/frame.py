@@ -51,6 +51,7 @@ from planframe.plan.nodes import (
     Unnest,
     WithColumn,
 )
+from planframe.plan.optimize import optimize_plan
 from planframe.schema.ir import Field, Schema, collect_col_names_in_expr
 from planframe.schema.materialize import materialize_model
 from planframe.schema.source import schema_from_type
@@ -121,6 +122,21 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def plan(self) -> PlanNode:
         return self._plan
+
+    def optimize(
+        self, *, level: Literal[0, 1, 2] = 1
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        """Return a new Frame with an optimized plan.
+
+        This is opt-in and performs only backend-independent, semantics-preserving rewrites.
+        """
+
+        if level == 0:
+            return self
+        plan2 = optimize_plan(self._plan, level=level)
+        if plan2 is self._plan:
+            return self
+        return Frame(_data=self._data, _adapter=self._adapter, _plan=plan2, _schema=self._schema)
 
     def _compile(self, expr: object) -> BackendExprT:
         try:

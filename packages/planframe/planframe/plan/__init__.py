@@ -19,6 +19,7 @@ from planframe.plan.nodes import (
     Unique,
     WithColumn,
 )
+from planframe.plan.optimize import optimize_plan
 from planframe.plan.walk import iter_plan_nodes
 
 __all__ = [
@@ -42,4 +43,5 @@ __all__ = [
     "Unique",
     "WithColumn",
     "iter_plan_nodes",
+    "optimize_plan",
 ]
