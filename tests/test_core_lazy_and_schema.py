@@ -18,6 +18,7 @@ from planframe.backend.errors import (
     PlanFrameExpressionError,
     PlanFrameSchemaError,
 )
+from planframe.execution_options import ExecutionOptions
 from planframe.expr import Expr, add, col, eq, lit, mul, over
 from planframe.expr.api import Add, AggExpr, Col, Lit, Mul, StrLower, Sub, TrueDiv
 from planframe.frame import Frame
@@ -756,16 +757,22 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
     ) -> None:
         self.calls.append(("write_avro", (path, compression, name)))
 
-    def collect(self, df: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        self.calls.append(("collect", None))
+    def collect(
+        self, df: list[dict[str, Any]], *, options: object | None = None
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("collect", options))
         return df
 
-    def to_dicts(self, df: list[dict[str, Any]]) -> list[dict[str, object]]:
-        self.calls.append(("to_dicts", None))
+    def to_dicts(
+        self, df: list[dict[str, Any]], *, options: object | None = None
+    ) -> list[dict[str, object]]:
+        self.calls.append(("to_dicts", options))
         return cast(list[dict[str, object]], df)
 
-    def to_dict(self, df: list[dict[str, Any]]) -> dict[str, list[object]]:
-        self.calls.append(("to_dict", None))
+    def to_dict(
+        self, df: list[dict[str, Any]], *, options: object | None = None
+    ) -> dict[str, list[object]]:
+        self.calls.append(("to_dict", options))
         if not df:
             return {}
         cols = {k: [] for k in df[0]}
@@ -1639,12 +1646,12 @@ def test_to_dicts_and_to_dict_are_lazy_boundaries() -> None:
     out = pf.select("id").sort("id", nulls_last=True)
     assert adapter.calls == []
 
-    dicts = out.to_dicts()
+    dicts = out.to_dicts(options=ExecutionOptions(streaming=True))
     assert dicts == [{"id": 1}, {"id": 2}]
     assert [c[0] for c in adapter.calls] == ["select", "sort", "to_dicts"]
 
     adapter.calls.clear()
-    d = out.to_dict()
+    d = out.to_dict(options=ExecutionOptions(streaming=True))
     assert d == {"id": [1, 2]}
     assert [c[0] for c in adapter.calls] == ["select", "sort", "to_dict"]
 

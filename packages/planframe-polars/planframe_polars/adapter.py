@@ -12,6 +12,7 @@ from planframe.backend.adapter import (
     CompiledSortKey,
 )
 from planframe.backend.errors import PlanFrameBackendError
+from planframe.execution_options import ExecutionOptions
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import UnnestItem
@@ -737,11 +738,22 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
             return df2.sample(n=n, **kwargs)
         return df2.sample(fraction=frac, **kwargs)
 
-    def collect(self, df: PolarsBackendFrame) -> PolarsBackendFrame:
+    def collect(
+        self, df: PolarsBackendFrame, *, options: ExecutionOptions | None = None
+    ) -> PolarsBackendFrame:
+        # NOTE: We accept options for a stable execution-time API surface.
+        # This adapter currently ignores them.
+        _ = options
         return self._collect_df(df) if isinstance(df, pl.LazyFrame) else df
 
-    def to_dicts(self, df: PolarsBackendFrame) -> list[dict[str, object]]:
+    def to_dicts(
+        self, df: PolarsBackendFrame, *, options: ExecutionOptions | None = None
+    ) -> list[dict[str, object]]:
+        _ = options
         return self._collect_df(df).to_dicts()
 
-    def to_dict(self, df: PolarsBackendFrame) -> dict[str, list[object]]:
+    def to_dict(
+        self, df: PolarsBackendFrame, *, options: ExecutionOptions | None = None
+    ) -> dict[str, list[object]]:
+        _ = options
         return self._collect_df(df).to_dict(as_series=False)  # type: ignore[return-value]
