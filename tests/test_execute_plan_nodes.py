@@ -9,6 +9,7 @@ from test_core_lazy_and_schema import SpyAdapter
 from planframe.execution import execute_plan
 from planframe.expr import add, col, gt, lit
 from planframe.frame import Frame
+from planframe.plan.join_options import JoinOptions
 from planframe.schema.ir import Schema
 
 
@@ -72,6 +73,28 @@ def test_execute_plan_collect_true_passes_options() -> None:
         options=ExecutionOptions(streaming=True),
     )
     assert ("collect", ExecutionOptions(streaming=True, engine_streaming=None)) in adapter.calls
+
+
+def test_execute_plan_join_passes_join_execution_hints() -> None:
+    adapter = SpyAdapter()
+    left = Frame.source([{"id": 1, "a": 1, "b": 0}], adapter=adapter, schema=S)
+    right = Frame.source([{"id": 1, "a": 2, "b": 0}], adapter=adapter, schema=S)
+
+    joined = left.join(right, on=("id",), options=JoinOptions(allow_parallel=True))
+
+    adapter.calls.clear()
+    _ = execute_plan(
+        adapter=adapter,
+        plan=joined.plan(),
+        root_data=joined._data,
+        schema=joined.schema(),
+    )
+    assert adapter.calls
+    name, args = adapter.calls[0]
+    assert name == "join"
+    options = args[-1]
+    assert isinstance(options, JoinOptions)
+    assert options.allow_parallel is True
 
 
 def test_execute_plan_select_project_with_column_cast_filter_sort_slice_head_tail() -> None:
