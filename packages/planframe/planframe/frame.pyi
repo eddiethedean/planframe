@@ -216,9 +216,93 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     @overload
     def cast(self, name: LiteralString, dtype: Any) -> Self: ...
     def filter(self, predicate: Expr[bool]) -> Self: ...
+    @overload
     def sort(
         self,
-        *columns: LiteralString,
+        __k1: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        __k1: LiteralString, __k2: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString, __k6: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString, __k6: LiteralString, __k7: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString, __k6: LiteralString, __k7: LiteralString, __k8: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString, __k6: LiteralString, __k7: LiteralString, __k8: LiteralString, __k9: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        __k1: LiteralString, __k2: LiteralString, __k3: LiteralString, __k4: LiteralString, __k5: LiteralString, __k6: LiteralString, __k7: LiteralString, __k8: LiteralString, __k9: LiteralString, __k10: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        *keys: LiteralString,
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    @overload
+    def sort(
+        self,
+        *keys: LiteralString | Expr[Any],
+        descending: bool | Sequence[bool] = ...,
+        nulls_last: bool | Sequence[bool] = ...,
+    ) -> Self: ...
+    def sort(
+        self,
+        *keys: Any,
         descending: bool | Sequence[bool] = ...,
         nulls_last: bool | Sequence[bool] = ...,
     ) -> Self: ...

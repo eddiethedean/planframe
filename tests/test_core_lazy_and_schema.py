@@ -7,13 +7,14 @@ from typing import Any, cast
 import pytest
 from pydantic import BaseModel
 
-from planframe.backend.adapter import BackendAdapter, CompiledProjectItem
+from planframe.backend.adapter import BackendAdapter, CompiledProjectItem, CompiledSortKey
 from planframe.backend.errors import (
     PlanFrameBackendError,
     PlanFrameExpressionError,
     PlanFrameSchemaError,
 )
 from planframe.expr import Expr, add, col, eq, lit, mul, over
+from planframe.expr.api import Add, Col, Lit, Mul, Sub
 from planframe.frame import Frame
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import Project
@@ -28,6 +29,28 @@ class UserDC:
 class UserPD(BaseModel):
     id: int
     age: int
+
+
+def _spy_sort_scalar_from_expr(row: dict[str, Any], expr: Any) -> Any:
+    """Minimal PlanFrame expr evaluation for SpyAdapter.sort expression keys."""
+
+    if isinstance(expr, Col):
+        return row[expr.name]
+    if isinstance(expr, Lit):
+        return expr.value
+    if isinstance(expr, Add):
+        return _spy_sort_scalar_from_expr(row, expr.left) + _spy_sort_scalar_from_expr(
+            row, expr.right
+        )
+    if isinstance(expr, Sub):
+        return _spy_sort_scalar_from_expr(row, expr.left) - _spy_sort_scalar_from_expr(
+            row, expr.right
+        )
+    if isinstance(expr, Mul):
+        return _spy_sort_scalar_from_expr(row, expr.left) * _spy_sort_scalar_from_expr(
+            row, expr.right
+        )
+    raise NotImplementedError(f"SpyAdapter.sort expr not supported: {type(expr).__name__}")
 
 
 class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
@@ -110,16 +133,16 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
     def sort(
         self,
         df: list[dict[str, Any]],
-        columns: tuple[str, ...],
+        keys: tuple[CompiledSortKey[object], ...],
         *,
         descending: tuple[bool, ...],
         nulls_last: tuple[bool, ...],
     ) -> list[dict[str, Any]]:
-        self.calls.append(("sort", (columns, descending, nulls_last)))
-        if not columns:
+        self.calls.append(("sort", (keys, descending, nulls_last)))
+        if not keys:
             return list(df)
-        if len(descending) != len(columns) or len(nulls_last) != len(columns):
-            raise ValueError("SpyAdapter.sort: flag tuple lengths must match columns")
+        if len(descending) != len(keys) or len(nulls_last) != len(keys):
+            raise ValueError("SpyAdapter.sort: flag tuple lengths must match keys")
 
         def cmp_vals(va: Any, vb: Any, desc: bool, nl: bool) -> int:
             na, nb = va is None, vb is None
@@ -136,8 +159,13 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
             return -1 if va > vb else 1
 
         def cmp_rows(ra: dict[str, Any], rb: dict[str, Any]) -> int:
-            for c, desc, nl in zip(columns, descending, nulls_last, strict=True):
-                r = cmp_vals(ra.get(c), rb.get(c), desc, nl)
+            for k, desc, nl in zip(keys, descending, nulls_last, strict=True):
+                if k.column is not None:
+                    va, vb = ra.get(k.column), rb.get(k.column)
+                else:
+                    va = _spy_sort_scalar_from_expr(ra, k.expr)
+                    vb = _spy_sort_scalar_from_expr(rb, k.expr)
+                r = cmp_vals(va, vb, desc, nl)
                 if r != 0:
                     return r
             return 0
@@ -674,8 +702,35 @@ def test_sort_accepts_per_key_descending_and_nulls_last() -> None:
     ]
     assert adapter.calls[0] == (
         "sort",
-        (("id", "age"), (False, True), (True, True)),
+        (
+            (
+                CompiledSortKey(column="id", expr=None),
+                CompiledSortKey(column="age", expr=None),
+            ),
+            (False, True),
+            (True, True),
+        ),
     )
+
+
+def test_sort_accepts_expression_keys() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source(
+        [
+            {"id": 1, "age": 10},
+            {"id": 2, "age": 5},
+            {"id": 3, "age": 20},
+        ],
+        adapter=adapter,
+        schema=UserDC,
+    )
+    out = pf.sort(add(col("id"), col("age")))
+    collected = out.collect()
+    assert [r["id"] for r in collected] == [2, 1, 3]
+
+    out2 = pf.sort("id", add(col("age"), lit(0)), descending=[True, False])
+    collected2 = out2.collect()
+    assert collected2[0]["id"] == 3
 
 
 def test_sort_rejects_flag_sequences_with_wrong_length() -> None:

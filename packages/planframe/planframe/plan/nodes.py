@@ -80,9 +80,23 @@ class Filter(PlanNode):
 
 
 @dataclass(frozen=True, slots=True)
+class SortColumnKey:
+    """Sort by an existing column named *name*."""
+
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class SortExprKey:
+    """Sort by a computed expression (schema unchanged; ordering only)."""
+
+    expr: Expr[Any]
+
+
+@dataclass(frozen=True, slots=True)
 class Sort(PlanNode):
     prev: PlanNode
-    columns: tuple[str, ...]
+    keys: tuple[SortColumnKey | SortExprKey, ...]
     descending: tuple[bool, ...]
     nulls_last: tuple[bool, ...]
 

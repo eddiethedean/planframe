@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from planframe.backend.adapter import BaseAdapter, CompiledProjectItem
+from planframe.backend.adapter import BaseAdapter, CompiledProjectItem, CompiledSortKey
 from planframe.expr.api import Expr, Lit
 from planframe.frame import Frame
 from planframe.plan.join_options import JoinOptions
@@ -74,7 +74,7 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
     def sort(
         self,
         df: RowsFrame,
-        columns: tuple[str, ...],
+        keys: tuple[CompiledSortKey[Expr[object]], ...],
         *,
         descending: tuple[bool, ...],
         nulls_last: tuple[bool, ...],

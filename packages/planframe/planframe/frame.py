@@ -4,7 +4,11 @@ import re
 from collections.abc import Sequence
 from typing import Any, Generic, Literal, TypeVar
 
-from planframe.backend.adapter import BackendAdapter, CompiledProjectItem
+from planframe.backend.adapter import (
+    BackendAdapter,
+    CompiledProjectItem,
+    CompiledSortKey,
+)
 from planframe.backend.errors import (
     PlanFrameBackendError,
     PlanFrameExecutionError,
@@ -39,6 +43,8 @@ from planframe.plan.nodes import (
     Select,
     Slice,
     Sort,
+    SortColumnKey,
+    SortExprKey,
     Source,
     Tail,
     Unique,
@@ -159,9 +165,18 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             bexpr = self._compile(node.predicate)
             return self._adapter.filter(prev, bexpr)
         if isinstance(node, Sort):
+            prev = self._eval(node.prev)
+            compiled: list[CompiledSortKey[BackendExprT]] = []
+            for k in node.keys:
+                if isinstance(k, SortColumnKey):
+                    compiled.append(CompiledSortKey(column=k.name, expr=None))
+                else:
+                    compiled.append(
+                        CompiledSortKey(column=None, expr=self._compile(k.expr))
+                    )
             return self._adapter.sort(
-                self._eval(node.prev),
-                node.columns,
+                prev,
+                tuple(compiled),
                 descending=node.descending,
                 nulls_last=node.nulls_last,
             )
@@ -498,18 +513,29 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def sort(
         self,
-        *columns: str,
+        *keys: str | Expr[Any],
         descending: bool | Sequence[bool] = False,
         nulls_last: bool | Sequence[bool] = False,
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
-        cols = tuple(columns)
-        self._schema.select(cols)  # validate existence only
-        des = _coerce_sort_flags("descending", len(cols), descending)
-        nls = _coerce_sort_flags("nulls_last", len(cols), nulls_last)
+        sort_keys: list[SortColumnKey | SortExprKey] = []
+        for k in keys:
+            if isinstance(k, str):
+                self._schema.get(k)
+                sort_keys.append(SortColumnKey(name=k))
+            elif isinstance(k, Expr):
+                sort_keys.append(SortExprKey(expr=k))
+            else:
+                raise TypeError(
+                    "sort keys must be column names (str) or Expr, "
+                    f"got {type(k).__name__!r}"
+                )
+        key_tuple = tuple(sort_keys)
+        des = _coerce_sort_flags("descending", len(key_tuple), descending)
+        nls = _coerce_sort_flags("nulls_last", len(key_tuple), nulls_last)
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Sort(self._plan, columns=cols, descending=des, nulls_last=nls),
+            _plan=Sort(self._plan, keys=key_tuple, descending=des, nulls_last=nls),
             _schema=self._schema,
         )
 

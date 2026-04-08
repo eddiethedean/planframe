@@ -23,6 +23,18 @@ class CompiledProjectItem(Generic[BackendExprT]):
     expr: BackendExprT | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class CompiledSortKey(Generic[BackendExprT]):
+    """One sort key for :meth:`BaseAdapter.sort`.
+
+    Exactly one of *column* or *expr* must be non-``None``.
+    *column* sorts by an existing column name; *expr* sorts by a compiled backend expression.
+    """
+
+    column: str | None = None
+    expr: BackendExprT | None = None
+
+
 class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     """Backend execution base class.
 
@@ -84,15 +96,15 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def sort(
         self,
         df: BackendFrameT,
-        columns: tuple[str, ...],
+        keys: tuple[CompiledSortKey[BackendExprT], ...],
         *,
         descending: tuple[bool, ...],
         nulls_last: tuple[bool, ...],
     ) -> BackendFrameT:
-        """Sort *df* by *columns* (first key is most significant).
+        """Sort *df* by *keys* (first key is most significant).
 
-        *descending* and *nulls_last* must have the same length as *columns*.
-        Each position applies to the sort key at that index (per-key direction and null placement).
+        *descending* and *nulls_last* must have the same length as *keys*.
+        Each position applies to that sort key (per-key direction and null placement).
         """
         ...
 
