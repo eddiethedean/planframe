@@ -1523,7 +1523,9 @@ def test_select_schema_is_lazy_and_strict_semantics() -> None:
 
     pf = Frame.source([{"id": 1, "x": 2}], adapter=adapter, schema=S)
 
-    from planframe.selector import prefix
+    from planframe.selector import ColumnSelector, prefix
+
+    assert isinstance(prefix("i"), ColumnSelector)
 
     out = pf.select_schema(prefix("i"))
     assert adapter.calls == []
