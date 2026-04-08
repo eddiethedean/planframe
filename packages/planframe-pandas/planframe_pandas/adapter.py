@@ -394,6 +394,10 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
             right_on=rcols,
             suffixes=("", suffix),
         )
+        # Match PlanFrame semantics: when joining on different key names, drop the RHS key columns.
+        for lc, rc in zip(lcols, rcols, strict=False):
+            if lc != rc and rc in out.columns and rc in right.columns:
+                out = out.drop(columns=[rc])
         drop_cols = [c for c in out.columns if c.startswith("__pf_join_")]
         if drop_cols:
             out = out.drop(columns=drop_cols)

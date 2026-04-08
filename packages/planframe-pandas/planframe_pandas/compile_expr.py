@@ -4,31 +4,56 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, TypeAlias, cast
 
+import numpy as np
 import pandas as pd
 
 from planframe.backend.errors import PlanFrameExpressionError
 from planframe.expr.api import (
+    Abs,
     Add,
     AggExpr,
     And,
+    Between,
+    Ceil,
+    Clip,
     Coalesce,
     Col,
+    DtDay,
+    DtMonth,
+    DtYear,
     Eq,
+    Exp,
     Expr,
+    Floor,
     Ge,
     Gt,
     IfElse,
+    IsFinite,
+    IsNotNull,
     IsNull,
     Le,
     Lit,
+    Log,
     Lt,
     Mul,
     Ne,
     Not,
     Or,
+    Over,
     Pow,
+    Round,
+    Sqrt,
+    StrContains,
+    StrEndsWith,
+    StrLen,
+    StrLower,
+    StrReplace,
+    StrSplit,
+    StrStartsWith,
+    StrStrip,
     Sub,
     TrueDiv,
+    Xor,
 )
 
 PandasExpr: TypeAlias = Callable[[pd.DataFrame], pd.Series | object]
@@ -44,6 +69,15 @@ class AggExprSpec:
 
 def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
     """Compile PlanFrame expression IR into a callable pandas expression."""
+
+    def _as_expr(e: Expr[Any]) -> PandasExpr:
+        out = compile_expr(e)
+        if isinstance(out, AggExprSpec):
+            raise PlanFrameExpressionError(
+                "AggExpr is only supported inside group_by(...).agg(...)"
+            )
+        return cast(PandasExpr, out)
+
     if isinstance(expr, Col):
         name = expr.name
         return lambda df: df[name]
@@ -180,6 +214,147 @@ def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
             return t_ser.where(c, other=f_ser)
 
         return _if_else
+
+    if isinstance(expr, IsNotNull):
+        inner_fn = _as_expr(expr.value)
+        return lambda df: cast(pd.Series, inner_fn(df)).notna()
+
+    if isinstance(expr, Xor):
+        left_fn = _as_expr(expr.left)
+        right_fn = _as_expr(expr.right)
+        return lambda df: cast(pd.Series, left_fn(df)) ^ cast(pd.Series, right_fn(df))
+
+    if isinstance(expr, Abs):
+        inner = _as_expr(expr.value)
+        return lambda df: cast(pd.Series, inner(df)).abs()
+
+    if isinstance(expr, Round):
+        inner = _as_expr(expr.value)
+        ndigits = 0 if expr.ndigits is None else int(expr.ndigits)
+        return lambda df: cast(pd.Series, inner(df)).round(ndigits)
+
+    if isinstance(expr, (Ceil,)):
+        inner = _as_expr(expr.value)
+        return lambda df: np.ceil(cast(pd.Series, inner(df)))
+
+    if isinstance(expr, Floor):
+        inner = _as_expr(expr.value)
+        return lambda df: np.floor(cast(pd.Series, inner(df)))
+
+    if isinstance(expr, Between):
+        v = _as_expr(expr.value)
+        lo = _as_expr(expr.low)
+        hi = _as_expr(expr.high)
+
+        def _between(df: pd.DataFrame) -> pd.Series:
+            vv = cast(pd.Series, v(df))
+            lowv = cast(Any, lo(df))
+            hiv = cast(Any, hi(df))
+            low_ser = (
+                lowv if isinstance(lowv, pd.Series) else pd.Series([lowv] * len(df), index=df.index)
+            )
+            hi_ser = (
+                hiv if isinstance(hiv, pd.Series) else pd.Series([hiv] * len(df), index=df.index)
+            )
+            return (vv >= low_ser) & (vv <= hi_ser)
+
+        return _between
+
+    if isinstance(expr, Clip):
+        v = _as_expr(expr.value)
+        lower = _as_expr(expr.lower) if expr.lower is not None else None
+        upper = _as_expr(expr.upper) if expr.upper is not None else None
+
+        def _clip(df: pd.DataFrame) -> pd.Series:
+            vv = cast(pd.Series, v(df))
+            lo = lower(df) if lower is not None else None
+            up = upper(df) if upper is not None else None
+            return vv.clip(lower=lo, upper=up)
+
+        return _clip
+
+    if isinstance(expr, Exp):
+        inner = _as_expr(expr.value)
+        return lambda df: np.exp(cast(Any, inner(df)))
+
+    if isinstance(expr, Log):
+        inner = _as_expr(expr.value)
+        return lambda df: np.log(cast(Any, inner(df)))
+
+    if isinstance(expr, Sqrt):
+        inner = _as_expr(expr.value)
+        return lambda df: np.sqrt(cast(Any, inner(df)))
+
+    if isinstance(expr, IsFinite):
+        inner = _as_expr(expr.value)
+        return lambda df: np.isfinite(cast(Any, inner(df)))
+
+    if isinstance(expr, StrLower):
+        inner = _as_expr(expr.value)
+        return lambda df: cast(pd.Series, inner(df)).astype("string").str.lower()
+
+    if isinstance(expr, StrStartsWith):
+        inner = _as_expr(expr.value)
+        prefix = expr.prefix
+        return lambda df: (
+            cast(pd.Series, inner(df)).astype("string").str.startswith(prefix, na=False)
+        )
+
+    if isinstance(expr, StrEndsWith):
+        inner = _as_expr(expr.value)
+        suffix = expr.suffix
+        return lambda df: cast(pd.Series, inner(df)).astype("string").str.endswith(suffix, na=False)
+
+    if isinstance(expr, StrContains):
+        inner = _as_expr(expr.value)
+        pattern = expr.pattern
+        literal = bool(expr.literal)
+        return lambda df: (
+            cast(pd.Series, inner(df))
+            .astype("string")
+            .str.contains(pattern, regex=not literal, na=False)
+        )
+
+    if isinstance(expr, StrLen):
+        inner = _as_expr(expr.value)
+        return lambda df: cast(pd.Series, inner(df)).astype("string").str.len()
+
+    if isinstance(expr, StrReplace):
+        inner = _as_expr(expr.value)
+        pattern = expr.pattern
+        repl = expr.replacement
+        literal = bool(expr.literal)
+        return lambda df: (
+            cast(pd.Series, inner(df))
+            .astype("string")
+            .str.replace(pattern, repl, regex=not literal)
+        )
+
+    if isinstance(expr, StrStrip):
+        inner = _as_expr(expr.value)
+        return lambda df: cast(pd.Series, inner(df)).astype("string").str.strip()
+
+    if isinstance(expr, StrSplit):
+        inner = _as_expr(expr.value)
+        by = expr.by
+        return lambda df: cast(pd.Series, inner(df)).astype("string").str.split(by)
+
+    if isinstance(expr, DtYear):
+        inner = _as_expr(expr.value)
+        return lambda df: pd.to_datetime(cast(pd.Series, inner(df))).dt.year
+
+    if isinstance(expr, DtMonth):
+        inner = _as_expr(expr.value)
+        return lambda df: pd.to_datetime(cast(pd.Series, inner(df))).dt.month
+
+    if isinstance(expr, DtDay):
+        inner = _as_expr(expr.value)
+        return lambda df: pd.to_datetime(cast(pd.Series, inner(df))).dt.day
+
+    if isinstance(expr, Over):
+        # Pandas backend does not currently model window contexts; treat as passthrough.
+        inner_fn = _as_expr(expr.value)
+        return lambda df: inner_fn(df)
 
     raise PlanFrameExpressionError(
         f"Unsupported expression node type={type(expr).__name__!r} for pandas backend"
