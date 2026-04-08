@@ -1012,6 +1012,27 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         variable_name: str = ...,
         value_name: str = ...,
     ) -> Self: ...
+    def pivot_longer(
+        self,
+        *,
+        id_vars: tuple[LiteralString, ...] | None = ...,
+        value_vars: tuple[LiteralString, ...] | None = ...,
+        names_to: str = ...,
+        values_to: str = ...,
+    ) -> Self: ...
+    def pivot_wider(
+        self,
+        *,
+        index: tuple[LiteralString, ...],
+        names_from: LiteralString,
+        values_from: LiteralString | tuple[LiteralString, ...],
+        aggregate_function: Literal[
+            "first", "last", "sum", "mean", "min", "max", "count", "len", "median"
+        ] = ...,
+        on_columns: tuple[LiteralString, ...] | None = ...,
+        sort_columns: bool = ...,
+        separator: str = ...,
+    ) -> Self: ...
     def slice(self, offset: int, length: int | None = ...) -> Self: ...
     def limit(self, n: int) -> Self: ...
     def head(self, n: int) -> Self: ...
