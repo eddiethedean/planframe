@@ -24,7 +24,7 @@ classifiers = [
  
  [project.urls]
 Repository = "https://github.com/eddiethedean/planframe"
-Documentation = "https://github.com/eddiethedean/planframe/blob/main/README.md"
+Documentation = "https://planframe.readthedocs.io/en/latest/planframe_polars/"
 Issues = "https://github.com/eddiethedean/planframe/issues"
  
  [tool.hatch.build.targets.wheel]

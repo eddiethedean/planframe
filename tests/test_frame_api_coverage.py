@@ -113,8 +113,8 @@ def test_frame_join_concat_backend_mismatch_errors() -> None:
 
     right = Frame.source([{"id": 1, "name": "b", "age": 1}], adapter=SpyAdapter2(), schema=S)
 
-    with pytest.raises(PlanFrameExecutionError, match="Backend collect failed"):
-        left.join(right, on=("id",)).collect()
+    with pytest.raises(PlanFrameBackendError, match="different backends"):
+        left.join(right, on=("id",))
 
     with pytest.raises(PlanFrameBackendError, match="different backends"):
         left.concat_vertical(right)

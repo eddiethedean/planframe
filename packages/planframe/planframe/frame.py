@@ -687,6 +687,8 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         suffix: str = "_right",
         options: JoinOptions | None = None,
     ) -> Frame[Any, BackendFrameT, BackendExprT]:
+        if other._adapter.name != self._adapter.name:
+            raise PlanFrameBackendError("Cannot join frames from different backends")
         if how == "cross":
             if on is not None or left_on is not None or right_on is not None:
                 raise ValueError("cross join must not specify join keys (on, left_on, or right_on)")
@@ -842,6 +844,14 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self._schema.select(index)  # validate
         self._schema.get(on)
         self._schema.get(values)
+        if (
+            on_columns is None
+            and self._adapter.name == "polars"
+            and type(self._data).__name__ == "LazyFrame"
+        ):
+            raise PlanFrameBackendError(
+                "pivot on Polars LazyFrame requires on_columns to be provided"
+            )
 
         out_fields = [self._schema.get(c) for c in index]
         if on_columns is not None:

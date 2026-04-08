@@ -10,6 +10,7 @@ from planframe.backend.adapter import (
     CompiledProjectItem,
     CompiledSortKey,
 )
+from planframe.backend.errors import PlanFrameBackendError
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
 from planframe.typing.scalars import Scalar
@@ -107,16 +108,18 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         keep: str | bool = "first",
         out_name: str = "duplicated",
     ) -> PolarsBackendFrame:
-        if keep is False:
-            raise NotImplementedError(
-                "duplicated(..., keep=False) is not supported in this adapter yet"
-            )
-        if keep not in {"first", "last"}:
+        if keep not in {"first", "last", False}:
             raise ValueError("keep must be 'first', 'last', or False")
 
         cols = list(subset) if subset is not None else None
         expr = pl.struct(cols) if cols is not None else pl.struct(pl.all())
-        mask_expr = expr.is_duplicated()
+        if keep == "first":
+            mask_expr = ~expr.is_first_distinct()
+        elif keep == "last":
+            mask_expr = ~expr.is_last_distinct()
+        else:
+            # Mark *all* duplicated rows (including the first and last occurrences).
+            mask_expr = (~expr.is_first_distinct()) | (~expr.is_last_distinct())
 
         if isinstance(df, pl.LazyFrame):
             return df.select(mask_expr.alias(out_name))
@@ -574,12 +577,17 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         shuffle: bool = False,
         seed: int | None = None,
     ) -> PolarsBackendFrame:
-        df2 = self._collect_df(df)
         kwargs: dict[str, Any] = {
             "with_replacement": with_replacement,
             "shuffle": shuffle,
             "seed": seed,
         }
+        if isinstance(df, pl.LazyFrame):
+            raise PlanFrameBackendError(
+                "Polars LazyFrame does not support sample() in this adapter. "
+                "Collect first, or construct the frame with lazy=False."
+            )
+        df2 = self._collect_df(df)
         if n is not None:
             return df2.sample(n=n, **kwargs)
         return df2.sample(fraction=frac, **kwargs)

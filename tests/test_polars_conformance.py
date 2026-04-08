@@ -393,14 +393,10 @@ def test_unique_no_subset_keeps_one_row_per_full_row() -> None:
     assert out.height == 2
 
 
-def test_duplicated_keep_false_not_supported() -> None:
-    pf = User({"id": [1, 1, 2], "name": ["a", "b", "c"], "age": [10, 20, 30]})
-    import pytest
-
-    from planframe.backend.errors import PlanFrameExecutionError
-
-    with pytest.raises(PlanFrameExecutionError):
-        pf.duplicated("id", keep=False).collect()
+def test_duplicated_keep_false_marks_all_duplicates() -> None:
+    pf = User({"id": [1, 1, 2, 3, 3], "name": ["a", "b", "c", "d", "e"], "age": [10, 20, 30, 1, 2]})
+    out = pf.duplicated("id", keep=False).collect()
+    assert out["duplicated"].to_list() == [True, True, False, True, True]
 
 
 def test_drop_nulls_fill_null_and_melt() -> None:
@@ -661,10 +657,10 @@ def test_pivot_lazy_without_on_columns_raises_execution_error() -> None:
         v: int
 
     pf = S(data)
-    from planframe.backend.errors import PlanFrameExecutionError
+    from planframe.backend.errors import PlanFrameBackendError
 
-    with pytest.raises(PlanFrameExecutionError):
-        pf.pivot(index=("id",), on="k", values="v", on_columns=None).collect()
+    with pytest.raises(PlanFrameBackendError, match="requires on_columns"):
+        pf.pivot(index=("id",), on="k", values="v", on_columns=None)
 
 
 def test_io_write_parquet_and_scan_parquet(tmp_path: Any) -> None:
@@ -926,7 +922,7 @@ def test_sample_n_is_deterministic_with_seed() -> None:
     class S(PolarsFrame):
         id: int
 
-    pf = S(data)
+    pf = S(data, lazy=False)
     a = pf.sample(3, seed=123, shuffle=True).sort("id").collect()["id"].to_list()
     b = pf.sample(3, seed=123, shuffle=True).sort("id").collect()["id"].to_list()
     assert a == b
@@ -938,9 +934,22 @@ def test_sample_frac_zero_and_one() -> None:
     class S(PolarsFrame):
         id: int
 
-    pf = S(data)
+    pf = S(data, lazy=False)
     assert pf.sample(frac=0.0, seed=1, shuffle=True).collect().height == 0
     assert pf.sample(frac=1.0, seed=1, shuffle=True).collect().height == 10
+
+
+def test_sample_on_lazy_source_raises_clear_error() -> None:
+    from planframe.backend.errors import PlanFrameExecutionError
+
+    data = {"id": list(range(10))}
+
+    class S(PolarsFrame):
+        id: int
+
+    pf = S(data, lazy=True)
+    with pytest.raises(PlanFrameExecutionError, match="Backend collect failed"):
+        pf.sample(3, seed=1, shuffle=True).collect()
 
 
 def test_drop_duplicates_alias_and_keep_last() -> None:
