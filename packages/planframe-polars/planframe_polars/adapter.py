@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from typing import Any, Literal, cast
 
 import polars as pl
@@ -21,6 +22,9 @@ from planframe.typing.storage import StorageOptions
 from planframe_polars.compile_expr import compile_expr
 
 PolarsBackendFrame = pl.DataFrame | pl.LazyFrame
+
+# Polars adds join kwargs over time; only forward hints the installed version supports.
+_LAZYFRAME_JOIN_PARAM_NAMES = frozenset(inspect.signature(pl.LazyFrame.join).parameters)
 
 
 class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
@@ -455,6 +459,11 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
                 # Polars doesn't expose a separate force_parallel flag; treat it as
                 # a strong allow_parallel signal when explicitly provided.
                 join_kwargs["allow_parallel"] = options.force_parallel
+            if (
+                options.engine_streaming is not None
+                and "engine_streaming" in _LAZYFRAME_JOIN_PARAM_NAMES
+            ):
+                join_kwargs["engine_streaming"] = options.engine_streaming
 
         return left_lf.join(right_lf, **join_kwargs)
 
