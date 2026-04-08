@@ -17,6 +17,7 @@ from planframe.backend.errors import (
 )
 from planframe.dynamic_groupby import DynamicGroupedFrame
 from planframe.execution import execute_plan
+from planframe.execution_options import ExecutionOptions
 from planframe.expr.api import Expr, clip, col, infer_dtype, lit
 from planframe.groupby import GroupedFrame
 from planframe.plan.join_options import JoinOptions
@@ -1302,10 +1303,11 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         kind: Literal["dataclass", "pydantic"] | None = None,
         name: str = "Row",
+        options: ExecutionOptions | None = None,
     ) -> BackendFrameT | list[Any]:
         try:
             planned = self._eval(self._plan)
-            out = self._adapter.collect(planned)
+            out = self._adapter.collect(planned, options=options)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(f"Backend collect failed for {self._adapter.name}") from e
 
@@ -1315,7 +1317,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         # Build row models from the derived schema.
         Model = materialize_model(name=name, schema=self._schema, kind=kind)
         try:
-            rows = self._adapter.to_dicts(out)
+            rows = self._adapter.to_dicts(out, options=options)
             return [Model(**r) for r in rows]
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
@@ -1327,10 +1329,11 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         kind: Literal["dataclass", "pydantic"] | None = None,
         name: str = "Row",
+        options: ExecutionOptions | None = None,
     ) -> BackendFrameT | list[Any]:
         try:
             planned = self._eval(self._plan)
-            out = await self._adapter.acollect(planned)
+            out = await self._adapter.acollect(planned, options=options)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend acollect failed for {self._adapter.name}"
@@ -1341,42 +1344,44 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
         Model = materialize_model(name=name, schema=self._schema, kind=kind)
         try:
-            rows = self._adapter.to_dicts(out)
+            rows = self._adapter.to_dicts(out, options=options)
             return [Model(**r) for r in rows]
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend acollect(kind={kind!r}) failed for {self._adapter.name}"
             ) from e
 
-    def to_dicts(self) -> list[dict[str, object]]:
+    def to_dicts(self, *, options: ExecutionOptions | None = None) -> list[dict[str, object]]:
         try:
             planned = self._eval(self._plan)
-            return self._adapter.to_dicts(planned)
+            return self._adapter.to_dicts(planned, options=options)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend to_dicts failed for {self._adapter.name}"
             ) from e
 
-    def to_dict(self) -> dict[str, list[object]]:
+    def to_dict(self, *, options: ExecutionOptions | None = None) -> dict[str, list[object]]:
         try:
             planned = self._eval(self._plan)
-            return self._adapter.to_dict(planned)
+            return self._adapter.to_dict(planned, options=options)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(f"Backend to_dict failed for {self._adapter.name}") from e
 
-    async def ato_dicts(self) -> list[dict[str, object]]:
+    async def ato_dicts(
+        self, *, options: ExecutionOptions | None = None
+    ) -> list[dict[str, object]]:
         try:
             planned = self._eval(self._plan)
-            return await self._adapter.ato_dicts(planned)
+            return await self._adapter.ato_dicts(planned, options=options)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend ato_dicts failed for {self._adapter.name}"
             ) from e
 
-    async def ato_dict(self) -> dict[str, list[object]]:
+    async def ato_dict(self, *, options: ExecutionOptions | None = None) -> dict[str, list[object]]:
         try:
             planned = self._eval(self._plan)
-            return await self._adapter.ato_dict(planned)
+            return await self._adapter.ato_dict(planned, options=options)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend ato_dict failed for {self._adapter.name}"

@@ -15,10 +15,12 @@ from planframe.frame import Frame
 class AsyncSpyAdapter(SpyAdapter):
     """Spy that records ``acollect`` and yields before delegating to sync collect."""
 
-    async def acollect(self, df: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        self.calls.append(("acollect", None))
+    async def acollect(
+        self, df: list[dict[str, Any]], *, options: object | None = None
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("acollect", options))
         await asyncio.sleep(0)
-        return self.collect(df)
+        return self.collect(df, options=options)
 
 
 def test_acollect_default_adapter_matches_collect() -> None:

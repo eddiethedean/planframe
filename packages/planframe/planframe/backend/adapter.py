@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Generic, Literal, TypeAlias, TypeVar
 
+from planframe.execution_options import ExecutionOptions
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import UnnestItem
 from planframe.schema.ir import Schema
@@ -391,15 +392,23 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def compile_expr(self, expr: object, *, schema: Schema | None = None) -> BackendExprT: ...
 
     @abstractmethod
-    def collect(self, df: BackendFrameT) -> BackendFrameT: ...
+    def collect(
+        self, df: BackendFrameT, *, options: ExecutionOptions | None = None
+    ) -> BackendFrameT: ...
 
     @abstractmethod
-    def to_dicts(self, df: BackendFrameT) -> list[dict[str, object]]: ...
+    def to_dicts(
+        self, df: BackendFrameT, *, options: ExecutionOptions | None = None
+    ) -> list[dict[str, object]]: ...
 
     @abstractmethod
-    def to_dict(self, df: BackendFrameT) -> dict[str, list[object]]: ...
+    def to_dict(
+        self, df: BackendFrameT, *, options: ExecutionOptions | None = None
+    ) -> dict[str, list[object]]: ...
 
-    async def acollect(self, df: BackendFrameT) -> BackendFrameT:
+    async def acollect(
+        self, df: BackendFrameT, *, options: ExecutionOptions | None = None
+    ) -> BackendFrameT:
         """Materialize *df* asynchronously.
 
         Default: run :meth:`collect` in a worker thread via :func:`asyncio.to_thread`
@@ -409,17 +418,21 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         instead of blocking in :meth:`collect`.
         """
 
-        return await asyncio.to_thread(self.collect, df)
+        return await asyncio.to_thread(self.collect, df, options=options)
 
-    async def ato_dicts(self, df: BackendFrameT) -> list[dict[str, object]]:
+    async def ato_dicts(
+        self, df: BackendFrameT, *, options: ExecutionOptions | None = None
+    ) -> list[dict[str, object]]:
         """Like :meth:`to_dicts`, but awaitable. Default uses :func:`asyncio.to_thread`."""
 
-        return await asyncio.to_thread(self.to_dicts, df)
+        return await asyncio.to_thread(self.to_dicts, df, options=options)
 
-    async def ato_dict(self, df: BackendFrameT) -> dict[str, list[object]]:
+    async def ato_dict(
+        self, df: BackendFrameT, *, options: ExecutionOptions | None = None
+    ) -> dict[str, list[object]]:
         """Like :meth:`to_dict`, but awaitable. Default uses :func:`asyncio.to_thread`."""
 
-        return await asyncio.to_thread(self.to_dict, df)
+        return await asyncio.to_thread(self.to_dict, df, options=options)
 
 
 # Backwards-compatible name for older imports.

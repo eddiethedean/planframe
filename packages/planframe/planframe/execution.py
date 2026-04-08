@@ -9,6 +9,7 @@ from planframe.backend.adapter import (
     CompiledSortKey,
 )
 from planframe.backend.errors import PlanFrameBackendError
+from planframe.execution_options import ExecutionOptions
 from planframe.expr.api import Expr
 from planframe.plan.nodes import (
     Agg,
@@ -61,6 +62,8 @@ def execute_plan(
     plan: PlanNode,
     root_data: BackendFrameT,
     schema: Schema,
+    options: ExecutionOptions | None = None,
+    collect: bool = False,
 ) -> BackendFrameT:
     """Execute a :class:`planframe.plan.nodes.PlanNode` tree.
 
@@ -68,7 +71,8 @@ def execute_plan(
 
     Important:
     - This returns the backend frame after applying the plan, but it does **not**
-      call :meth:`planframe.backend.adapter.BaseAdapter.collect`.
+      call :meth:`planframe.backend.adapter.BaseAdapter.collect` unless
+      `collect=True` is provided.
     """
 
     def _compile(expr: Any) -> BackendExprT:
@@ -310,4 +314,7 @@ def execute_plan(
 
         raise PlanFrameBackendError(f"Unsupported plan node: {type(node)!r}")
 
-    return _eval(plan)
+    out = _eval(plan)
+    if collect:
+        return adapter.collect(out, options=options)
+    return out

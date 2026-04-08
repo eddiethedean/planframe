@@ -13,6 +13,7 @@ from planframe.backend.adapter import (
     CompiledSortKey,
 )
 from planframe.backend.errors import PlanFrameBackendError
+from planframe.execution_options import ExecutionOptions
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import UnnestItem
@@ -560,13 +561,20 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
     ) -> pd.DataFrame:
         return df.sample(n=n, frac=frac, replace=with_replacement, random_state=seed).copy()
 
-    def collect(self, df: pd.DataFrame) -> pd.DataFrame:
+    def collect(self, df: pd.DataFrame, *, options: ExecutionOptions | None = None) -> pd.DataFrame:
+        _ = options
         return df
 
-    def to_dicts(self, df: pd.DataFrame) -> list[dict[str, object]]:
+    def to_dicts(
+        self, df: pd.DataFrame, *, options: ExecutionOptions | None = None
+    ) -> list[dict[str, object]]:
+        _ = options
         return cast(list[dict[str, object]], df.to_dict(orient="records"))
 
-    def to_dict(self, df: pd.DataFrame) -> dict[str, list[object]]:
+    def to_dict(
+        self, df: pd.DataFrame, *, options: ExecutionOptions | None = None
+    ) -> dict[str, list[object]]:
+        _ = options
         return cast(dict[str, list[object]], df.to_dict(orient="list"))
 
     def write_parquet(

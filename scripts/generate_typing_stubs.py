@@ -58,6 +58,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("")
     a("from planframe.backend.adapter import BackendAdapter")
     a("from planframe.dynamic_groupby import DynamicGroupedFrame")
+    a("from planframe.execution_options import ExecutionOptions")
     a("from planframe.expr.api import Expr")
     a("from planframe.groupby import GroupedFrame")
     a("from planframe.plan.join_options import JoinOptions")
@@ -592,23 +593,33 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        options: JoinOptions | None = ...,")
     a("    ) -> Frame[Any, BackendFrameT, BackendExprT]: ...")
     a("    @overload")
-    a("    def collect(self) -> BackendFrameT: ...")
+    a("    def collect(self, *, options: ExecutionOptions | None = ...) -> BackendFrameT: ...")
     a("")
     a("    @overload")
     a(
-        '    def collect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ...) -> list[Any]: ...'
+        '    def collect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ..., options: ExecutionOptions | None = ...) -> list[Any]: ...'
     )
     a("    @overload")
-    a("    async def acollect(self) -> BackendFrameT: ...")
+    a(
+        "    async def acollect(self, *, options: ExecutionOptions | None = ...) -> BackendFrameT: ..."
+    )
     a("")
     a("    @overload")
     a(
-        '    async def acollect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ...) -> list[Any]: ...'
+        '    async def acollect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ..., options: ExecutionOptions | None = ...) -> list[Any]: ...'
     )
-    a("    def to_dicts(self) -> list[dict[str, object]]: ...")
-    a("    def to_dict(self) -> dict[str, list[object]]: ...")
-    a("    async def ato_dicts(self) -> list[dict[str, object]]: ...")
-    a("    async def ato_dict(self) -> dict[str, list[object]]: ...")
+    a(
+        "    def to_dicts(self, *, options: ExecutionOptions | None = ...) -> list[dict[str, object]]: ..."
+    )
+    a(
+        "    def to_dict(self, *, options: ExecutionOptions | None = ...) -> dict[str, list[object]]: ..."
+    )
+    a(
+        "    async def ato_dicts(self, *, options: ExecutionOptions | None = ...) -> list[dict[str, object]]: ..."
+    )
+    a(
+        "    async def ato_dict(self, *, options: ExecutionOptions | None = ...) -> dict[str, list[object]]: ..."
+    )
     a("    def write_parquet(")
     a("        self,")
     a("        path: str,")

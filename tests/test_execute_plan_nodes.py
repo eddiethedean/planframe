@@ -55,6 +55,25 @@ def _run(frame: Frame[Any, list[dict[str, Any]], object]) -> tuple[list[dict[str
     return out, [c[0] for c in adapter.calls]
 
 
+def test_execute_plan_collect_true_passes_options() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1, "a": None, "b": 2}]
+    pf = Frame.source(data, adapter=adapter, schema=S)
+
+    from planframe.execution_options import ExecutionOptions
+
+    adapter.calls.clear()
+    _ = execute_plan(
+        adapter=adapter,
+        plan=pf.plan(),
+        root_data=pf._data,
+        schema=pf.schema(),
+        collect=True,
+        options=ExecutionOptions(streaming=True),
+    )
+    assert ("collect", ExecutionOptions(streaming=True, engine_streaming=None)) in adapter.calls
+
+
 def test_execute_plan_select_project_with_column_cast_filter_sort_slice_head_tail() -> None:
     adapter = SpyAdapter()
     data = [{"id": 2, "a": None, "b": 5}, {"id": 1, "a": 3, "b": 4}]
