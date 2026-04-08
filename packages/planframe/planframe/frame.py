@@ -7,19 +7,17 @@ from typing import Any, Generic, Literal, TypeVar, cast
 from planframe.backend.adapter import (
     BackendAdapter,
     CompiledJoinKey,
-    CompiledProjectItem,
-    CompiledSortKey,
 )
 from planframe.backend.errors import (
     PlanFrameBackendError,
     PlanFrameExecutionError,
     PlanFrameSchemaError,
 )
+from planframe.execution import execute_plan
 from planframe.expr.api import Expr, infer_dtype
 from planframe.groupby import GroupedFrame
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import (
-    Agg,
     Cast,
     ConcatHorizontal,
     ConcatVertical,
@@ -30,7 +28,6 @@ from planframe.plan.nodes import (
     Explode,
     FillNull,
     Filter,
-    GroupBy,
     Head,
     Join,
     JoinKeyColumn,
@@ -175,186 +172,12 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def _eval(self, node: object) -> BackendFrameT:
         if not isinstance(node, PlanNode):
             raise PlanFrameBackendError(f"Unsupported plan node: {type(node)!r}")
-        if isinstance(node, Source):
-            return self._data
-        if isinstance(node, Select):
-            return self._adapter.select(self._eval(node.prev), node.columns)
-        if isinstance(node, Project):
-            prev = self._eval(node.prev)
-            parts: list[CompiledProjectItem[BackendExprT]] = []
-            for it in node.items:
-                if isinstance(it, ProjectPick):
-                    parts.append(
-                        CompiledProjectItem(name=it.column, from_column=it.column, expr=None)
-                    )
-                else:
-                    parts.append(
-                        CompiledProjectItem(
-                            name=it.name,
-                            from_column=None,
-                            expr=self._compile(it.expr),
-                        )
-                    )
-            return self._adapter.project(prev, tuple(parts))
-        if isinstance(node, Drop):
-            return self._adapter.drop(self._eval(node.prev), node.columns, strict=node.strict)
-        if isinstance(node, Rename):
-            return self._adapter.rename(self._eval(node.prev), node.mapping, strict=node.strict)
-        if isinstance(node, WithColumn):
-            prev = self._eval(node.prev)
-            bexpr = self._compile(node.expr)
-            return self._adapter.with_column(prev, node.name, bexpr)
-        if isinstance(node, Cast):
-            return self._adapter.cast(self._eval(node.prev), node.name, node.dtype)
-        if isinstance(node, Filter):
-            prev = self._eval(node.prev)
-            bexpr = self._compile(node.predicate)
-            return self._adapter.filter(prev, bexpr)
-        if isinstance(node, Sort):
-            prev = self._eval(node.prev)
-            compiled: list[CompiledSortKey[BackendExprT]] = []
-            for k in node.keys:
-                if isinstance(k, SortColumnKey):
-                    compiled.append(CompiledSortKey(column=k.name, expr=None))
-                else:
-                    compiled.append(CompiledSortKey(column=None, expr=self._compile(k.expr)))
-            return self._adapter.sort(
-                prev,
-                tuple(compiled),
-                descending=node.descending,
-                nulls_last=node.nulls_last,
-            )
-        if isinstance(node, Unique):
-            return self._adapter.unique(
-                self._eval(node.prev),
-                node.subset,
-                keep=node.keep,
-                maintain_order=node.maintain_order,
-            )
-        if isinstance(node, Duplicated):
-            return self._adapter.duplicated(
-                self._eval(node.prev),
-                node.subset,
-                keep=node.keep,
-                out_name=node.out_name,
-            )
-        if isinstance(node, GroupBy):
-            # GroupBy is only meaningful when immediately followed by Agg.
-            return self._eval(node.prev)
-        if isinstance(node, Agg):
-            # prev is a GroupBy node
-            if not isinstance(node.prev, GroupBy):
-                raise PlanFrameBackendError("Agg must follow GroupBy")
-            compiled_keys = self._compile_join_keys_tuple(node.prev.keys)
-            compiled_aggs = self._compile_named_aggs(node.named_aggs)
-            return self._adapter.group_by_agg(
-                self._eval(node.prev.prev),
-                keys=compiled_keys,
-                named_aggs=compiled_aggs,
-            )
-        if isinstance(node, DropNulls):
-            return self._adapter.drop_nulls(
-                self._eval(node.prev),
-                node.subset,
-                how=node.how,
-                threshold=node.threshold,
-            )
-        if isinstance(node, FillNull):
-            prev = self._eval(node.prev)
-            if node.value is not None and isinstance(node.value, Expr):
-                compiled_value: BackendExprT = self._compile(node.value)
-            else:
-                compiled_value = node.value
-            return self._adapter.fill_null(
-                prev,
-                compiled_value,
-                node.subset,
-                strategy=node.strategy,
-            )
-        if isinstance(node, Melt):
-            return self._adapter.melt(
-                self._eval(node.prev),
-                id_vars=node.id_vars,
-                value_vars=node.value_vars,
-                variable_name=node.variable_name,
-                value_name=node.value_name,
-            )
-        if isinstance(node, Join):
-            left_df = self._eval(node.prev)
-            right_frame: FrameLike = node.right
-            if getattr(right_frame, "_adapter", None) is None:
-                raise PlanFrameBackendError("Join node right frame is invalid")
-            if getattr(right_frame._adapter, "name", None) != self._adapter.name:
-                raise PlanFrameBackendError("Cannot join frames from different backends")
-            right_df = cast(BackendFrameT, right_frame._eval(right_frame._plan))
-            if node.left_keys is node.right_keys:
-                compiled = self._compile_join_keys_tuple(node.left_keys)
-                lo = ro = compiled
-            else:
-                lo = self._compile_join_keys_tuple(node.left_keys)
-                ro = self._compile_join_keys_tuple(node.right_keys)
-            return self._adapter.join(
-                left_df,
-                right_df,
-                left_on=lo,
-                right_on=ro,
-                how=node.how,
-                suffix=node.suffix,
-                options=node.options,
-            )
-        if isinstance(node, Slice):
-            return self._adapter.slice(
-                self._eval(node.prev), offset=node.offset, length=node.length
-            )
-        if isinstance(node, Head):
-            return self._adapter.head(self._eval(node.prev), node.n)
-        if isinstance(node, Tail):
-            return self._adapter.tail(self._eval(node.prev), node.n)
-        if isinstance(node, ConcatVertical):
-            left_df = self._eval(node.prev)
-            other_frame: FrameLike = node.other
-            if getattr(other_frame, "_adapter", None) is None:
-                raise PlanFrameBackendError("ConcatVertical node other frame is invalid")
-            if getattr(other_frame._adapter, "name", None) != self._adapter.name:
-                raise PlanFrameBackendError("Cannot concat frames from different backends")
-            right_df = cast(BackendFrameT, other_frame._eval(other_frame._plan))
-            return self._adapter.concat_vertical(left_df, right_df)
-        if isinstance(node, Pivot):
-            return self._adapter.pivot(
-                self._eval(node.prev),
-                index=node.index,
-                on=node.on,
-                values=node.values,
-                agg=node.agg,
-                on_columns=node.on_columns,
-                separator=node.separator,
-            )
-        if isinstance(node, Explode):
-            return self._adapter.explode(self._eval(node.prev), node.column)
-        if isinstance(node, Unnest):
-            return self._adapter.unnest(self._eval(node.prev), node.column, fields=node.fields)
-        if isinstance(node, ConcatHorizontal):
-            left_df = self._eval(node.prev)
-            other_frame: FrameLike = node.other
-            if getattr(other_frame, "_adapter", None) is None:
-                raise PlanFrameBackendError("ConcatHorizontal node other frame is invalid")
-            if getattr(other_frame._adapter, "name", None) != self._adapter.name:
-                raise PlanFrameBackendError("Cannot concat frames from different backends")
-            right_df = cast(BackendFrameT, other_frame._eval(other_frame._plan))
-            return self._adapter.concat_horizontal(left_df, right_df)
-        if isinstance(node, DropNullsAll):
-            return self._adapter.drop_nulls_all(self._eval(node.prev), node.subset)
-        if isinstance(node, Sample):
-            return self._adapter.sample(
-                self._eval(node.prev),
-                n=node.n,
-                frac=node.frac,
-                with_replacement=node.with_replacement,
-                shuffle=node.shuffle,
-                seed=node.seed,
-            )
-
-        raise PlanFrameBackendError(f"Unsupported plan node: {type(node)!r}")
+        return execute_plan(
+            adapter=self._adapter,
+            plan=node,
+            root_data=self._data,
+            schema=self._schema,
+        )
 
     def select(
         self, *columns: str | tuple[str, Expr[Any]]
