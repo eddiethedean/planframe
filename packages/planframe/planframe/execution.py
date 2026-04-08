@@ -258,6 +258,7 @@ def execute_plan(
                 agg=node.agg,
                 on_columns=node.on_columns,
                 separator=node.separator,
+                sort_columns=node.sort_columns,
             )
         if isinstance(node, Explode):
             return adapter.explode(_eval(node.prev), node.columns, outer=node.outer)

@@ -290,10 +290,11 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
         *,
         index: tuple[str, ...],
         on: str,
-        values: str,
+        values: tuple[str, ...],
         agg: str = "first",
         on_columns: tuple[str, ...] | None = None,
         separator: str = "_",
+        sort_columns: bool = False,
     ) -> pd.DataFrame:
         if agg == "len":
             aggfunc: str | Any = "size"
@@ -302,7 +303,7 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
         pt = df.pivot_table(
             index=list(index),
             columns=on,
-            values=values,
+            values=list(values) if len(values) != 1 else values[0],
             aggfunc=aggfunc,
             dropna=False,
         )
@@ -315,13 +316,24 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
         else:
             pt.columns = [str(c) for c in pt.columns]
 
+        if sort_columns and on_columns is not None:
+            on_columns = tuple(sorted(on_columns))
+
         if on_columns is not None:
-            # Ensure columns exist (fill with NA).
-            for c in on_columns:
-                if c not in pt.columns:
-                    pt[c] = pd.NA
-            ordered = list(index) + list(on_columns)
-            pt = pt.loc[:, ordered]
+            # Ensure columns exist (fill with NA) and order them.
+            if len(values) == 1:
+                for c in on_columns:
+                    if c not in pt.columns:
+                        pt[c] = pd.NA
+                ordered = list(index) + list(on_columns)
+                pt = pt.loc[:, ordered]
+            else:
+                want = [f"{v}{separator}{c}" for v in values for c in on_columns]
+                for c in want:
+                    if c not in pt.columns:
+                        pt[c] = pd.NA
+                ordered = list(index) + want
+                pt = pt.loc[:, ordered]
         return pt
 
     def explode(self, df: pd.DataFrame, columns: Columns, *, outer: bool = False) -> pd.DataFrame:

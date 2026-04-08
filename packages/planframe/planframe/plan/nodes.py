@@ -215,10 +215,11 @@ class Pivot(PlanNode):
     prev: PlanNode
     index: tuple[str, ...]
     on: str
-    values: str
+    values: tuple[str, ...]
     agg: str
     on_columns: tuple[str, ...] | None
     separator: str = "_"
+    sort_columns: bool = False
 
 
 @dataclass(frozen=True, slots=True)

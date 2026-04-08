@@ -654,14 +654,33 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def melt(
         self,
         *,
-        id_vars: tuple[str, ...],
-        value_vars: tuple[str, ...],
+        id_vars: Sequence[str] | None = None,
+        value_vars: Sequence[str] | None = None,
         variable_name: str = "variable",
         value_name: str = "value",
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        names = self._schema.names()
+        if id_vars is None and value_vars is None:
+            id_tup: tuple[str, ...] = ()
+            val_tup: tuple[str, ...] = names
+        elif id_vars is None:
+            val_tup = tuple(value_vars or ())
+            id_tup = tuple(n for n in names if n not in set(val_tup))
+        elif value_vars is None:
+            id_tup = tuple(id_vars)
+            val_tup = tuple(n for n in names if n not in set(id_tup))
+        else:
+            id_tup = tuple(id_vars)
+            val_tup = tuple(value_vars)
+
+        if not val_tup:
+            raise PlanFrameSchemaError(
+                "melt requires non-empty value_vars (explicitly or via inference)"
+            )
+
         schema2 = self._schema.melt(
-            id_vars=id_vars,
-            value_vars=value_vars,
+            id_vars=id_tup,
+            value_vars=val_tup,
             variable_name=variable_name,
             value_name=value_name,
         )
@@ -670,12 +689,27 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _adapter=self._adapter,
             _plan=Melt(
                 self._plan,
-                id_vars=id_vars,
-                value_vars=value_vars,
+                id_vars=id_tup,
+                value_vars=val_tup,
                 variable_name=variable_name,
                 value_name=value_name,
             ),
             _schema=schema2,
+        )
+
+    def unpivot(
+        self,
+        *,
+        index: Sequence[str] | None = None,
+        on: Sequence[str] | None = None,
+        variable_name: str = "variable",
+        value_name: str = "value",
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        return self.melt(
+            id_vars=tuple(index) if index is not None else None,
+            value_vars=tuple(on) if on is not None else None,
+            variable_name=variable_name,
+            value_name=value_name,
         )
 
     def join(
@@ -850,20 +884,37 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def pivot(
         self,
         *,
-        index: tuple[str, ...],
-        on: str,
-        values: str,
+        index: Sequence[str],
+        columns: str | None = None,
+        on: str | None = None,
+        values: str | Sequence[str],
         agg: Literal[
             "first", "last", "sum", "mean", "min", "max", "count", "len", "median"
         ] = "first",
         on_columns: tuple[str, ...] | None = None,
         separator: str = "_",
+        sort_columns: bool = False,
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
-        if not index:
+        if columns is None and on is None:
+            raise ValueError("pivot requires columns= (preferred) or on=")
+        if columns is not None and on is not None:
+            raise ValueError("pivot: pass either columns= or on=, not both")
+        on_name = columns if columns is not None else cast(str, on)
+
+        idx = tuple(index)
+        if not idx:
             raise PlanFrameSchemaError("pivot requires non-empty index")
-        self._schema.select(index)  # validate
-        self._schema.get(on)
-        self._schema.get(values)
+        self._schema.select(idx)  # validate
+        self._schema.get(on_name)
+
+        value_cols = (values,) if isinstance(values, str) else tuple(values)
+        if not value_cols:
+            raise PlanFrameSchemaError("pivot requires non-empty values")
+        for v in value_cols:
+            self._schema.get(v)
+
+        if sort_columns and on_columns is not None:
+            on_columns = tuple(sorted(on_columns))
         if (
             on_columns is None
             and self._adapter.name == "polars"
@@ -873,22 +924,28 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 "pivot on Polars LazyFrame requires on_columns to be provided"
             )
 
-        out_fields = [self._schema.get(c) for c in index]
+        out_fields = [self._schema.get(c) for c in idx]
         if on_columns is not None:
-            for c in on_columns:
-                out_fields.append(Field(name=str(c), dtype=object))
+            if len(value_cols) == 1:
+                for c in on_columns:
+                    out_fields.append(Field(name=str(c), dtype=object))
+            else:
+                for v in value_cols:
+                    for c in on_columns:
+                        out_fields.append(Field(name=f"{v}{separator}{c}", dtype=object))
         schema2 = Schema(fields=tuple(out_fields))
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Pivot(
                 self._plan,
-                index=index,
-                on=on,
-                values=values,
+                index=idx,
+                on=on_name,
+                values=value_cols,
                 agg=agg,
                 on_columns=on_columns,
                 separator=separator,
+                sort_columns=sort_columns,
             ),
             _schema=schema2,
         )
