@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypedDict
 
 import polars as pl
 import pytest
@@ -41,6 +41,16 @@ from planframe.expr import (
 from planframe_polars import PolarsFrame
 
 pytestmark = pytest.mark.conformance
+
+
+class _SStructAB(TypedDict):
+    a: int | None
+    b: int | None
+
+
+class _SStructId(TypedDict):
+    id: int
+
 
 scan_parquet = PolarsFrame.scan_parquet
 scan_parquet_dataset = PolarsFrame.scan_parquet_dataset
@@ -825,7 +835,7 @@ def test_concat_horizontal_union_distinct_explode_unnest_drop_nulls_all() -> Non
         id: int
         x: int
         lst: object
-        s: object
+        s: _SStructAB
 
     pf = S(data)
     left = pf.select("id", "x")
@@ -839,10 +849,10 @@ def test_concat_horizontal_union_distinct_explode_unnest_drop_nulls_all() -> Non
     exploded = pf.explode("lst").select("id", "lst").collect()
     assert exploded.height >= 3
 
-    unnested = pf.unnest("s", fields=("a", "b")).select("id", "a", "b").collect()
+    unnested = pf.unnest("s").select("id", "a", "b").collect()
     assert set(unnested.columns) == {"id", "a", "b"}
 
-    dropped = pf.unnest("s", fields=("a", "b")).drop_nulls_all("a", "b").collect()
+    dropped = pf.unnest("s").drop_nulls_all("a", "b").collect()
     assert "a" in dropped.columns
 
 
@@ -867,7 +877,7 @@ def test_unnest_duplicate_field_raises() -> None:
 
     class S(PolarsFrame):
         id: int
-        s: object
+        s: _SStructId
 
     pf = S(data)
     import pytest
@@ -875,7 +885,7 @@ def test_unnest_duplicate_field_raises() -> None:
     from planframe.backend.errors import PlanFrameSchemaError
 
     with pytest.raises(PlanFrameSchemaError):
-        pf.unnest("s", fields=("id",))
+        pf.unnest("s")
 
 
 def test_to_dicts_and_to_dict_execute() -> None:

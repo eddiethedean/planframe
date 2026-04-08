@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypedDict
 
 import pandas as pd
 import pytest
@@ -8,6 +8,11 @@ import pytest
 from planframe.backend.errors import PlanFrameExecutionError
 from planframe.expr import add, agg_sum, col, lit, ne
 from planframe_pandas import PandasFrame
+
+
+class _Meta(TypedDict):
+    x: int
+    y: str
 
 
 class User(PandasFrame):
@@ -69,7 +74,7 @@ def test_pandas_melt_pivot_explode_unnest(tmp_path: Any) -> None:
         a: int
         b: int
         parts: list[int]
-        meta: dict[str, object]
+        meta: _Meta
 
     pf = S(
         [
@@ -88,7 +93,7 @@ def test_pandas_melt_pivot_explode_unnest(tmp_path: Any) -> None:
     df2 = exploded.collect()
     assert df2.to_dict(orient="list") == {"id": [1, 1, 2], "parts": [1, 2, 3]}
 
-    unnested = pf.unnest("meta", fields=("x", "y")).select("id", "x", "y").sort("id")
+    unnested = pf.unnest("meta").select("id", "x", "y").sort("id")
     df3 = unnested.collect()
     assert df3.to_dict(orient="list") == {"id": [1, 2], "x": [1, 2], "y": ["a", "b"]}
 

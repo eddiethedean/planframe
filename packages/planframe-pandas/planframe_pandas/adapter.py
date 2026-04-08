@@ -7,6 +7,7 @@ import pandas as pd
 
 from planframe.backend.adapter import (
     BaseAdapter,
+    Columns,
     CompiledJoinKey,
     CompiledProjectItem,
     CompiledSortKey,
@@ -14,6 +15,7 @@ from planframe.backend.adapter import (
 from planframe.backend.errors import PlanFrameBackendError
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
+from planframe.plan.nodes import UnnestItem
 from planframe.typing.scalars import Scalar
 from planframe.typing.storage import StorageOptions
 from planframe_pandas.compile_expr import AggExprSpec, PandasExpr, compile_expr
@@ -322,22 +324,54 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
             pt = pt.loc[:, ordered]
         return pt
 
-    def explode(self, df: pd.DataFrame, column: str) -> pd.DataFrame:
-        return df.explode(column).reset_index(drop=True)
+    def explode(self, df: pd.DataFrame, columns: Columns, *, outer: bool = False) -> pd.DataFrame:
+        if outer:
+            raise PlanFrameBackendError("pandas adapter does not support explode(outer=True)")
+        return df.explode(list(columns)).reset_index(drop=True)
 
-    def unnest(self, df: pd.DataFrame, column: str, *, fields: tuple[str, ...]) -> pd.DataFrame:
-        # Expect dict-like entries.
+    def unnest(self, df: pd.DataFrame, items: tuple[UnnestItem, ...]) -> pd.DataFrame:
         out = df.copy()
-        ser = out[column]
-        expanded = pd.json_normalize(ser).reindex(out.index)
-        if fields:
-            expanded = expanded.loc[:, list(fields)]
-        for c in expanded.columns:
-            if c in out.columns and c != column:
-                raise PlanFrameBackendError(f"unnest would overwrite existing column: {c!r}")
-        out = out.drop(columns=[column])
-        for c in expanded.columns:
-            out[c] = expanded[c]
+        for it in items:
+            ser = out[it.column]
+            expanded = pd.json_normalize(ser).reindex(out.index)
+            expanded = expanded.loc[:, list(it.fields)]
+            for c in expanded.columns:
+                if c in out.columns and c != it.column:
+                    raise PlanFrameBackendError(f"unnest would overwrite existing column: {c!r}")
+            out = out.drop(columns=[it.column])
+            for c in expanded.columns:
+                out[c] = expanded[c]
+        return out
+
+    def posexplode(
+        self,
+        df: pd.DataFrame,
+        column: str,
+        *,
+        pos: str = "pos",
+        value: str | None = None,
+        outer: bool = False,
+    ) -> pd.DataFrame:
+        value_name = column if value is None else value
+        out = df.copy()
+
+        def _as_list(x: Any) -> list[Any]:
+            if isinstance(x, (list, tuple)):
+                return list(x)
+            if x is None:
+                return []
+            return [x]
+
+        def _as_list_outer(x: Any) -> list[Any]:
+            xs = _as_list(x)
+            return xs if xs else [None]
+
+        seqs = out[column].map(_as_list_outer if outer else _as_list)
+        out[column] = seqs
+        out[pos] = seqs.map(lambda xs: list(range(len(xs))))
+        out = out.explode([pos, column], ignore_index=True)
+        if value_name != column:
+            out = out.rename(columns={column: value_name})
         return out
 
     def join(

@@ -224,14 +224,29 @@ class Pivot(PlanNode):
 @dataclass(frozen=True, slots=True)
 class Explode(PlanNode):
     prev: PlanNode
-    column: str
+    columns: tuple[str, ...]
+    outer: bool = False
 
 
 @dataclass(frozen=True, slots=True)
 class Unnest(PlanNode):
     prev: PlanNode
+    items: tuple[UnnestItem, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class UnnestItem:
     column: str
     fields: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class Posexplode(PlanNode):
+    prev: PlanNode
+    column: str
+    pos: str = "pos"
+    value: str | None = None
+    outer: bool = False
 
 
 @dataclass(frozen=True, slots=True)

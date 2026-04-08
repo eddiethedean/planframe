@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Generic, Literal, TypeAlias, TypeVar
 
 from planframe.plan.join_options import JoinOptions
+from planframe.plan.nodes import UnnestItem
 from planframe.schema.ir import Schema
 from planframe.typing.scalars import Scalar
 from planframe.typing.storage import StorageOptions
@@ -313,11 +314,22 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     ) -> None: ...
 
     @abstractmethod
-    def explode(self, df: BackendFrameT, column: str) -> BackendFrameT: ...
+    def explode(
+        self, df: BackendFrameT, columns: Columns, *, outer: bool = False
+    ) -> BackendFrameT: ...
 
     @abstractmethod
-    def unnest(
-        self, df: BackendFrameT, column: str, *, fields: tuple[str, ...]
+    def unnest(self, df: BackendFrameT, items: tuple[UnnestItem, ...]) -> BackendFrameT: ...
+
+    @abstractmethod
+    def posexplode(
+        self,
+        df: BackendFrameT,
+        column: str,
+        *,
+        pos: str = "pos",
+        value: str | None = None,
+        outer: bool = False,
     ) -> BackendFrameT: ...
 
     @abstractmethod

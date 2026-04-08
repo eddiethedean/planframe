@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypedDict
 
 import pytest
 from pydantic import BaseModel
@@ -84,25 +85,34 @@ def test_materialize_model_pydantic_kind_creates_model() -> None:
 
 
 def test_schema_ir_unnest_branches() -> None:
+    class SStruct(TypedDict):
+        x: int
+        y: int
+
     schema = Schema(
         fields=(
             Field(name="id", dtype=int),
-            Field(name="s", dtype=dict),
+            Field(name="s", dtype=SStruct),
             Field(name="a", dtype=int),
         )
     )
 
-    with pytest.raises(PlanFrameSchemaError, match="requires non-empty fields"):
-        schema.unnest("s", fields=())
+    with pytest.raises(PlanFrameSchemaError, match="requires at least one column"):
+        schema.unnest(())
 
-    with pytest.raises(PlanFrameSchemaError, match="Cannot unnest missing column"):
-        schema.unnest("missing", fields=("x",))
+    with pytest.raises(PlanFrameSchemaError, match="columns must be unique"):
+        schema.unnest(("s", "s"))
 
-    with pytest.raises(PlanFrameSchemaError, match="fields must be unique"):
-        schema.unnest("s", fields=("x", "x"))
+    with pytest.raises(PlanFrameSchemaError, match="Cannot unnest missing columns"):
+        schema.unnest(("missing",))
 
+    schema2 = Schema(fields=(Field(name="s", dtype=dict),))
+    with pytest.raises(PlanFrameSchemaError, match="requires schema field names"):
+        schema2.unnest(("s",))
+
+    schema3 = Schema(fields=(Field(name="s", dtype=SStruct), Field(name="x", dtype=int)))
     with pytest.raises(PlanFrameSchemaError, match="duplicate column name"):
-        schema.unnest("s", fields=("a",))
+        schema3.unnest(("s",))
 
 
 def test_schema_ir_melt_duplicate_names_and_missing_columns() -> None:

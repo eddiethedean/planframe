@@ -36,6 +36,7 @@ from planframe.plan.nodes import (
     Melt,
     Pivot,
     PlanNode,
+    Posexplode,
     Project,
     ProjectExpr,
     ProjectPick,
@@ -50,6 +51,7 @@ from planframe.plan.nodes import (
     Tail,
     Unique,
     Unnest,
+    UnnestItem,
     WithColumn,
 )
 from planframe.plan.optimize import optimize_plan
@@ -807,23 +809,41 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         return self.concat_vertical(other).unique()
 
-    def explode(self, column: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
-        schema2 = self._schema.explode(column)
+    def explode(
+        self, *columns: str, outer: bool = False
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        schema2 = self._schema.explode(columns)
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Explode(self._plan, column=column),
+            _plan=Explode(self._plan, columns=tuple(columns), outer=outer),
             _schema=schema2,
         )
 
-    def unnest(
-        self, column: str, *, fields: tuple[str, ...]
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
-        schema2 = self._schema.unnest(column, fields=fields)
+    def unnest(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        schema2, items = self._schema.unnest(columns)
+        node_items = tuple(UnnestItem(column=c, fields=f) for c, f in items)
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Unnest(self._plan, column=column, fields=fields),
+            _plan=Unnest(self._plan, items=node_items),
+            _schema=schema2,
+        )
+
+    def posexplode(
+        self,
+        column: str,
+        *,
+        pos: str = "pos",
+        value: str | None = None,
+        outer: bool = False,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        value_name = column if value is None else value
+        schema2 = self._schema.posexplode(column, pos=pos, value=value_name)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Posexplode(self._plan, column=column, pos=pos, value=value, outer=outer),
             _schema=schema2,
         )
 

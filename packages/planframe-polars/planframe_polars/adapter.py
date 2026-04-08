@@ -6,6 +6,7 @@ import polars as pl
 
 from planframe.backend.adapter import (
     BaseAdapter,
+    Columns,
     CompiledJoinKey,
     CompiledProjectItem,
     CompiledSortKey,
@@ -13,6 +14,7 @@ from planframe.backend.adapter import (
 from planframe.backend.errors import PlanFrameBackendError
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
+from planframe.plan.nodes import UnnestItem
 from planframe.typing.scalars import Scalar
 from planframe.typing.storage import StorageOptions
 from planframe_polars.compile_expr import compile_expr
@@ -545,15 +547,38 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         comp_lit = cast(Literal["uncompressed", "snappy", "deflate"], compression)
         out.write_avro(path, compression=comp_lit, name=name)
 
-    def explode(self, df: PolarsBackendFrame, column: str) -> PolarsBackendFrame:
-        return df.explode(column)
-
-    def unnest(
-        self, df: PolarsBackendFrame, column: str, *, fields: tuple[str, ...]
+    def explode(
+        self, df: PolarsBackendFrame, columns: Columns, *, outer: bool = False
     ) -> PolarsBackendFrame:
-        # Polars can unnest without explicit field selection; PlanFrame schema determines
-        # which output columns are expected.
-        return df.unnest(column)
+        if outer:
+            raise PlanFrameBackendError("polars adapter does not support explode(outer=True)")
+        return df.explode(list(columns))
+
+    def unnest(self, df: PolarsBackendFrame, items: tuple[UnnestItem, ...]) -> PolarsBackendFrame:
+        out = df
+        for it in items:
+            out = out.unnest(it.column)
+        return out
+
+    def posexplode(
+        self,
+        df: PolarsBackendFrame,
+        column: str,
+        *,
+        pos: str = "pos",
+        value: str | None = None,
+        outer: bool = False,
+    ) -> PolarsBackendFrame:
+        if outer:
+            raise PlanFrameBackendError("polars adapter does not support posexplode(outer=True)")
+
+        value_name = column if value is None else value
+        # Build a parallel position list column, then explode both.
+        df2 = df.with_columns(pl.int_ranges(0, pl.col(column).list.len()).alias(pos))
+        out = df2.explode([pos, column])
+        if value_name != column:
+            out = out.rename({column: value_name})
+        return out
 
     def drop_nulls_all(
         self, df: PolarsBackendFrame, subset: tuple[str, ...] | None

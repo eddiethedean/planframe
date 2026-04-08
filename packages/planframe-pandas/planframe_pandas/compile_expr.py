@@ -341,15 +341,15 @@ def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
 
     if isinstance(expr, DtYear):
         inner = _as_expr(expr.value)
-        return lambda df: pd.to_datetime(cast(pd.Series, inner(df))).dt.year
+        return lambda df: cast(pd.Series, pd.to_datetime(cast(pd.Series, inner(df)))).dt.year
 
     if isinstance(expr, DtMonth):
         inner = _as_expr(expr.value)
-        return lambda df: pd.to_datetime(cast(pd.Series, inner(df))).dt.month
+        return lambda df: cast(pd.Series, pd.to_datetime(cast(pd.Series, inner(df)))).dt.month
 
     if isinstance(expr, DtDay):
         inner = _as_expr(expr.value)
-        return lambda df: pd.to_datetime(cast(pd.Series, inner(df))).dt.day
+        return lambda df: cast(pd.Series, pd.to_datetime(cast(pd.Series, inner(df)))).dt.day
 
     if isinstance(expr, Over):
         # Pandas backend does not currently model window contexts; treat as passthrough.
