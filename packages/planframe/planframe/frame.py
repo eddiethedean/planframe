@@ -14,6 +14,7 @@ from planframe.backend.errors import (
     PlanFrameExecutionError,
     PlanFrameSchemaError,
 )
+from planframe.dynamic_groupby import DynamicGroupedFrame
 from planframe.execution import execute_plan
 from planframe.expr.api import Expr, infer_dtype
 from planframe.groupby import GroupedFrame
@@ -41,6 +42,7 @@ from planframe.plan.nodes import (
     ProjectExpr,
     ProjectPick,
     Rename,
+    RollingAgg,
     Sample,
     Select,
     Slice,
@@ -597,6 +599,79 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _plan=self._plan,
             _schema=self._schema,
             _key_items=items,
+        )
+
+    def group_by_dynamic(
+        self,
+        index_column: str,
+        *,
+        every: str,
+        period: str | None = None,
+        by: Sequence[str] | None = None,
+    ) -> DynamicGroupedFrame[SchemaT, BackendFrameT, BackendExprT]:
+        self._schema.get(index_column)
+        by_tup = tuple(by) if by is not None else None
+        if by_tup is not None:
+            self._schema.select(by_tup)
+        if not every:
+            raise ValueError("group_by_dynamic requires non-empty every")
+        if period is not None and not period:
+            raise ValueError("group_by_dynamic period must be non-empty when provided")
+
+        return DynamicGroupedFrame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=self._plan,
+            _schema=self._schema,
+            _index_column=index_column,
+            _every=every,
+            _period=period,
+            _by=by_tup,
+        )
+
+    def rolling_agg(
+        self,
+        *,
+        on: str,
+        column: str,
+        window_size: int | str,
+        op: str,
+        out_name: str,
+        by: Sequence[str] | None = None,
+        min_periods: int = 1,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        self._schema.get(on)
+        self._schema.get(column)
+        by_tup = tuple(by) if by is not None else None
+        if by_tup is not None:
+            self._schema.select(by_tup)
+        if isinstance(window_size, int) and window_size <= 0:
+            raise ValueError("rolling_agg window_size must be positive")
+        if isinstance(window_size, str) and not window_size:
+            raise ValueError("rolling_agg window_size must be non-empty")
+        if min_periods <= 0:
+            raise ValueError("rolling_agg min_periods must be positive")
+        if not out_name:
+            raise ValueError("rolling_agg requires non-empty out_name")
+
+        dtype: object = object
+        if op in {"count"}:
+            dtype = int
+        schema2 = self._schema.with_column(out_name, dtype=dtype)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=RollingAgg(
+                self._plan,
+                on=on,
+                column=column,
+                window_size=window_size,
+                op=op,
+                out_name=out_name,
+                by=by_tup,
+                min_periods=min_periods,
+            ),
+            _schema=schema2,
         )
 
     def drop_nulls(

@@ -319,6 +319,58 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
             out.append(dict(base))
         return out
 
+    def group_by_dynamic_agg(
+        self,
+        df: list[dict[str, Any]],
+        *,
+        index_column: str,
+        every: str,
+        period: str | None = None,
+        by: tuple[str, ...] | None = None,
+        named_aggs: dict[str, tuple[str, str] | AggExpr],
+    ) -> list[dict[str, Any]]:
+        self.calls.append(
+            ("group_by_dynamic_agg", (index_column, every, period, by, dict(named_aggs)))
+        )
+        # Minimal: no actual windowing; just aggregate over the full input keyed by (index_column, *by).
+        keys = (index_column, *(() if by is None else by))
+        groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+        for row in df:
+            k = tuple(row.get(c) for c in keys)
+            groups.setdefault(k, []).append(row)
+
+        out: list[dict[str, Any]] = []
+        for k, rows in groups.items():
+            base: dict[str, Any] = {keys[i]: k[i] for i in range(len(keys))}
+            for out_name, spec in named_aggs.items():
+                if isinstance(spec, tuple):
+                    op, col_name = spec
+                    vals = [r[col_name] for r in rows]
+                    base[out_name] = _spy_agg_reduce(vals, op)
+                elif isinstance(spec, AggExpr):
+                    inner_vals = [_spy_row_expr(r, spec.inner) for r in rows]
+                    base[out_name] = _spy_agg_reduce(inner_vals, spec.op)
+                else:
+                    raise TypeError("unexpected agg spec")
+            out.append(dict(base))
+        return out
+
+    def rolling_agg(
+        self,
+        df: list[dict[str, Any]],
+        *,
+        on: str,
+        column: str,
+        window_size: int | str,
+        op: str,
+        out_name: str,
+        by: tuple[str, ...] | None = None,
+        min_periods: int = 1,
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("rolling_agg", (on, column, window_size, op, out_name, by, min_periods)))
+        # Minimal: just add the output column as a placeholder.
+        return [{**row, out_name: "computed"} for row in df]
+
     def drop_nulls(
         self,
         df: list[dict[str, Any]],
@@ -1377,6 +1429,37 @@ def test_posexplode_is_lazy_and_adds_pos_and_value_columns() -> None:
     rows = out.collect()
     assert rows == [{"id": 1, "pos": 0, "xs": 10}, {"id": 1, "pos": 1, "xs": 20}]
     assert [c[0] for c in adapter.calls] == ["posexplode", "collect"]
+
+
+def test_group_by_dynamic_is_lazy() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S:
+        ts: int
+        g: str
+        x: int
+
+    pf = Frame.source([{"ts": 1, "g": "a", "x": 10}], adapter=adapter, schema=S)
+    out = pf.group_by_dynamic("ts", every="1h", by=("g",)).agg(n=("count", "x"))
+    assert adapter.calls == []
+    _ = out.collect()
+    assert [c[0] for c in adapter.calls] == ["group_by_dynamic_agg", "collect"]
+
+
+def test_rolling_agg_is_lazy() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S:
+        ts: int
+        x: int
+
+    pf = Frame.source([{"ts": 1, "x": 10}], adapter=adapter, schema=S)
+    out = pf.rolling_agg(on="ts", column="x", window_size=2, op="mean", out_name="x_roll")
+    assert adapter.calls == []
+    _ = out.collect()
+    assert [c[0] for c in adapter.calls] == ["rolling_agg", "collect"]
 
 
 def test_write_methods_execute_and_are_boundaries(tmp_path: Any) -> None:

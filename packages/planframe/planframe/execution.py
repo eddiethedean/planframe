@@ -19,6 +19,7 @@ from planframe.plan.nodes import (
     DropNulls,
     DropNullsAll,
     Duplicated,
+    DynamicGroupByAgg,
     Explode,
     FillNull,
     Filter,
@@ -34,6 +35,7 @@ from planframe.plan.nodes import (
     Project,
     ProjectPick,
     Rename,
+    RollingAgg,
     Sample,
     Select,
     Slice,
@@ -178,6 +180,16 @@ def execute_plan(
                 keys=compiled_keys,
                 named_aggs=compiled_aggs,
             )
+        if isinstance(node, DynamicGroupByAgg):
+            compiled_aggs = _compile_named_aggs(node.named_aggs)
+            return adapter.group_by_dynamic_agg(
+                _eval(node.prev),
+                index_column=node.index_column,
+                every=node.every,
+                period=node.period,
+                by=node.by,
+                named_aggs=compiled_aggs,
+            )
         if isinstance(node, DropNulls):
             return adapter.drop_nulls(
                 _eval(node.prev),
@@ -259,6 +271,17 @@ def execute_plan(
                 on_columns=node.on_columns,
                 separator=node.separator,
                 sort_columns=node.sort_columns,
+            )
+        if isinstance(node, RollingAgg):
+            return adapter.rolling_agg(
+                _eval(node.prev),
+                on=node.on,
+                column=node.column,
+                window_size=node.window_size,
+                op=node.op,
+                out_name=node.out_name,
+                by=node.by,
+                min_periods=node.min_periods,
             )
         if isinstance(node, Explode):
             return adapter.explode(_eval(node.prev), node.columns, outer=node.outer)

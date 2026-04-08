@@ -267,6 +267,32 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
             out = out.drop(columns=tmp_cols)
         return res
 
+    def group_by_dynamic_agg(
+        self,
+        df: pd.DataFrame,
+        *,
+        index_column: str,
+        every: str,
+        period: str | None = None,
+        by: tuple[str, ...] | None = None,
+        named_aggs: dict[str, tuple[str, str] | PandasBackendExpr],
+    ) -> pd.DataFrame:
+        raise PlanFrameBackendError("pandas adapter does not implement group_by_dynamic_agg")
+
+    def rolling_agg(
+        self,
+        df: pd.DataFrame,
+        *,
+        on: str,
+        column: str,
+        window_size: int | str,
+        op: str,
+        out_name: str,
+        by: tuple[str, ...] | None = None,
+        min_periods: int = 1,
+    ) -> pd.DataFrame:
+        raise PlanFrameBackendError("pandas adapter does not implement rolling_agg")
+
     def melt(
         self,
         df: pd.DataFrame,

@@ -181,6 +181,118 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
                 agg_exprs.append(expr.alias(out_name))
         return df.group_by(*by_exprs).agg(agg_exprs)
 
+    def group_by_dynamic_agg(
+        self,
+        df: PolarsBackendFrame,
+        *,
+        index_column: str,
+        every: str,
+        period: str | None = None,
+        by: tuple[str, ...] | None = None,
+        named_aggs: dict[str, tuple[str, str] | pl.Expr],
+    ) -> PolarsBackendFrame:
+        if not every:
+            raise ValueError("every must be non-empty")
+
+        # Build aggregation expressions (same handling as group_by_agg).
+        agg_exprs: list[pl.Expr] = []
+        for out_name, spec in named_aggs.items():
+            if (
+                isinstance(spec, tuple)
+                and len(spec) == 2
+                and isinstance(spec[0], str)
+                and isinstance(spec[1], str)
+            ):
+                op = spec[0]
+                col: str = spec[1]
+                e = pl.col(col)
+                if op == "count":
+                    ex = e.count()
+                elif op == "sum":
+                    ex = e.sum()
+                elif op == "mean":
+                    ex = e.mean()
+                elif op == "min":
+                    ex = e.min()
+                elif op == "max":
+                    ex = e.max()
+                elif op == "n_unique":
+                    ex = e.n_unique()
+                else:
+                    raise ValueError(f"Unsupported agg op: {op!r}")
+                agg_exprs.append(ex.alias(out_name))
+            else:
+                expr = cast(pl.Expr, spec)
+                agg_exprs.append(expr.alias(out_name))
+
+        kwargs: dict[str, Any] = {"every": every}
+        if period is not None:
+            kwargs["period"] = period
+        if by is not None:
+            kwargs["by"] = list(by)
+
+        return df.group_by_dynamic(index_column, **kwargs).agg(agg_exprs)
+
+    def rolling_agg(
+        self,
+        df: PolarsBackendFrame,
+        *,
+        on: str,
+        column: str,
+        window_size: int | str,
+        op: str,
+        out_name: str,
+        by: tuple[str, ...] | None = None,
+        min_periods: int = 1,
+    ) -> PolarsBackendFrame:
+        # Ensure deterministic ordering for rolling windows.
+        df2 = df.sort(on)
+        base = pl.col(column)
+
+        if isinstance(window_size, int):
+            if op == "sum":
+                expr = base.rolling_sum(window_size=window_size, min_periods=min_periods)
+            elif op == "mean":
+                expr = base.rolling_mean(window_size=window_size, min_periods=min_periods)
+            elif op == "min":
+                expr = base.rolling_min(window_size=window_size, min_periods=min_periods)
+            elif op == "max":
+                expr = base.rolling_max(window_size=window_size, min_periods=min_periods)
+            elif op == "count":
+                expr = (
+                    base.is_not_null()
+                    .cast(pl.Int64)
+                    .rolling_sum(window_size=window_size, min_periods=min_periods)
+                )
+            else:
+                raise ValueError(f"Unsupported rolling op: {op!r}")
+        else:
+            # time-based rolling, use *_by on the on-column.
+            by_col = pl.col(on)
+            if op == "sum":
+                expr = base.rolling_sum_by(by_col, window_size=window_size, min_periods=min_periods)
+            elif op == "mean":
+                expr = base.rolling_mean_by(
+                    by_col, window_size=window_size, min_periods=min_periods
+                )
+            elif op == "min":
+                expr = base.rolling_min_by(by_col, window_size=window_size, min_periods=min_periods)
+            elif op == "max":
+                expr = base.rolling_max_by(by_col, window_size=window_size, min_periods=min_periods)
+            elif op == "count":
+                expr = (
+                    base.is_not_null()
+                    .cast(pl.Int64)
+                    .rolling_sum_by(by_col, window_size=window_size, min_periods=min_periods)
+                )
+            else:
+                raise ValueError(f"Unsupported rolling op: {op!r}")
+
+        if by is not None:
+            expr = expr.over(list(by))
+
+        return df2.with_columns(expr.alias(out_name))
+
     def drop_nulls(
         self,
         df: PolarsBackendFrame,
