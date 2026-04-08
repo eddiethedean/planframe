@@ -63,7 +63,7 @@ df = out.collect()
   - **reshape**: `melt`, `pivot` (see note below)
   - **set-like**: `concat_vertical`
   - **dedupe**: `unique`, `duplicated`
-  - **joins**: `join`
+  - **joins**: `join` (`on` / `left_on` / `right_on` may mix column names and `Expr` keys)
   - **grouping**: `group_by(...).agg(...)`
   - **core**: `with_column`, `cast`, `filter`, `sort` (keys may be column names and/or `Expr`; schema unchanged)
 - **Boundaries**:

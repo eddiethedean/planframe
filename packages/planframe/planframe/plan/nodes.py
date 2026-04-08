@@ -152,11 +152,25 @@ class Melt(PlanNode):
 
 
 @dataclass(frozen=True, slots=True)
+class JoinKeyColumn:
+    """Join predicate uses this existing column name on one side."""
+
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class JoinKeyExpr:
+    """Join predicate compares this expression to the paired key on the other side."""
+
+    expr: Expr[Any]
+
+
+@dataclass(frozen=True, slots=True)
 class Join(PlanNode):
     prev: PlanNode
     right: Any
-    left_keys: tuple[str, ...]
-    right_keys: tuple[str, ...]
+    left_keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
+    right_keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
     how: str = "inner"
     suffix: str = "_right"
     options: JoinOptions | None = None

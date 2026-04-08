@@ -454,6 +454,37 @@ def test_join_left_on_right_on_polars() -> None:
     assert out.to_dict(as_series=False) == {"user_id": [1], "x": [10], "y": [100]}
 
 
+def test_join_expression_keys_polars() -> None:
+    @dataclass(frozen=True)
+    class L:
+        id: int
+        email: str
+
+    @dataclass(frozen=True)
+    class R:
+        rid: int
+        email_norm: str
+
+    class LF(PolarsFrame):
+        id: int
+        email: str
+
+    class RF(PolarsFrame):
+        rid: int
+        email_norm: str
+
+    left_pf = LF({"id": [1, 2], "email": ["A@x.com", "b@y.com"]})
+    right_pf = RF({"rid": [10, 20], "email_norm": ["a@x.com", "b@y.com"]})
+    out = left_pf.join(
+        right_pf,
+        left_on=(lower(col("email")),),
+        right_on=(lower(col("email_norm")),),
+        how="inner",
+    ).collect()
+    assert out.height == 2
+    assert set(out["id"].to_list()) == {1, 2}
+
+
 def test_row_ops_head_tail_slice_limit() -> None:
     pf = User({"id": [1, 2, 3, 4], "name": ["a", "b", "c", "d"], "age": [10, 20, 30, 40]})
 
