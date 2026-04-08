@@ -15,3 +15,5 @@ class JoinOptions:
     join_nulls: bool | None = None
     maintain_order: str | bool | None = None
     streaming: bool | None = None
+    allow_parallel: bool | None = None
+    force_parallel: bool | None = None
