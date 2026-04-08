@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import cast
 
 from planframe.backend.errors import PlanFrameBackendError
 from planframe.plan.nodes import (
