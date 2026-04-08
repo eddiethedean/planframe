@@ -30,6 +30,7 @@ df = pf.select("id").collect()
 #
 # PlanFrame is always lazy; these build a plan until `collect()`.
 pf3 = pf.with_row_count(name="row_nr").clip(lower=0, subset=("age",))
+pf4 = pf.rename_upper().cast_many({"age": float})
 
 # Or construct from python data:
 pf2 = User({"id": [1], "age": [2]})
@@ -44,6 +45,7 @@ PlanFrame is always lazy:
 ### Notes (Polars-specific)
 
 - **Pivot**: `LazyFrame.pivot(...)` requires `on_columns` to be provided up-front (Polars must know the output schema prior to `collect()`). PlanFrame enforces this at execution time.
+- **pivot_wider**: wrapper around `pivot(...)`; for deterministic output columns on lazy sources, pass `on_columns`.
 - **concat_vertical**: implemented via `polars.concat(..., how="vertical")`.
 - **Join**: implemented via `LazyFrame.join(...)` / `DataFrame.join(...)` with symmetric `on` or asymmetric `left_on` / `right_on`, plus optional `JoinOptions` mapped to Polars (`nulls_equal`, `validate`, `coalesce`, `maintain_order`, `allow_parallel` / streaming).
 - **Group by / agg**: `group_by` compiles to Polars `group_by` with column or expression keys (expression keys are aliased `__pf_g{i}`). `agg` compiles tuple reductions to `pl.col(...).sum()`-style calls and `AggExpr` to aggregated expressions on compiled inners (e.g. `agg_sum(truediv(col("a"), col("b")))`).

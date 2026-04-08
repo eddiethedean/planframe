@@ -19,4 +19,8 @@ Documentation (ReadTheDocs):
 
 - `with_row_count(name="row_nr", offset=0)`: add a monotonically increasing row number column.
 - `clip(lower=..., upper=..., subset=...)`: clamp numeric columns (if `subset=None`, clamps all numeric schema fields).
+- `cast_many` / `cast_subset`: multi-column cast helpers.
+- `fill_null_many` / `fill_null_subset`: multi-column fill-null helpers.
+- `rename_upper/lower/title/strip(...)`: schema-driven rename helpers.
+- `pivot_longer(...)` / `pivot_wider(...)`: reshape convenience wrappers around `melt` / `pivot`.
 

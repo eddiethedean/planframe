@@ -39,6 +39,17 @@ Two common primitives:
 - `with_row_count(name="row_nr", offset=0)` adds a monotonically increasing row number column.
 - `clip(lower=..., upper=..., subset=...)` clamps numeric columns (if `subset=None`, PlanFrame clamps all numeric schema fields).
 
+## Schema-only selectors and multi-column helpers
+
+- `select_schema(selector, strict=True)` evaluates a selector object against the current PlanFrame `Schema` (backend-independent) and lowers to an explicit selection.
+- Multi-column helpers: `cast_many`, `cast_subset`, `fill_null_many`, `fill_null_subset`.
+- Rename helpers: `rename_upper/lower/title/strip(...)`.
+
+## Reshape ergonomics
+
+- `pivot_longer(...)` and `pivot_wider(...)` are convenience wrappers around `melt(...)` / `pivot(...)`.
+- For deterministic output columns (especially on lazy sources), pass `on_columns` to `pivot_wider(...)`.
+
 ## Defaults for missing columns
 
 If your schema defines defaults, PlanFrame will fill **missing input keys/columns** on construction.

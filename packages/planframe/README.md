@@ -24,6 +24,11 @@ Some commonly used Frame transforms:
 
 - `with_row_count(name="row_nr", offset=0)`: add a monotonically increasing row number column.
 - `clip(lower=..., upper=..., subset=...)`: clamp numeric columns (if `subset=None`, clamps all numeric schema fields).
+- `select_schema(selector, strict=True)`: schema-only selectors (backend-independent).
+- `cast_many(mapping, strict=True)` / `cast_subset(*columns, dtype, strict=True)`: multi-column cast helpers.
+- `fill_null_subset(value|strategy, *columns)` / `fill_null_many(mapping, strict=True)`: multi-column fill-null helpers.
+- `rename_upper/lower/title/strip(...)`: schema-driven rename helpers.
+- `pivot_longer(...)` / `pivot_wider(...)`: reshape convenience wrappers around `melt` / `pivot`.
 
 ### Note on backends
 `planframe` is backend-agnostic. It does not execute anything until `collect()` (even for eager backends). To execute plans you need an adapter package (e.g. `planframe-polars`).

@@ -67,12 +67,16 @@ Output = out.materialize_model("Output", kind="dataclass")
 df = out.collect()
 ```
 
-### New in v0.4.x
+### New in v0.5.x
 
 Common primitives added recently:
 
 - `Frame.with_row_count(name="row_nr", offset=0)` to add a monotonically increasing row number column (lazy).
 - `Frame.clip(lower=..., upper=..., subset=...)` to clamp numeric columns (lazy; `subset=None` clamps all numeric schema fields).
+- `Frame.select_schema(selector, strict=True)`: schema-only selectors (no backend dependency).
+- Multi-column helpers: `cast_many`, `cast_subset`, `fill_null_subset`, `fill_null_many`.
+- Rename helpers: `rename_upper`, `rename_lower`, `rename_title`, `rename_strip`.
+- Reshape helpers: `pivot_longer`, `pivot_wider`.
 
 ### Learn more
 

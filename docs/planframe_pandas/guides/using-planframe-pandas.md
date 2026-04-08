@@ -45,6 +45,12 @@ Two common primitives:
 - `with_row_count(name="row_nr", offset=0)` adds a monotonically increasing row number column.
 - `clip(lower=..., upper=..., subset=...)` clamps numeric columns (if `subset=None`, PlanFrame clamps all numeric schema fields).
 
+## Schema-only selectors and multi-column helpers
+
+- `select_schema(selector, strict=True)` evaluates a selector object against the current PlanFrame `Schema` (backend-independent) and lowers to an explicit selection.
+- Multi-column helpers: `cast_many`, `cast_subset`, `fill_null_many`, `fill_null_subset`.
+- Rename helpers: `rename_upper/lower/title/strip(...)`.
+
 ## Grouping and aggregation
 
 `group_by` takes one or more **keys**, each either a column name (`str`) or a **`planframe.expr`** expression (same general idea as `sort` / `join` keys). Keys that are expressions are not named after a single input column; in the aggregated result they appear as **`__pf_g0`**, **`__pf_g1`**, … by position in the key list.
@@ -74,7 +80,9 @@ df = out.collect()
 ## Reshape and nested data
 
 - **melt**: implemented via `pandas.melt(...)`
+- **pivot_longer**: convenience wrapper around `melt(...)`
 - **pivot**: implemented via `DataFrame.pivot_table(...)`; if you pass `on_columns`, PlanFrame will ensure those output columns exist (filling missing with `NA`) and will reorder to match.
+- **pivot_wider**: convenience wrapper around `pivot(...)` (pass `on_columns` for deterministic output columns)
 - **explode**: implemented via `DataFrame.explode(...)`
 - **unnest**: expands dict-like values into columns (via `pandas.json_normalize`); name collisions raise an error.
 
