@@ -53,7 +53,6 @@ This is what users interact with.
 
 - `Frame[PlanT, BackendT]`
 - `Expr[T]`
-- `Column[T]`
 - typed methods like `.select(...)`, `.with_column(...)`, `.rename(...)`
 
 ### Layer B — Internal Resolution Layer
@@ -80,27 +79,6 @@ PlanT = TypeVar("PlanT")
 BackendT = TypeVar("BackendT")
 T = TypeVar("T")
 NameT = TypeVar("NameT", bound=str)
-```
-
-### Frame
-
-```python
-class Frame(Generic[PlanT, BackendT]):
-    ...
-```
-
-### Expressions
-
-```python
-class Expr(Generic[T]):
-    ...
-```
-
-### Columns
-
-```python
-class Column(Generic[T]):
-    ...
 ```
 
 ---
@@ -173,7 +151,8 @@ In other words:
 
 ## 7. Concrete Rules for Resolve
 
-## Rule 1 — Source
+### Rule 1 — Source
+
 If a frame starts from a concrete schema `S`, then every source column resolves to the declared field type in `S`.
 
 Conceptually:
@@ -189,7 +168,8 @@ Implementation options:
 
 ---
 
-## Rule 2 — Select
+### Rule 2 — Select
+
 A selected frame only exposes selected columns.
 
 Conceptually:
@@ -204,23 +184,10 @@ Pyright strategy:
 - return a new frame type bound to a new accessor proxy
 - optionally generate a materialized schema proxy type
 
-Example overload pattern:
-
-```python
-from typing import overload
-from typing_extensions import Literal
-
-@overload
-def select(self, __c1: Literal["id"]) -> Frame[Any, BackendT]: ...
-@overload
-def select(self, __c1: Literal["id"], __c2: Literal["name"]) -> Frame[Any, BackendT]: ...
-```
-
-The runtime implementation is generic, but the stubs drive static checking.
-
 ---
 
-## Rule 3 — WithColumn
+### Rule 3 — WithColumn
+
 Adding a column introduces a new name with the expression output type.
 
 Conceptually:
@@ -230,39 +197,10 @@ Resolve[WithColumn[P, "age_plus_one", int], "age_plus_one"] -> int
 Resolve[WithColumn[P, "id_plus_one", int], "id"] -> Resolve[P, "id"]
 ```
 
-Pyright strategy:
-- `with_column` must require a literal column name
-- the expression type is carried by `Expr[T]`
-- the return type is a new frame type tied to a new accessor proxy
-
-Example:
-
-```python
-NameLit = TypeVar("NameLit", bound=str)
-T = TypeVar("T")
-
-def with_column(
-    self,
-    name: NameLit,
-    expr: Expr[T],
-) -> Frame[Any, BackendT]:
-    ...
-```
-
-In raw Python typing this is not enough to fully expose the new column statically. That is why one of these must be true:
-
-- you materialize
-- you generate stubs
-- or you use a plugin
-
-MVP recommendation:
-- make `with_column` fully typed for expression output
-- expose exact resulting schema after `materialize()`
-- optionally provide a debug `reveal_schema()` runtime method
-
 ---
 
-## Rule 4 — Rename
+### Rule 4 — Rename
+
 Renaming moves the type from the old name to the new name.
 
 Conceptually:
@@ -275,59 +213,23 @@ Resolve[Rename[P, {"name": "full_name"}], "name"] -> error
 Pyright strategy:
 - only support keyword rename syntax in the typed API
 
-Example:
-
-```python
-frame.rename(name="full_name")
-```
-
-This is easier to type than arbitrary dicts.
-
-Support overloads for a limited number of renames in MVP.
-
 ---
 
-## Rule 5 — Drop
+### Rule 5 — Drop
+
 Dropped columns disappear from the visible schema.
 
-Conceptually:
-
-```python
-Resolve[Drop[P, ("age",)], "age"] -> error
-```
-
-Pyright strategy:
-- same as `select`, but subtractive
-- overload-based API for small arity
-- exact schema becomes cleanest after `materialize()`
-
 ---
 
-## Rule 6 — Cast
+### Rule 6 — Cast
+
 Casting keeps the name but changes the type.
 
-Conceptually:
-
-```python
-Resolve[Cast[P, "id", str], "id"] -> str
-```
-
-Pyright strategy:
-- explicit typed caster operations
-- avoid accepting arbitrary Python types unless mapped through a supported dtype IR
-
 ---
 
-## Rule 7 — Filter
+### Rule 7 — Filter
+
 Filtering does not change schema.
-
-Conceptually:
-
-```python
-Resolve[Filter[P], K] -> Resolve[P, K]
-```
-
-This is one of the easiest operations to support statically and should be in v1.
 
 ---
 
@@ -339,14 +241,10 @@ To maximize Pyright success, the public typed API should enforce these rules:
 - column names must be `Literal[...]` at call sites
 - expressions must be `Expr[T]`
 - transformations must be immutable
-- no dict-based dynamic schemas in public typed methods
-- no `Any` in public signatures unless it is an intentional unsafe boundary
 
 ### Forbidden in the safe API
-- `df["col"]`
 - runtime-computed column names
 - `lambda`-based apply
-- loops that mutate schema shape
 - backend-native raw expressions in typed methods
 
 ---
@@ -362,11 +260,10 @@ The practical design is:
 
 ### Stage 2 — Exact schema views at explicit boundaries
 - `materialize_model("OutputModel")`
-- `schema_view()`
 - generated `.pyi` support for frozen pipelines
 
 ### Stage 3 — Optional plugin
-The plugin can implement full logical `Resolve` over the plan AST.
+Implement plan-AST-aware column resolution.
 
 ---
 
@@ -391,10 +288,6 @@ At this point:
 - a Pydantic or dataclass model can be generated
 - exact static types can be emitted through stubs or codegen
 
-This gives users the best of both worlds:
-- fluent chains without manual intermediate models
-- exact concrete schema when they care
-
 ---
 
 ## 11. Recommended Resolution Tiers
@@ -402,17 +295,11 @@ This gives users the best of both worlds:
 ### Tier 1 — No plugin
 Use overloads + materialization + generated stubs.
 
-This is the fastest path to a useful package.
-
 ### Tier 2 — Stub generation
 For stable pipelines, emit `.pyi` or codegen classes.
 
-This improves exactness without requiring editor plugin logic.
-
 ### Tier 3 — Pyright plugin
-Implement plan-AST-aware column resolution.
-
-This is the most powerful, but also the highest maintenance cost.
+Implement full logical `Resolve` over the plan AST.
 
 ---
 
@@ -433,58 +320,3 @@ For the first release:
 5. Make exact concrete output available at `materialize_model`
 6. Treat fully-general `Resolve` as a future plugin feature
 
-This is enough to create a compelling package without overpromising impossible type magic in plain Python typing.
-
----
-
-## 13. Example Signatures
-
-```python
-from __future__ import annotations
-
-from typing import Generic, TypeVar, Any
-from typing_extensions import Literal
-
-PlanT = TypeVar("PlanT")
-BackendT = TypeVar("BackendT")
-T = TypeVar("T")
-
-class Expr(Generic[T]):
-    ...
-
-class Frame(Generic[PlanT, BackendT]):
-    def filter(self, predicate: Expr[bool]) -> Frame[PlanT, BackendT]:
-        ...
-
-    def with_column(
-        self,
-        name: str,
-        expr: Expr[T],
-    ) -> Frame[Any, BackendT]:
-        ...
-
-    def materialize_model(self, name: str) -> type[Any]:
-        ...
-```
-
-### Recommended refinement
-
-For polished typing, the user-facing package should ship `.pyi` files with richer overloads than the runtime implementation.
-
----
-
-## 14. Final Position
-
-`Resolve` should be treated as:
-
-- a specification for how schema typing behaves
-- a combination of public API restrictions and type propagation mechanisms
-- not a promise that vanilla Python typing alone can evaluate arbitrary schema transformations perfectly
-
-That honesty is essential to the package design.
-
-PlanFrame can still deliver an extremely strong result:
-- no user-defined intermediate models
-- statically-typed transformations
-- backend-agnostic execution
-- exact concrete schemas at explicit boundaries

@@ -1,0 +1,57 @@
+site_name: PlanFrame
+repo_url: https://github.com/eddiethedean/planframe
+repo_name: eddiethedean/planframe
+
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+plugins:
+  - search
+  - section-index
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: false
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+nav:
+  - Home: index.md
+  - PlanFrame (Core):
+      - Overview: planframe/index.md
+      - Guides:
+          - Creating an adapter: planframe/guides/creating-an-adapter.md
+      - Reference:
+          - API (light): planframe/reference/api.md
+      - Design:
+          - Package plan: planframe/design/package-plan.md
+          - Backend adapter design: planframe/design/backend-adapter-design.md
+          - Typing design: planframe/design/typing-design.md
+          - Thesis: planframe/design/thesis.md
+  - planframe-polars:
+      - Overview: planframe_polars/index.md
+      - Guides:
+          - Using planframe-polars: planframe_polars/guides/using-planframe-polars.md
+      - Reference:
+          - API (light): planframe_polars/reference/api.md
+  - Adapters:
+      - Adapter catalog: adapters/index.md
+      - Adapter docs template: adapters/template/README.md
+  - Shared:
+      - Glossary: shared/glossary.md
+      - FAQ: shared/faq.md
+

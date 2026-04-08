@@ -1,4 +1,3 @@
-
 # PlanFrame — Standalone Typed DataFrame Engine (Full Plan & Design Doc)
 
 ## Overview
@@ -233,3 +232,4 @@ This enables:
 ---
 
 # End of Document
+

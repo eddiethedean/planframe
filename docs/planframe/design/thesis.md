@@ -1,4 +1,3 @@
-
 # PlanFrame — Product Thesis & Vision
 
 ## Introduction
@@ -262,3 +261,4 @@ It makes them more predictable, more composable, and more understandable.
 By making schema evolution explicit and type-safe, PlanFrame turns data transformations into something both humans and tools can reason about.
 
 That is its purpose.
+

@@ -470,3 +470,4 @@ The project followed an incremental path:
 The adapter layer has grown to include **join**, **sort**, **grouping** (`group_by_agg`), and other operations, but the design goal is unchanged: keep the protocol **explicit and boring**, with schema semantics owned by core and execution owned by adapters.
 
 This keeps the package coherent, portable, and realistically shippable.
+

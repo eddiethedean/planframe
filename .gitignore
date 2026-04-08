@@ -23,6 +23,7 @@ pip-wheel-metadata/
 .coverage.*
 coverage.xml
 htmlcov/
+site/
 
 # Type check / lint caches
 .mypy_cache/

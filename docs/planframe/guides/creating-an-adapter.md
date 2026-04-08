@@ -25,7 +25,7 @@ It’s not fast, but it’s a good template: each adapter method is a pure trans
 Run:
 
 ```bash
-./.venv/bin/python docs/guides/planframe/examples/rows_adapter_minimal.py
+./.venv/bin/python docs/planframe/guides/examples/rows_adapter_minimal.py
 ```
 
 Expected output:
