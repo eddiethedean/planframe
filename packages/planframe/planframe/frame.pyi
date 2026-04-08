@@ -6,6 +6,7 @@ from typing import Any, Generic, Literal, TypeVar, overload
 from typing_extensions import LiteralString, Self
 
 from planframe.backend.adapter import BackendAdapter
+from planframe.dynamic_groupby import DynamicGroupedFrame
 from planframe.expr.api import Expr
 from planframe.groupby import GroupedFrame
 from planframe.plan.join_options import JoinOptions
@@ -923,6 +924,14 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self, *keys: LiteralString | Expr[Any]
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     def group_by(self, *keys: Any) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    def group_by_dynamic(
+        self,
+        index_column: LiteralString,
+        *,
+        every: str,
+        period: str | None = ...,
+        by: tuple[LiteralString, ...] | None = ...,
+    ) -> DynamicGroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def drop_nulls(
         self, *subset: LiteralString, how: Literal["any", "all"] = ..., threshold: int | None = ...
@@ -1470,3 +1479,14 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         kind: Literal["dataclass", "pydantic"] = ...,
     ) -> type[Any]: ...
+    def rolling_agg(
+        self,
+        *,
+        on: LiteralString,
+        column: LiteralString,
+        window_size: int | str,
+        op: str,
+        out_name: str,
+        by: tuple[LiteralString, ...] | None = ...,
+        min_periods: int = ...,
+    ) -> Self: ...

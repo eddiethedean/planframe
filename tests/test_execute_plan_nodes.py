@@ -317,6 +317,32 @@ def test_execute_plan_posexplode() -> None:
     assert res == [{"id": 1, "pos": 0, "xs": 5}, {"id": 1, "pos": 1, "xs": 6}]
 
 
+def test_execute_plan_group_by_dynamic_and_rolling_agg() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S2:
+        ts: int
+        g: str
+        x: int
+
+    pf = Frame.source(
+        [{"ts": 1, "g": "a", "x": 10}, {"ts": 1, "g": "a", "x": 20}],
+        adapter=adapter,
+        schema=S2,
+    )
+
+    dyn = pf.group_by_dynamic("ts", every="1h", by=("g",)).agg(n=("count", "x"))
+    res_dyn, calls_dyn = _run(dyn)
+    assert calls_dyn == ["group_by_dynamic_agg"]
+    assert len(res_dyn) == 1
+
+    roll = pf.rolling_agg(on="ts", column="x", window_size=2, op="mean", out_name="x_roll")
+    res_roll, calls_roll = _run(roll)
+    assert calls_roll == ["rolling_agg"]
+    assert "x_roll" in res_roll[0]
+
+
 def test_execute_plan_join_and_concat_and_backend_mismatch_errors() -> None:
     adapter = SpyAdapter()
     left = Frame.source([{"id": 1, "a": 1, "b": 0}], adapter=adapter, schema=S)

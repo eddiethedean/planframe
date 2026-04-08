@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
+from planframe.dynamic_groupby import DynamicGroupedFrame
 from planframe.execution import execute_plan
 from planframe.frame import Frame
 from planframe.groupby import GroupedFrame
@@ -27,6 +28,7 @@ __all__ = [
     "Frame",
     "Schema",
     "GroupedFrame",
+    "DynamicGroupedFrame",
     "JoinOptions",
     "execute_plan",
     "expr",

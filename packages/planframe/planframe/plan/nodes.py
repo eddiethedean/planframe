@@ -147,6 +147,28 @@ class Agg(PlanNode):
 
 
 @dataclass(frozen=True, slots=True)
+class DynamicGroupByAgg(PlanNode):
+    prev: PlanNode
+    index_column: str
+    every: str
+    period: str | None
+    by: tuple[str, ...] | None
+    named_aggs: dict[str, tuple[str, str] | Expr[Any]]
+
+
+@dataclass(frozen=True, slots=True)
+class RollingAgg(PlanNode):
+    prev: PlanNode
+    on: str
+    column: str
+    window_size: int | str
+    op: str
+    out_name: str
+    by: tuple[str, ...] | None
+    min_periods: int = 1
+
+
+@dataclass(frozen=True, slots=True)
 class DropNulls(PlanNode):
     prev: PlanNode
     subset: tuple[str, ...] | None

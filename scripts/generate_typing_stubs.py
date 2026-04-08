@@ -59,6 +59,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("from planframe.backend.adapter import BackendAdapter")
     a("from planframe.expr.api import Expr")
     a("from planframe.groupby import GroupedFrame")
+    a("from planframe.dynamic_groupby import DynamicGroupedFrame")
     a("from planframe.plan.join_options import JoinOptions")
     a("from planframe.plan.nodes import PlanNode")
     a("from planframe.schema.ir import Schema")
@@ -321,6 +322,14 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a(
         "    def group_by(self, *keys: Any) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ..."
     )
+    a("    def group_by_dynamic(")
+    a("        self,")
+    a("        index_column: LiteralString,")
+    a("        *,")
+    a("        every: str,")
+    a("        period: str | None = ...,")
+    a("        by: tuple[LiteralString, ...] | None = ...,")
+    a("    ) -> DynamicGroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...")
     a("    @overload")
     a(
         '    def drop_nulls(self, *subset: LiteralString, how: Literal["any", "all"] = ..., threshold: int | None = ...) -> Self: ...'
@@ -597,6 +606,18 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a('        kind: Literal["dataclass", "pydantic"] = ...,')
     a("    ) -> type[Any]: ...")
     a("")
+
+    a("    def rolling_agg(")
+    a("        self,")
+    a("        *,")
+    a("        on: LiteralString,")
+    a("        column: LiteralString,")
+    a("        window_size: int | str,")
+    a("        op: str,")
+    a("        out_name: str,")
+    a("        by: tuple[LiteralString, ...] | None = ...,")
+    a("        min_periods: int = ...,")
+    a("    ) -> Self: ...")
 
     return "\n".join(lines)
 

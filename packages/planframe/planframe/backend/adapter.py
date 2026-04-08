@@ -155,6 +155,36 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         ...
 
     @abstractmethod
+    def group_by_dynamic_agg(
+        self,
+        df: BackendFrameT,
+        *,
+        index_column: str,
+        every: str,
+        period: str | None = None,
+        by: Columns | None = None,
+        named_aggs: dict[ColumnName, AggSpec],
+    ) -> BackendFrameT:
+        """Dynamic time-window group-by aggregation."""
+        ...
+
+    @abstractmethod
+    def rolling_agg(
+        self,
+        df: BackendFrameT,
+        *,
+        on: str,
+        column: str,
+        window_size: int | str,
+        op: str,
+        out_name: str,
+        by: Columns | None = None,
+        min_periods: int = 1,
+    ) -> BackendFrameT:
+        """Rolling window aggregation producing a new column."""
+        ...
+
+    @abstractmethod
     def drop_nulls(
         self,
         df: BackendFrameT,
