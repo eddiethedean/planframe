@@ -27,7 +27,7 @@ RowsFrame = list[dict[str, object]]
 class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
     name = "rows"
 
-    def compile_expr(self, expr: Expr[object]) -> Expr[object]:
+    def compile_expr(self, expr: Expr[object], *, schema: Any = None) -> Expr[object]:
         return expr
 
     def select(self, df: RowsFrame, columns: tuple[str, ...]) -> RowsFrame:

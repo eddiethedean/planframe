@@ -121,7 +121,7 @@ class BackendAdapter(Protocol, Generic[BackendFrameT, BackendExprT]):
     ) -> BackendFrameT:
         ...
 
-    def compile_expr(self, expr: Any) -> BackendExprT:
+    def compile_expr(self, expr: Any, *, schema: Any | None = None) -> BackendExprT:
         ...
 
     def collect(self, df: BackendFrameT) -> BackendFrameT:
@@ -235,7 +235,7 @@ class PolarsAdapter:
     def filter(self, df: pl.DataFrame | pl.LazyFrame, predicate: pl.Expr):
         return df.filter(predicate)
 
-    def compile_expr(self, expr: Any) -> pl.Expr:
+    def compile_expr(self, expr: Any, *, schema: Any | None = None) -> pl.Expr:
         ...
 
     def collect(self, df: pl.DataFrame | pl.LazyFrame):
@@ -322,7 +322,7 @@ class PandasAdapter:
     def filter(self, df: pd.DataFrame, predicate: Any) -> pd.DataFrame:
         return df.loc[predicate].copy()
 
-    def compile_expr(self, expr: Any) -> Any:
+    def compile_expr(self, expr: Any, *, schema: Any | None = None) -> Any:
         ...
 
     def collect(self, df: pd.DataFrame) -> pd.DataFrame:

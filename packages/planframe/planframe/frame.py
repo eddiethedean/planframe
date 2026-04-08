@@ -121,7 +121,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def _compile(self, expr: Any) -> BackendExprT:
         try:
-            return self._adapter.compile_expr(expr)
+            return self._adapter.compile_expr(expr, schema=self._schema)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameBackendError(
                 f"Failed to compile expression for backend {self._adapter.name}"

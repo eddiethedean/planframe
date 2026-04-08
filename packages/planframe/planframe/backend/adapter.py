@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
 from planframe.plan.join_options import JoinOptions
+from planframe.schema.ir import Schema
 
 BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
@@ -327,7 +328,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     ) -> BackendFrameT: ...
 
     @abstractmethod
-    def compile_expr(self, expr: Any) -> BackendExprT: ...
+    def compile_expr(self, expr: Any, *, schema: Schema | None = None) -> BackendExprT: ...
 
     @abstractmethod
     def collect(self, df: BackendFrameT) -> BackendFrameT: ...
