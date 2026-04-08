@@ -12,7 +12,7 @@ PlanFrame is a typed relational planning layer for Python DataFrames.
 This repository is a mono-repo that currently ships:
 - **`planframe`**: core package (import as `planframe`)
 - **`planframe-polars`**: Polars adapter (import as `planframe_polars`)
-- **`planframe-pandas`**: pandas adapter (import as `planframe_pandas`)
+- **`planframe-pandas`**: Pandas adapter (import as `planframe_pandas`)
 
 ### Documentation (ReadTheDocs)
 
