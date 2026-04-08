@@ -108,6 +108,16 @@ def test_pandas_melt_pivot_explode_unnest(tmp_path: Any) -> None:
     assert out_path.exists()
 
 
+def test_pandas_clip_subset_and_all_numeric() -> None:
+    pf = User({"id": [1, 2], "age": [-1, 10]})
+
+    df_subset = pf.clip(lower=0, upper=6, subset=("age",)).collect()
+    assert df_subset.to_dict(orient="list") == {"id": [1, 2], "age": [0, 6]}
+
+    df_all = pf.clip(lower=0).collect()
+    assert df_all.to_dict(orient="list") == {"id": [1, 2], "age": [0, 10]}
+
+
 def test_pandas_write_parquet_raises_clear_error_without_pyarrow(tmp_path: Any) -> None:
     pf = User({"id": [1], "name": ["a"], "age": [10]})
     out_path = tmp_path / "out.parquet"

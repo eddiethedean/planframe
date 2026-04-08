@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numbers
 import os
 import re
 from collections.abc import Sequence
@@ -16,7 +17,7 @@ from planframe.backend.errors import (
 )
 from planframe.dynamic_groupby import DynamicGroupedFrame
 from planframe.execution import execute_plan
-from planframe.expr.api import Expr, infer_dtype
+from planframe.expr.api import Expr, clip, col, infer_dtype, lit
 from planframe.groupby import GroupedFrame
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import (
@@ -482,6 +483,72 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _plan=WithRowCount(self._plan, name=name, offset=offset),
             _schema=schema2,
         )
+
+    def clip(
+        self,
+        *,
+        lower: Expr[object] | Scalar | None = None,
+        upper: Expr[object] | Scalar | None = None,
+        subset: Sequence[str] | None = None,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        if lower is None and upper is None:
+            raise ValueError("clip requires at least one of lower= or upper=")
+
+        lower_expr: Expr[object] | None
+        if isinstance(lower, Expr) or lower is None:
+            lower_expr = cast(Expr[object] | None, lower)
+        else:
+            lower_expr = cast(Expr[object], lit(lower))
+
+        upper_expr: Expr[object] | None
+        if isinstance(upper, Expr) or upper is None:
+            upper_expr = cast(Expr[object] | None, upper)
+        else:
+            upper_expr = cast(Expr[object], lit(upper))
+
+        if subset is None:
+            cols: list[str] = []
+            for f in self._schema.fields:
+                dt = f.dtype
+                if (
+                    isinstance(dt, type)
+                    and issubclass(dt, numbers.Real)
+                    and not issubclass(dt, bool)
+                ):
+                    cols.append(f.name)
+            if not cols:
+                raise PlanFrameSchemaError(
+                    "clip subset=None requires at least one numeric column in schema"
+                )
+        else:
+            cols = list(subset)
+            if not cols:
+                raise ValueError("clip subset must be non-empty when provided")
+            if len(set(cols)) != len(cols):
+                raise ValueError("clip subset must be unique")
+            for c in cols:
+                f = self._schema.get(c)
+                dt = f.dtype
+                if not (
+                    isinstance(dt, type)
+                    and issubclass(dt, numbers.Real)
+                    and not issubclass(dt, bool)
+                ):
+                    raise PlanFrameSchemaError(
+                        f"clip requires numeric columns; got {c!r} with dtype {dt!r}"
+                    )
+
+        out: Frame[SchemaT, BackendFrameT, BackendExprT] = self
+        for c in cols:
+            out = Frame(
+                _data=out._data,
+                _adapter=out._adapter,
+                _plan=WithColumn(
+                    out._plan, name=c, expr=clip(col(c), lower=lower_expr, upper=upper_expr)
+                ),
+                _schema=out._schema,  # clip preserves dtype
+            )
+        return out
 
     def filter(self, predicate: Expr[bool]) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         return Frame(
