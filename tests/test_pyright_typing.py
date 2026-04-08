@@ -3,6 +3,10 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.typing
+
 ROOT = Path(__file__).resolve().parents[1]
 PYRIGHT_DIR = ROOT / "tests" / "pyright"
 
@@ -16,21 +20,23 @@ def _run_pyright(path: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_pyright_pass_suite() -> None:
-    pass_dir = PYRIGHT_DIR / "pass"
-    files = sorted(pass_dir.glob("*.py"))
-    assert files, "no pyright pass tests found"
-
-    for f in files:
-        res = _run_pyright(f)
-        assert res.returncode == 0, f"{f}\n{res.stdout}\n{res.stderr}"
+def _fmt_res(res: subprocess.CompletedProcess[str]) -> str:
+    return f"returncode={res.returncode}\nstdout:\n{res.stdout}\nstderr:\n{res.stderr}"
 
 
-def test_pyright_fail_suite() -> None:
-    fail_dir = PYRIGHT_DIR / "fail"
-    files = sorted(fail_dir.glob("*.py"))
-    assert files, "no pyright fail tests found"
+PASS_FILES = sorted((PYRIGHT_DIR / "pass").glob("*.py"))
+FAIL_FILES = sorted((PYRIGHT_DIR / "fail").glob("*.py"))
 
-    for f in files:
-        res = _run_pyright(f)
-        assert res.returncode != 0, f"expected pyright to fail but it passed: {f}"
+
+@pytest.mark.parametrize("path", PASS_FILES, ids=lambda p: p.name)
+def test_pyright_pass_file(path: Path) -> None:
+    assert PASS_FILES, "no pyright pass tests found"
+    res = _run_pyright(path)
+    assert res.returncode == 0, f"{path}\n{_fmt_res(res)}"
+
+
+@pytest.mark.parametrize("path", FAIL_FILES, ids=lambda p: p.name)
+def test_pyright_fail_file(path: Path) -> None:
+    assert FAIL_FILES, "no pyright fail tests found"
+    res = _run_pyright(path)
+    assert res.returncode != 0, f"expected pyright to fail but it passed: {path}\n{_fmt_res(res)}"

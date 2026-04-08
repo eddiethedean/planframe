@@ -40,6 +40,8 @@ from planframe.expr import (
 )
 from planframe_polars import PolarsFrame
 
+pytestmark = pytest.mark.conformance
+
 scan_parquet = PolarsFrame.scan_parquet
 scan_parquet_dataset = PolarsFrame.scan_parquet_dataset
 scan_csv = PolarsFrame.scan_csv
@@ -125,6 +127,31 @@ def test_select_drop_rename_with_column_filter_collect() -> None:
     assert len(rows) == 1
     assert rows[0].id == 1
     assert rows[0].years == 10
+
+
+def test_optimize_preserves_results_polars() -> None:
+    pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
+    out = pf.select("id", "name", "age").select("id", "age").rename(age="years").drop()
+
+    unopt = out.collect()
+    opt = out.optimize(level=1).collect()
+
+    assert unopt.columns == opt.columns
+    assert unopt.to_dicts() == opt.to_dicts()
+
+
+def test_select_equivalence_with_column_polars() -> None:
+    pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
+
+    a = pf.select("id", ("years_plus_one", add(col("age"), lit(1)))).collect()
+    b = (
+        pf.with_column("years_plus_one", add(col("age"), lit(1)))
+        .select("id", "years_plus_one")
+        .collect()
+    )
+
+    assert a.columns == b.columns
+    assert a.to_dicts() == b.to_dicts()
 
 
 def test_materialize_model_dataclass() -> None:

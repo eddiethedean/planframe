@@ -100,4 +100,17 @@ Run tests:
 source .venv/bin/activate
 pytest
 ```
+
+Run subsets:
+
+```bash
+# skip typing-only tests (pyright + stub generation)
+pytest -m "not typing"
+
+# only typing-only tests
+pytest -m typing
+
+# only backend conformance (Polars) tests
+pytest -m conformance
+```
  

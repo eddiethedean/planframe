@@ -59,3 +59,36 @@ def test_iter_plan_nodes_join_can_include_rhs_plan() -> None:
     # RHS nodes appear after LHS chain (deterministic order).
     rhs_head_idx = names.index("Head")
     assert rhs_head_idx > names.index("Select")
+
+
+def test_iter_plan_nodes_concat_can_include_other_plan() -> None:
+    class A(PolarsFrame):
+        id: int
+
+    class Bv(PolarsFrame):
+        id: int
+
+    class Bh(PolarsFrame):
+        x: int
+
+    left = A({"id": [1]}).select("id").head(1)
+    right_v = Bv({"id": [2]}).select("id")
+    right_h = Bh({"x": [2]}).select("x")
+
+    out_v = left.concat_vertical(right_v)
+    names_v = [
+        type(n).__name__ for n in iter_plan_nodes(root=out_v.plan(), include_side_frames=True)
+    ]
+    assert names_v[0] == "ConcatVertical"
+    assert names_v.count("Source") == 2
+    # RHS nodes come after LHS chain.
+    src_idx_v = [i for i, n in enumerate(names_v) if n == "Source"]
+    assert len(src_idx_v) == 2
+    assert src_idx_v[1] > src_idx_v[0]
+
+    out_h = left.concat_horizontal(right_h)
+    names_h = [
+        type(n).__name__ for n in iter_plan_nodes(root=out_h.plan(), include_side_frames=True)
+    ]
+    assert names_h[0] == "ConcatHorizontal"
+    assert names_h.count("Source") == 2
