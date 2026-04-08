@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Protocol, cast
+from typing import Protocol, cast, runtime_checkable
 
 from planframe.backend.errors import PlanFrameSchemaError
 from planframe.schema.ir import Schema
 
 
+@runtime_checkable
 class ColumnSelector(Protocol):
     """Schema-only column selection protocol (no backend dependency)."""
 
