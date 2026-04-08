@@ -3,13 +3,15 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, fields, is_dataclass
 from types import MappingProxyType
-from typing import Any
+from typing import Any, TypeAlias
 
 from planframe.backend.errors import PlanFrameSchemaError
 from planframe.expr.api import Col, Expr, infer_dtype
 from planframe.plan.nodes import JoinKeyColumn, JoinKeyExpr, ProjectExpr, ProjectPick
 
-PFType = Any
+# Schema field "dtype" is intentionally backend-agnostic and may be a Python type,
+# a backend dtype object, or an annotation object from a schema model.
+PFType: TypeAlias = object
 
 
 def collect_col_names_in_expr(expr: Expr[Any]) -> frozenset[str]:

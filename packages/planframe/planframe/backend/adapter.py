@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Generic, Literal, TypeVar
+from typing import Generic, Literal, TypeAlias, TypeVar
 
 from planframe.plan.join_options import JoinOptions
 from planframe.schema.ir import Schema
@@ -12,6 +12,10 @@ from planframe.typing.storage import StorageOptions
 
 BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
+
+ColumnName: TypeAlias = str
+Columns: TypeAlias = tuple[ColumnName, ...]
+AggSpec: TypeAlias = tuple[str, ColumnName] | BackendExprT
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,7 +60,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     name: str
 
     @abstractmethod
-    def select(self, df: BackendFrameT, columns: tuple[str, ...]) -> BackendFrameT: ...
+    def select(self, df: BackendFrameT, columns: Columns) -> BackendFrameT: ...
 
     @abstractmethod
     def project(
@@ -68,9 +72,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         ...
 
     @abstractmethod
-    def drop(
-        self, df: BackendFrameT, columns: tuple[str, ...], *, strict: bool = True
-    ) -> BackendFrameT:
+    def drop(self, df: BackendFrameT, columns: Columns, *, strict: bool = True) -> BackendFrameT:
         """Remove columns named in *columns* from *df*.
 
         When *strict* is True (default), implementations must raise if any name is missing.
@@ -80,7 +82,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
 
     @abstractmethod
     def rename(
-        self, df: BackendFrameT, mapping: dict[str, str], *, strict: bool = True
+        self, df: BackendFrameT, mapping: dict[ColumnName, ColumnName], *, strict: bool = True
     ) -> BackendFrameT:
         """Rename columns according to *mapping*.
 
@@ -120,7 +122,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def unique(
         self,
         df: BackendFrameT,
-        subset: tuple[str, ...] | None,
+        subset: Columns | None,
         *,
         keep: str = "first",
         maintain_order: bool = False,
@@ -130,7 +132,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def duplicated(
         self,
         df: BackendFrameT,
-        subset: tuple[str, ...] | None,
+        subset: Columns | None,
         *,
         keep: str | bool = "first",
         out_name: str = "duplicated",
@@ -142,7 +144,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         df: BackendFrameT,
         *,
         keys: tuple[CompiledJoinKey[BackendExprT], ...],
-        named_aggs: dict[str, tuple[str, str] | BackendExprT],
+        named_aggs: dict[ColumnName, AggSpec],
     ) -> BackendFrameT:
         """Group *df* by *keys*, then apply *named_aggs*.
 
@@ -155,7 +157,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def drop_nulls(
         self,
         df: BackendFrameT,
-        subset: tuple[str, ...] | None,
+        subset: Columns | None,
         *,
         how: Literal["any", "all"] = "any",
         threshold: int | None = None,
@@ -166,7 +168,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         self,
         df: BackendFrameT,
         value: Scalar | BackendExprT | None,
-        subset: tuple[str, ...] | None,
+        subset: Columns | None,
         *,
         strategy: str | None = None,
     ) -> BackendFrameT: ...
@@ -176,10 +178,10 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         self,
         df: BackendFrameT,
         *,
-        id_vars: tuple[str, ...],
-        value_vars: tuple[str, ...],
-        variable_name: str,
-        value_name: str,
+        id_vars: Columns,
+        value_vars: Columns,
+        variable_name: ColumnName,
+        value_name: ColumnName,
     ) -> BackendFrameT: ...
 
     @abstractmethod

@@ -208,7 +208,7 @@ def execute_plan(
                 raise PlanFrameBackendError("Join node right frame is invalid")
             if getattr(right_frame._adapter, "name", None) != adapter.name:
                 raise PlanFrameBackendError("Cannot join frames from different backends")
-            right_df = cast(BackendFrameT, right_frame._eval(right_frame._plan))
+            right_df = right_frame._eval(right_frame._plan)
             if node.left_keys is node.right_keys:
                 compiled = _compile_join_keys_tuple(node.left_keys)
                 lo = ro = compiled
@@ -237,7 +237,7 @@ def execute_plan(
                 raise PlanFrameBackendError("ConcatVertical node other frame is invalid")
             if getattr(other_frame._adapter, "name", None) != adapter.name:
                 raise PlanFrameBackendError("Cannot concat frames from different backends")
-            right_df = cast(BackendFrameT, other_frame._eval(other_frame._plan))
+            right_df = other_frame._eval(other_frame._plan)
             return adapter.concat_vertical(left_df, right_df)
         if isinstance(node, ConcatHorizontal):
             left_df = _eval(node.prev)
@@ -246,7 +246,7 @@ def execute_plan(
                 raise PlanFrameBackendError("ConcatHorizontal node other frame is invalid")
             if getattr(other_frame._adapter, "name", None) != adapter.name:
                 raise PlanFrameBackendError("Cannot concat frames from different backends")
-            right_df = cast(BackendFrameT, other_frame._eval(other_frame._plan))
+            right_df = other_frame._eval(other_frame._plan)
             return adapter.concat_horizontal(left_df, right_df)
         if isinstance(node, Pivot):
             return adapter.pivot(

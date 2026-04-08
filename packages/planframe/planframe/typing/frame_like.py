@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Any, Protocol
 
 
 class FrameLike(Protocol):
@@ -10,7 +10,8 @@ class FrameLike(Protocol):
     understand the attributes used by the evaluator.
     """
 
-    _adapter: object
-    _plan: object
+    # Note: these are intentionally minimal and backend-agnostic.
+    _adapter: Any
+    _plan: Any
 
-    def _eval(self, node: object) -> object: ...
+    def _eval(self, node: object) -> Any: ...

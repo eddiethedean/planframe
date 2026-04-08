@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Generic, Literal, TypeAlias, TypeGuard, TypeVar
 
 from planframe.backend.errors import PlanFrameExpressionError
 
@@ -507,8 +507,30 @@ def agg_n_unique(inner: Expr[object]) -> AggExpr:
     return AggExpr(op="n_unique", inner=inner)
 
 
-def _assert_bool(expr: Expr[object]) -> Expr[bool]:
-    if isinstance(
+BoolExpr: TypeAlias = (
+    Eq
+    | Ne
+    | Lt
+    | Le
+    | Gt
+    | Ge
+    | IsNull
+    | IsNotNull
+    | IsIn
+    | And
+    | Or
+    | Not
+    | Xor
+    | Between
+    | StrContains
+    | StrStartsWith
+    | StrEndsWith
+    | IsFinite
+)
+
+
+def is_bool_expr(expr: Expr[object]) -> TypeGuard[BoolExpr]:
+    return isinstance(
         expr,
         (
             Eq,
@@ -530,12 +552,16 @@ def _assert_bool(expr: Expr[object]) -> Expr[bool]:
             StrEndsWith,
             IsFinite,
         ),
-    ):
-        return expr  # type: ignore[return-value]
+    )
+
+
+def _assert_bool(expr: Expr[object]) -> Expr[bool]:
+    if is_bool_expr(expr):
+        return expr
     raise PlanFrameExpressionError(f"Expected boolean Expr, got: {type(expr).__name__}")
 
 
-def infer_dtype(expr: Expr[Any]) -> Any:
+def infer_dtype(expr: Expr[Any]) -> object:
     """Best-effort runtime dtype inference for schema evolution.
 
     This is intentionally conservative in MVP; higher-fidelity typing comes from stubs/overloads.
