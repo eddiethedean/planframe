@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Sequence
 from typing import Any, Generic, Literal, TypeVar, cast
@@ -100,6 +101,40 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self._adapter = _adapter
         self._plan = _plan
         self._schema = _schema
+
+    def __repr__(self) -> str:
+        # Keep repr cheap: never execute, never compile expressions, and keep traversal bounded.
+        verbose = os.getenv("PLANFRAME_REPR_VERBOSE", "").lower() in {"1", "true", "yes", "on"}
+
+        cols = self._schema.names()
+        col_preview_limit = 12 if verbose else 6
+        if len(cols) <= col_preview_limit:
+            cols_preview = ", ".join(cols)
+        else:
+            head = ", ".join(cols[:col_preview_limit])
+            cols_preview = f"{head}, …(+{len(cols) - col_preview_limit})"
+
+        # Plan shape: follow the primary `prev` chain for a small number of nodes.
+        plan_limit = 20 if verbose else 6
+        kinds: list[str] = []
+        node: PlanNode | None = self._plan
+        schema_type_name: str | None = None
+        steps = 0
+        while isinstance(node, PlanNode) and steps < plan_limit:
+            kinds.append(type(node).__name__)
+            if isinstance(node, Source) and schema_type_name is None:
+                schema_type_name = getattr(node.schema_type, "__name__", None)
+            prev = getattr(node, "prev", None)
+            node = prev if isinstance(prev, PlanNode) else None
+            steps += 1
+
+        if node is not None:
+            kinds.append("…")
+
+        plan_preview = "->".join(kinds)
+        schema_tag = f"[{schema_type_name}]" if schema_type_name else ""
+        adapter_tag = f", adapter={self._adapter.name!r}" if verbose else ""
+        return f"Frame{schema_tag}(cols={len(cols)} [{cols_preview}], plan={plan_preview}{adapter_tag})"
 
     @classmethod
     def source(
