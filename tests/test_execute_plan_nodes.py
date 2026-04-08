@@ -302,6 +302,17 @@ def test_execute_plan_melt_pivot_explode_unnest_sample() -> None:
     assert len(res_s) == 1
 
 
+def test_execute_plan_with_row_count() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1}, {"id": 2}, {"id": 3}]
+    pf = Frame.source(data, adapter=adapter, schema=S)
+
+    out = pf.select("id").with_row_count(name="rn", offset=7)
+    res, calls = _run(out)
+    assert calls == ["select", "with_row_count"]
+    assert res == [{"id": 1, "rn": 7}, {"id": 2, "rn": 8}, {"id": 3, "rn": 9}]
+
+
 def test_execute_plan_posexplode() -> None:
     adapter = SpyAdapter()
 

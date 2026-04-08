@@ -101,6 +101,13 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def cast(self, df: BackendFrameT, name: str, dtype: object) -> BackendFrameT: ...
 
     @abstractmethod
+    def with_row_count(
+        self, df: BackendFrameT, *, name: str = "row_nr", offset: int = 0
+    ) -> BackendFrameT:
+        """Add a monotonically increasing row number column."""
+        ...
+
+    @abstractmethod
     def filter(self, df: BackendFrameT, predicate: BackendExprT) -> BackendFrameT: ...
 
     @abstractmethod

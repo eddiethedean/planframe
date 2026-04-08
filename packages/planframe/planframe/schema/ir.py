@@ -148,6 +148,11 @@ class Schema:
             raise PlanFrameSchemaError(f"Cannot cast missing column: {name}")
         return self.with_column(name=name, dtype=dtype)
 
+    def with_row_count(self, name: str) -> Schema:
+        if not name:
+            raise PlanFrameSchemaError("with_row_count requires non-empty name")
+        return self.with_column(name=name, dtype=int)
+
     def select_exclude(self, columns: Iterable[str]) -> Schema:
         drop_set = set(columns)
         fm = self._field_map
@@ -252,7 +257,7 @@ class Schema:
 
         # Pydantic BaseModel type (v1).
         try:
-            from pydantic import BaseModel  # type: ignore
+            from pydantic import BaseModel
 
             if isinstance(dtype, type) and issubclass(dtype, BaseModel):
                 fd = getattr(dtype, "__fields__", None)

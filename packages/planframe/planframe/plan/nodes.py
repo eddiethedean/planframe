@@ -77,6 +77,13 @@ class Cast(PlanNode):
 
 
 @dataclass(frozen=True, slots=True)
+class WithRowCount(PlanNode):
+    prev: PlanNode
+    name: str = "row_nr"
+    offset: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class Filter(PlanNode):
     prev: PlanNode
     predicate: Expr[bool]
