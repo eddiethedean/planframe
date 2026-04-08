@@ -5,6 +5,8 @@ from typing import Any, Literal
 
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
+from planframe.typing.frame_like import FrameLike
+from planframe.typing.scalars import Scalar
 
 
 class PlanNode:
@@ -13,7 +15,7 @@ class PlanNode:
 
 @dataclass(frozen=True, slots=True)
 class Source(PlanNode):
-    schema_type: type[Any]
+    schema_type: type[object]
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,7 +72,7 @@ class WithColumn(PlanNode):
 class Cast(PlanNode):
     prev: PlanNode
     name: str
-    dtype: Any
+    dtype: object
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,8 +156,12 @@ class DropNulls(PlanNode):
 @dataclass(frozen=True, slots=True)
 class FillNull(PlanNode):
     prev: PlanNode
-    value: Any
+    # One of value or strategy must be provided.
+    # - value may be a literal or an Expr (for per-cell fill)
+    # - strategy names a backend-defined fill strategy (forward/backward/etc.)
+    value: Scalar | Expr[Any] | None
     subset: tuple[str, ...] | None
+    strategy: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,7 +176,7 @@ class Melt(PlanNode):
 @dataclass(frozen=True, slots=True)
 class Join(PlanNode):
     prev: PlanNode
-    right: Any
+    right: FrameLike
     left_keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
     right_keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
     how: str = "inner"
@@ -200,7 +206,7 @@ class Tail(PlanNode):
 @dataclass(frozen=True, slots=True)
 class ConcatVertical(PlanNode):
     prev: PlanNode
-    other: Any
+    other: FrameLike
 
 
 @dataclass(frozen=True, slots=True)
@@ -230,7 +236,7 @@ class Unnest(PlanNode):
 @dataclass(frozen=True, slots=True)
 class ConcatHorizontal(PlanNode):
     prev: PlanNode
-    other: Any
+    other: FrameLike
 
 
 @dataclass(frozen=True, slots=True)

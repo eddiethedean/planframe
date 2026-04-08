@@ -3,10 +3,12 @@ from __future__ import annotations
 import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Generic, Literal, TypeVar
+from typing import Generic, Literal, TypeVar
 
 from planframe.plan.join_options import JoinOptions
 from planframe.schema.ir import Schema
+from planframe.typing.scalars import Scalar
+from planframe.typing.storage import StorageOptions
 
 BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
@@ -93,7 +95,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def with_column(self, df: BackendFrameT, name: str, expr: BackendExprT) -> BackendFrameT: ...
 
     @abstractmethod
-    def cast(self, df: BackendFrameT, name: str, dtype: Any) -> BackendFrameT: ...
+    def cast(self, df: BackendFrameT, name: str, dtype: object) -> BackendFrameT: ...
 
     @abstractmethod
     def filter(self, df: BackendFrameT, predicate: BackendExprT) -> BackendFrameT: ...
@@ -163,8 +165,10 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def fill_null(
         self,
         df: BackendFrameT,
-        value: Any,
+        value: Scalar | BackendExprT | None,
         subset: tuple[str, ...] | None,
+        *,
+        strategy: str | None = None,
     ) -> BackendFrameT: ...
 
     @abstractmethod
@@ -243,7 +247,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         compression: str = "zstd",
         row_group_size: int | None = None,
         partition_by: tuple[str, ...] | None = None,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None: ...
 
     @abstractmethod
@@ -254,12 +258,12 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         *,
         separator: str = ",",
         include_header: bool = True,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None: ...
 
     @abstractmethod
     def write_ndjson(
-        self, df: BackendFrameT, path: str, *, storage_options: dict[str, Any] | None = None
+        self, df: BackendFrameT, path: str, *, storage_options: StorageOptions | None = None
     ) -> None: ...
 
     @abstractmethod
@@ -269,7 +273,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         path: str,
         *,
         compression: str = "uncompressed",
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None: ...
 
     @abstractmethod
@@ -278,7 +282,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         df: BackendFrameT,
         *,
         table_name: str,
-        connection: Any,
+        connection: object,
         if_table_exists: str = "fail",
         engine: str | None = None,
     ) -> None: ...
@@ -293,7 +297,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         target: str,
         *,
         mode: str = "error",
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None: ...
 
     @abstractmethod
@@ -332,7 +336,7 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     ) -> BackendFrameT: ...
 
     @abstractmethod
-    def compile_expr(self, expr: Any, *, schema: Schema | None = None) -> BackendExprT: ...
+    def compile_expr(self, expr: object, *, schema: Schema | None = None) -> BackendExprT: ...
 
     @abstractmethod
     def collect(self, df: BackendFrameT) -> BackendFrameT: ...

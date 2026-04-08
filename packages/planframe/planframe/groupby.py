@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
+from planframe.backend.adapter import BackendAdapter
 from planframe.backend.errors import PlanFrameSchemaError
 from planframe.expr.api import AggExpr, Expr, infer_dtype
 from planframe.plan.nodes import Agg, GroupBy, JoinKeyColumn, JoinKeyExpr, PlanNode
 from planframe.schema.ir import Field, Schema, collect_col_names_in_expr
+
+if TYPE_CHECKING:
+    from planframe.frame import Frame
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
@@ -18,7 +22,7 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     __slots__ = ("_data", "_adapter", "_plan", "_schema", "_key_items")
 
     _data: BackendFrameT
-    _adapter: Any
+    _adapter: BackendAdapter[BackendFrameT, BackendExprT]
     _plan: PlanNode
     _schema: Schema
     _key_items: tuple[JoinKeyColumn | JoinKeyExpr, ...]
@@ -27,7 +31,7 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self,
         *,
         _data: BackendFrameT,
-        _adapter: Any,
+        _adapter: BackendAdapter[BackendFrameT, BackendExprT],
         _plan: PlanNode,
         _schema: Schema,
         _key_items: tuple[JoinKeyColumn | JoinKeyExpr, ...],
@@ -38,7 +42,9 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self._schema = _schema
         self._key_items = _key_items
 
-    def agg(self, **named_aggs: tuple[AggOp, str] | Expr[Any]) -> Any:
+    def agg(
+        self, **named_aggs: tuple[AggOp, str] | Expr[Any]
+    ) -> Frame[Any, BackendFrameT, BackendExprT]:
         if not named_aggs:
             raise PlanFrameSchemaError("agg requires at least one named aggregation")
         # Schema: keys + named aggs (types are conservative)
@@ -59,7 +65,7 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 op = spec[0]
                 col = spec[1]
                 self._schema.get(col)  # validate
-                dtype: Any = object
+                dtype: object = object
                 if op in {"count", "n_unique"}:
                     dtype = int
                 out_fields.append(Field(name=out_name, dtype=dtype))
@@ -77,6 +83,6 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 )
         schema2 = Schema(fields=tuple(out_fields))
         plan2 = Agg(GroupBy(self._plan, keys=self._key_items), named_aggs=dict(named_aggs))
-        from planframe.frame import Frame  # avoid cycle
+        from planframe.frame import Frame  # avoid cycle at import time
 
         return Frame(_data=self._data, _adapter=self._adapter, _plan=plan2, _schema=schema2)

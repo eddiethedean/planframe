@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Generic, Literal, TypeVar, cast
 import polars as pl
 
 from planframe.frame import Frame
+from planframe.typing.storage import StorageOptions
 from planframe_polars.adapter import PolarsAdapter, PolarsBackendFrame
 
 SchemaT = TypeVar("SchemaT")
@@ -97,7 +98,7 @@ class PolarsFrame(
         *,
         schema: type[SchemaT],
         hive_partitioning: bool | None = None,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
         kwargs: dict[str, Any] = {"storage_options": storage_options}
         if hive_partitioning is not None:
@@ -111,7 +112,7 @@ class PolarsFrame(
         path_or_glob: str,
         *,
         schema: type[SchemaT],
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
         return cls.scan_parquet(
             path_or_glob,
@@ -126,7 +127,7 @@ class PolarsFrame(
         path: str,
         *,
         schema: type[SchemaT],
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
         lf = pl.scan_csv(path, storage_options=storage_options)
         return cls.source(lf, adapter=cls._adapter_singleton, schema=schema)
@@ -137,7 +138,7 @@ class PolarsFrame(
         path: str,
         *,
         schema: type[SchemaT],
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
         lf = pl.scan_ndjson(path, storage_options=storage_options)
         return cls.source(lf, adapter=cls._adapter_singleton, schema=schema)
@@ -149,7 +150,7 @@ class PolarsFrame(
         *,
         schema: type[SchemaT],
         hive_partitioning: bool | None = None,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
         kwargs: dict[str, Any] = {"storage_options": storage_options}
         if hive_partitioning is not None:
@@ -164,7 +165,7 @@ class PolarsFrame(
         *,
         schema: type[SchemaT],
         version: int | str | None = None,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
         kwargs: dict[str, Any] = {"storage_options": storage_options}
         if version is not None:
@@ -179,7 +180,7 @@ class PolarsFrame(
         *,
         schema: type[SchemaT],
         version: int | str | None = None,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
         kwargs: dict[str, Any] = {"storage_options": storage_options}
         if version is not None:
@@ -208,7 +209,7 @@ class PolarsFrame(
 
     @classmethod
     def read_database(
-        cls, query: str, *, connection: Any, schema: type[SchemaT]
+        cls, query: str, *, connection: object, schema: type[SchemaT]
     ) -> PolarsFrame[SchemaT]:
         df = pl.read_database(query=query, connection=connection)
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)

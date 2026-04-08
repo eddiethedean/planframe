@@ -12,6 +12,8 @@ from planframe.backend.adapter import (
 )
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
+from planframe.typing.scalars import Scalar
+from planframe.typing.storage import StorageOptions
 from planframe_polars.compile_expr import compile_expr
 
 PolarsBackendFrame = pl.DataFrame | pl.LazyFrame
@@ -58,8 +60,8 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     def with_column(self, df: PolarsBackendFrame, name: str, expr: pl.Expr) -> PolarsBackendFrame:
         return df.with_columns(expr.alias(name))
 
-    def cast(self, df: PolarsBackendFrame, name: str, dtype: Any) -> PolarsBackendFrame:
-        return df.with_columns(pl.col(name).cast(dtype))
+    def cast(self, df: PolarsBackendFrame, name: str, dtype: object) -> PolarsBackendFrame:
+        return df.with_columns(pl.col(name).cast(cast(Any, dtype)))
 
     def filter(self, df: PolarsBackendFrame, predicate: pl.Expr) -> PolarsBackendFrame:
         return df.filter(predicate)
@@ -121,7 +123,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         mask = df.select(mask_expr.alias(out_name))[out_name]
         return pl.DataFrame({out_name: mask})
 
-    def compile_expr(self, expr: Any, *, schema: Any = None) -> pl.Expr:
+    def compile_expr(self, expr: object, *, schema: Any = None) -> pl.Expr:
         if not isinstance(expr, Expr):
             raise TypeError(f"Expected PlanFrame Expr, got {type(expr)!r}")
         return compile_expr(expr)
@@ -217,11 +219,34 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         return df
 
     def fill_null(
-        self, df: PolarsBackendFrame, value: Any, subset: tuple[str, ...] | None
+        self,
+        df: PolarsBackendFrame,
+        value: Scalar | pl.Expr | None,
+        subset: tuple[str, ...] | None,
+        *,
+        strategy: str | None = None,
     ) -> PolarsBackendFrame:
+        if (value is None) == (strategy is None):
+            raise ValueError("fill_null requires exactly one of value or strategy")
+
+        if strategy is not None:
+            allowed = {"forward", "backward", "min", "max", "mean", "zero", "one"}
+            if strategy not in allowed:
+                raise ValueError(f"Unsupported fill_null strategy={strategy!r}")
+            strat_lit = cast(
+                Literal["forward", "backward", "min", "max", "mean", "zero", "one"],
+                strategy,
+            )
+            if subset is None:
+                # Polars supports strategy-based fill on eager and lazy frames.
+                return df.fill_null(strategy=strat_lit)
+            exprs = [pl.col(c).fill_null(strategy=strat_lit) for c in subset]
+            return df.with_columns(exprs)
+
+        # value-based fill (literal or Expr)
         if subset is None:
-            return df.fill_null(value)
-        exprs = [pl.col(c).fill_null(value) for c in subset]
+            return df.fill_null(value)  # type: ignore[arg-type]
+        exprs = [pl.col(c).fill_null(value) for c in subset]  # type: ignore[arg-type]
         return df.with_columns(exprs)
 
     def melt(
@@ -413,7 +438,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         compression: str = "zstd",
         row_group_size: int | None = None,
         partition_by: tuple[str, ...] | None = None,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         out = self._collect_df(df)
         if compression not in {"uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"}:
@@ -437,7 +462,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         *,
         separator: str = ",",
         include_header: bool = True,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         out = self._collect_df(df)
         out.write_csv(
@@ -448,7 +473,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         )
 
     def write_ndjson(
-        self, df: PolarsBackendFrame, path: str, *, storage_options: dict[str, Any] | None = None
+        self, df: PolarsBackendFrame, path: str, *, storage_options: StorageOptions | None = None
     ) -> None:
         out = self._collect_df(df)
         # Polars write_ndjson does not currently accept storage_options.
@@ -461,7 +486,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         path: str,
         *,
         compression: str = "uncompressed",
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         out = self._collect_df(df)
         if compression not in {"uncompressed", "lz4", "zstd"}:
@@ -475,7 +500,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         df: PolarsBackendFrame,
         *,
         table_name: str,
-        connection: Any,
+        connection: object,
         if_table_exists: str = "fail",
         engine: str | None = None,
     ) -> None:
@@ -495,7 +520,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         target: str,
         *,
         mode: str = "error",
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         out = self._collect_df(df)
         if mode not in {"error", "append", "overwrite", "ignore"}:

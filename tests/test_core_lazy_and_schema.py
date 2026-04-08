@@ -342,11 +342,47 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         return out
 
     def fill_null(
-        self, df: list[dict[str, Any]], value: Any, subset: tuple[str, ...] | None
+        self,
+        df: list[dict[str, Any]],
+        value: Any | object | None,
+        subset: tuple[str, ...] | None,
+        *,
+        strategy: str | None = None,
     ) -> list[dict[str, Any]]:
-        self.calls.append(("fill_null", (value, subset)))
+        self.calls.append(("fill_null", (value, subset, strategy)))
+        if (value is None) == (strategy is None):
+            raise ValueError("SpyAdapter.fill_null requires exactly one of value or strategy")
+
         cols = subset or tuple(df[0].keys())
         out: list[dict[str, Any]] = []
+
+        if strategy is not None:
+            if strategy not in {"forward", "backward"}:
+                raise NotImplementedError(
+                    f"SpyAdapter.fill_null strategy not supported: {strategy}"
+                )
+            rows = [dict(r) for r in df]
+            if strategy == "forward":
+                last: dict[str, Any] = {}
+                for r in rows:
+                    for c in cols:
+                        v = r.get(c)
+                        if v is None and c in last:
+                            r[c] = last[c]
+                        elif v is not None:
+                            last[c] = v
+            else:  # backward
+                nxt: dict[str, Any] = {}
+                for r in reversed(rows):
+                    for c in cols:
+                        v = r.get(c)
+                        if v is None and c in nxt:
+                            r[c] = nxt[c]
+                        elif v is not None:
+                            nxt[c] = v
+            return rows
+
+        # literal fill
         for r in df:
             r2 = dict(r)
             for c in cols:
@@ -670,6 +706,26 @@ def test_always_lazy_with_new_ops() -> None:
     assert adapter.calls == []
     collected = out.collect()
     assert collected == [{"duplicated": False}, {"duplicated": False}]
+
+
+def test_fill_null_strategy_forward_fill() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1, "age": None}, {"id": 2, "age": 10}, {"id": 3, "age": None}]
+    pf = Frame.source(data, adapter=adapter, schema=UserDC)
+
+    out = pf.fill_null(None, "age", strategy="forward").collect()
+    assert out == [{"id": 1, "age": None}, {"id": 2, "age": 10}, {"id": 3, "age": 10}]
+
+
+def test_fill_null_rejects_ambiguous_or_missing_args() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "age": None}], adapter=adapter, schema=UserDC)
+
+    with pytest.raises(ValueError, match="exactly one of value= or strategy="):
+        pf.fill_null()
+
+    with pytest.raises(ValueError, match="exactly one of value= or strategy="):
+        pf.fill_null(0, strategy="forward")
 
 
 def test_schema_from_pydantic_is_supported() -> None:

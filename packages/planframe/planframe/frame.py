@@ -57,6 +57,9 @@ from planframe.plan.nodes import (
 from planframe.schema.ir import Field, Schema, collect_col_names_in_expr
 from planframe.schema.materialize import materialize_model
 from planframe.schema.source import schema_from_type
+from planframe.typing.frame_like import FrameLike
+from planframe.typing.scalars import Scalar
+from planframe.typing.storage import StorageOptions
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
@@ -119,7 +122,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def plan(self) -> PlanNode:
         return self._plan
 
-    def _compile(self, expr: Any) -> BackendExprT:
+    def _compile(self, expr: object) -> BackendExprT:
         try:
             return self._adapter.compile_expr(expr, schema=self._schema)
         except Exception as e:  # noqa: BLE001
@@ -169,7 +172,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 )
         return tuple(out)
 
-    def _eval(self, node: PlanNode) -> BackendFrameT:
+    def _eval(self, node: object) -> BackendFrameT:
+        if not isinstance(node, PlanNode):
+            raise PlanFrameBackendError(f"Unsupported plan node: {type(node)!r}")
         if isinstance(node, Source):
             return self._data
         if isinstance(node, Select):
@@ -255,7 +260,17 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 threshold=node.threshold,
             )
         if isinstance(node, FillNull):
-            return self._adapter.fill_null(self._eval(node.prev), node.value, node.subset)
+            prev = self._eval(node.prev)
+            if node.value is not None and isinstance(node.value, Expr):
+                compiled_value: BackendExprT = self._compile(node.value)
+            else:
+                compiled_value = node.value
+            return self._adapter.fill_null(
+                prev,
+                compiled_value,
+                node.subset,
+                strategy=node.strategy,
+            )
         if isinstance(node, Melt):
             return self._adapter.melt(
                 self._eval(node.prev),
@@ -266,12 +281,12 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             )
         if isinstance(node, Join):
             left_df = self._eval(node.prev)
-            right_frame = node.right
+            right_frame: FrameLike = node.right
             if getattr(right_frame, "_adapter", None) is None:
                 raise PlanFrameBackendError("Join node right frame is invalid")
-            if right_frame._adapter.name != self._adapter.name:
+            if getattr(right_frame._adapter, "name", None) != self._adapter.name:
                 raise PlanFrameBackendError("Cannot join frames from different backends")
-            right_df = right_frame._eval(right_frame._plan)
+            right_df = cast(BackendFrameT, right_frame._eval(right_frame._plan))
             if node.left_keys is node.right_keys:
                 compiled = self._compile_join_keys_tuple(node.left_keys)
                 lo = ro = compiled
@@ -297,12 +312,12 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             return self._adapter.tail(self._eval(node.prev), node.n)
         if isinstance(node, ConcatVertical):
             left_df = self._eval(node.prev)
-            other_frame = node.other
+            other_frame: FrameLike = node.other
             if getattr(other_frame, "_adapter", None) is None:
                 raise PlanFrameBackendError("ConcatVertical node other frame is invalid")
-            if other_frame._adapter.name != self._adapter.name:
+            if getattr(other_frame._adapter, "name", None) != self._adapter.name:
                 raise PlanFrameBackendError("Cannot concat frames from different backends")
-            right_df = other_frame._eval(other_frame._plan)
+            right_df = cast(BackendFrameT, other_frame._eval(other_frame._plan))
             return self._adapter.concat_vertical(left_df, right_df)
         if isinstance(node, Pivot):
             return self._adapter.pivot(
@@ -320,12 +335,12 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             return self._adapter.unnest(self._eval(node.prev), node.column, fields=node.fields)
         if isinstance(node, ConcatHorizontal):
             left_df = self._eval(node.prev)
-            other_frame = node.other
+            other_frame: FrameLike = node.other
             if getattr(other_frame, "_adapter", None) is None:
                 raise PlanFrameBackendError("ConcatHorizontal node other frame is invalid")
-            if other_frame._adapter.name != self._adapter.name:
+            if getattr(other_frame._adapter, "name", None) != self._adapter.name:
                 raise PlanFrameBackendError("Cannot concat frames from different backends")
-            right_df = other_frame._eval(other_frame._plan)
+            right_df = cast(BackendFrameT, other_frame._eval(other_frame._plan))
             return self._adapter.concat_horizontal(left_df, right_df)
         if isinstance(node, DropNullsAll):
             return self._adapter.drop_nulls_all(self._eval(node.prev), node.subset)
@@ -564,7 +579,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def cast(self, name: str, dtype: Any) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def cast(self, name: str, dtype: object) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.cast(name, dtype=dtype)
         return Frame(
             _data=self._data,
@@ -738,15 +753,22 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def fill_null(self, value: Any, *subset: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def fill_null(
+        self,
+        value: Scalar | Expr[Any] | None = None,
+        *subset: str,
+        strategy: str | None = None,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         sub = tuple(subset) if subset else None
+        if (value is None) == (strategy is None):
+            raise ValueError("fill_null requires exactly one of value= or strategy=")
         if sub is not None:
             self._schema.select(sub)  # validate
         schema2 = self._schema.fill_null()
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=FillNull(self._plan, value=value, subset=sub),
+            _plan=FillNull(self._plan, value=value, subset=sub, strategy=strategy),
             _schema=schema2,
         )
 
@@ -817,7 +839,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _adapter=self._adapter,
             _plan=Join(
                 self._plan,
-                right=other,
+                right=cast(FrameLike, other),
                 left_keys=lk,
                 right_keys=rk,
                 how=how,
@@ -877,7 +899,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=ConcatVertical(self._plan, other=other),
+            _plan=ConcatVertical(self._plan, other=cast(FrameLike, other)),
             _schema=self._schema,
         )
 
@@ -897,7 +919,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         return Frame(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=ConcatHorizontal(self._plan, other=other),
+            _plan=ConcatHorizontal(self._plan, other=cast(FrameLike, other)),
             _schema=schema2,
         )
 
@@ -1056,7 +1078,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = "zstd",
         row_group_size: int | None = None,
         partition_by: tuple[str, ...] | None = None,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         try:
             planned = self._eval(self._plan)
@@ -1079,7 +1101,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         separator: str = ",",
         include_header: bool = True,
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         try:
             planned = self._eval(self._plan)
@@ -1095,7 +1117,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend write_csv failed for {self._adapter.name}"
             ) from e
 
-    def write_ndjson(self, path: str, *, storage_options: dict[str, Any] | None = None) -> None:
+    def write_ndjson(self, path: str, *, storage_options: StorageOptions | None = None) -> None:
         try:
             planned = self._eval(self._plan)
             self._adapter.write_ndjson(planned, path, storage_options=storage_options)
@@ -1109,7 +1131,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         path: str,
         *,
         compression: Literal["uncompressed", "lz4", "zstd"] = "uncompressed",
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         try:
             planned = self._eval(self._plan)
@@ -1125,7 +1147,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self,
         table_name: str,
         *,
-        connection: Any,
+        connection: object,
         if_table_exists: Literal["fail", "replace", "append"] = "fail",
         engine: str | None = None,
     ) -> None:
@@ -1157,7 +1179,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         target: str,
         *,
         mode: Literal["error", "append", "overwrite", "ignore", "merge"] = "error",
-        storage_options: dict[str, Any] | None = None,
+        storage_options: StorageOptions | None = None,
     ) -> None:
         try:
             planned = self._eval(self._plan)
