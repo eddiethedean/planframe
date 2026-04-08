@@ -65,7 +65,7 @@ df = out.collect()
   - **dedupe**: `unique`, `duplicated`
   - **joins**: `join`
   - **grouping**: `group_by(...).agg(...)`
-  - **core**: `with_column`, `cast`, `filter`, `sort`
+  - **core**: `with_column`, `cast`, `filter`, `sort` (keys may be column names and/or `Expr`; schema unchanged)
 - **Boundaries**:
   - `collect()` executes the accumulated plan using the adapter/backend
   - `materialize_model(kind="dataclass" | "pydantic")` materializes a Python model from the derived schema (no execution)

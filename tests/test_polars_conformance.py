@@ -91,6 +91,20 @@ def test_select_mixed_str_and_expr_polars() -> None:
     assert df["twice_age"].to_list() == [20, 40]
 
 
+def test_sort_expression_key_polars() -> None:
+    pf = User({"id": [1, 2, 3], "name": ["a", "b", "c"], "age": [30, 10, 20]})
+    out = pf.sort(add(col("id"), col("age")))
+    df = out.collect()
+    assert df["id"].to_list() == [2, 3, 1]
+
+
+def test_sort_mixed_column_and_expr_polars() -> None:
+    pf = User({"id": [1, 2], "name": ["b", "a"], "age": [10, 20]})
+    out = pf.sort("name", add(col("id"), col("age")))
+    df = out.collect()
+    assert df["id"].to_list() == [2, 1]
+
+
 def test_select_drop_rename_with_column_filter_collect() -> None:
     pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
 

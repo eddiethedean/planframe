@@ -4,7 +4,7 @@ from typing import Any, Literal, cast
 
 import polars as pl
 
-from planframe.backend.adapter import BaseAdapter, CompiledProjectItem
+from planframe.backend.adapter import BaseAdapter, CompiledProjectItem, CompiledSortKey
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
 from planframe_polars.compile_expr import compile_expr
@@ -62,14 +62,22 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     def sort(
         self,
         df: PolarsBackendFrame,
-        columns: tuple[str, ...],
+        keys: tuple[CompiledSortKey[pl.Expr], ...],
         *,
         descending: tuple[bool, ...],
         nulls_last: tuple[bool, ...],
     ) -> PolarsBackendFrame:
-        if not columns:
+        if not keys:
             return df
-        return df.sort(list(columns), descending=descending, nulls_last=nulls_last)
+        by: list[str | pl.Expr] = []
+        for k in keys:
+            if k.column is not None:
+                by.append(k.column)
+            elif k.expr is not None:
+                by.append(k.expr)
+            else:
+                raise ValueError("CompiledSortKey requires column or expr")
+        return df.sort(by, descending=descending, nulls_last=nulls_last)
 
     def unique(
         self,
