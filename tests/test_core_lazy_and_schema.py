@@ -1419,6 +1419,23 @@ def test_with_row_count_is_lazy_and_respects_offset() -> None:
     assert [c[0] for c in adapter.calls] == ["select", "with_row_count", "collect"]
 
 
+def test_clip_is_lazy_and_clips_selected_columns() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S:
+        x: int
+        y: int
+
+    pf = Frame.source([{"x": -1, "y": 5}, {"x": 10, "y": 1}], adapter=adapter, schema=S)
+    out = pf.clip(lower=0, upper=6, subset=("x",))
+    assert adapter.calls == []
+
+    _ = out.collect()
+    # SpyAdapter.with_column doesn't evaluate expressions; it just records calls.
+    assert [c[0] for c in adapter.calls] == ["compile_expr", "with_column", "collect"]
+
+
 def test_unnest_plan_node_carries_fields() -> None:
     adapter = SpyAdapter()
 

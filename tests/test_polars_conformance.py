@@ -556,6 +556,16 @@ def test_row_ops_head_tail_slice_limit() -> None:
     assert collected["id"].to_list() == [3]
 
 
+def test_clip_subset_and_all_numeric_polars() -> None:
+    pf = User({"id": [1, 2], "name": ["a", "b"], "age": [-1, 10]})
+
+    df_subset = pf.clip(lower=0, upper=6, subset=("age",)).sort("id").collect()
+    assert df_subset.to_dict(as_series=False) == {"id": [1, 2], "name": ["a", "b"], "age": [0, 6]}
+
+    df_all = pf.clip(lower=0).sort("id").collect()
+    assert df_all.to_dict(as_series=False) == {"id": [1, 2], "name": ["a", "b"], "age": [0, 10]}
+
+
 def test_row_ops_slice_length_none_and_offset_past_end() -> None:
     data = {"id": [1, 2, 3]}
 

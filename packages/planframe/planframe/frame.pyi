@@ -632,6 +632,13 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         expr: Expr[T],
     ) -> Self: ...
     def with_row_count(self, *, name: str = ..., offset: int = ...) -> Self: ...
+    def clip(
+        self,
+        *,
+        lower: Expr[object] | Scalar | None = ...,
+        upper: Expr[object] | Scalar | None = ...,
+        subset: Sequence[LiteralString] | None = ...,
+    ) -> Self: ...
     @overload
     def cast(self, name: LiteralString, dtype: type[T]) -> Self: ...
     @overload
