@@ -1436,6 +1436,34 @@ def test_clip_is_lazy_and_clips_selected_columns() -> None:
     assert [c[0] for c in adapter.calls] == ["compile_expr", "with_column", "collect"]
 
 
+def test_select_schema_is_lazy_and_strict_semantics() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S:
+        id: int
+        x: int
+
+    pf = Frame.source([{"id": 1, "x": 2}], adapter=adapter, schema=S)
+
+    from planframe.selector import prefix
+
+    out = pf.select_schema(prefix("i"))
+    assert adapter.calls == []
+    rows = out.collect()
+    assert rows == [{"id": 1}]
+
+    assert adapter.calls and adapter.calls[0][0] == "select"
+
+    # strict=True errors when selector matches nothing
+    with pytest.raises(PlanFrameSchemaError, match="matched no columns"):
+        _ = pf.select_schema(prefix("nope"), strict=True)
+
+    # strict=False allows empty selection
+    empty = pf.select_schema(prefix("nope"), strict=False)
+    assert empty.collect() == [{}]
+
+
 def test_unnest_plan_node_carries_fields() -> None:
     adapter = SpyAdapter()
 

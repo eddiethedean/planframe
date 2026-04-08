@@ -63,6 +63,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("from planframe.plan.join_options import JoinOptions")
     a("from planframe.plan.nodes import PlanNode")
     a("from planframe.schema.ir import Schema")
+    a("from planframe.selector import ColumnSelector")
     a("from planframe.typing._schema_types import JoinedSchema")
     a("from planframe.typing.scalars import Scalar")
     a("from planframe.typing.storage import StorageOptions")
@@ -116,6 +117,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("    def select_prefix(self, prefix: str) -> Self: ...")
     a("    def select_suffix(self, suffix: str) -> Self: ...")
     a("    def select_regex(self, pattern: str) -> Self: ...")
+    a("    def select_schema(self, selector: ColumnSelector, *, strict: bool = ...) -> Self: ...")
     a("")
     for n in range(1, max_arity + 1):
         params = ", ".join([f"__c{i}: LiteralString" for i in range(1, n + 1)])

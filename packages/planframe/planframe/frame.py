@@ -62,6 +62,7 @@ from planframe.plan.optimize import optimize_plan
 from planframe.schema.ir import Field, Schema, collect_col_names_in_expr
 from planframe.schema.materialize import materialize_model
 from planframe.schema.source import schema_from_type
+from planframe.selector import ColumnSelector, _apply_strict
 from planframe.typing.frame_like import FrameLike
 from planframe.typing.scalars import Scalar
 from planframe.typing.storage import StorageOptions
@@ -302,6 +303,18 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def select_regex(self, pattern: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         rx = re.compile(pattern)
         cols = tuple(n for n in self._schema.names() if rx.search(n))
+        schema2 = self._schema.select(cols)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=Select(self._plan, cols),
+            _schema=schema2,
+        )
+
+    def select_schema(
+        self, selector: ColumnSelector, *, strict: bool = True
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        cols = _apply_strict(cols=selector.select(self._schema), strict=strict, selector=selector)
         schema2 = self._schema.select(cols)
         return Frame(
             _data=self._data,

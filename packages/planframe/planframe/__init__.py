@@ -15,6 +15,7 @@ from planframe.frame import Frame
 from planframe.groupby import GroupedFrame
 from planframe.plan.join_options import JoinOptions
 from planframe.schema.ir import Schema
+from planframe.selector import ColumnSelector
 
 
 def __getattr__(name: str) -> Any:
@@ -29,6 +30,7 @@ __all__ = [
     "Schema",
     "GroupedFrame",
     "DynamicGroupedFrame",
+    "ColumnSelector",
     "JoinOptions",
     "execute_plan",
     "expr",

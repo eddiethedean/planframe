@@ -313,6 +313,19 @@ def test_execute_plan_with_row_count() -> None:
     assert res == [{"id": 1, "rn": 7}, {"id": 2, "rn": 8}, {"id": 3, "rn": 9}]
 
 
+def test_execute_plan_select_schema_lowers_to_select() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1, "a": 10, "b": 20}]
+    pf = Frame.source(data, adapter=adapter, schema=S)
+
+    from planframe.selector import by_name
+
+    out = pf.select_schema(by_name("id", "b"))
+    res, calls = _run(out)
+    assert calls == ["select"]
+    assert res == [{"id": 1, "b": 20}]
+
+
 def test_execute_plan_posexplode() -> None:
     adapter = SpyAdapter()
 
