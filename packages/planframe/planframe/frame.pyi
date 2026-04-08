@@ -958,6 +958,96 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self,
         other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
         *,
+        on: tuple[
+            LiteralString, LiteralString, LiteralString, LiteralString, LiteralString, LiteralString
+        ],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
         left_on: tuple[LiteralString],
         right_on: tuple[LiteralString],
         how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
@@ -1004,6 +1094,141 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         left_on: tuple[LiteralString, LiteralString, LiteralString, LiteralString, LiteralString],
         right_on: tuple[LiteralString, LiteralString, LiteralString, LiteralString, LiteralString],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        left_on: tuple[
+            LiteralString, LiteralString, LiteralString, LiteralString, LiteralString, LiteralString
+        ],
+        right_on: tuple[
+            LiteralString, LiteralString, LiteralString, LiteralString, LiteralString, LiteralString
+        ],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        left_on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        right_on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        left_on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        right_on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        left_on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        right_on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
+        suffix: str = ...,
+        options: JoinOptions | None = ...,
+    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...
+    @overload
+    def join(
+        self,
+        other: Frame[OtherSchemaT, BackendFrameT, BackendExprT],
+        *,
+        left_on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
+        right_on: tuple[
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+            LiteralString,
+        ],
         how: Literal["inner", "left", "right", "full", "semi", "anti"] = ...,
         suffix: str = ...,
         options: JoinOptions | None = ...,

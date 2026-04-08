@@ -322,7 +322,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        suffix: str = ...,")
     a("        options: JoinOptions | None = ...,")
     a("    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...")
-    for n in range(2, 6):
+    for n in range(2, max_arity + 1):
         on_tuple = ", ".join(["LiteralString"] * n)
         a("    @overload")
         a("    def join(")
@@ -334,7 +334,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
         a("        suffix: str = ...,")
         a("        options: JoinOptions | None = ...,")
         a("    ) -> Frame[JoinedSchema[SchemaT, OtherSchemaT], BackendFrameT, BackendExprT]: ...")
-    for n in range(1, 6):
+    for n in range(1, max_arity + 1):
         lr = ", ".join(["LiteralString"] * n)
         a("    @overload")
         a("    def join(")
