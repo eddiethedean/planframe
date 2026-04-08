@@ -860,6 +860,35 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
+    def fill_null_subset(
+        self,
+        value: Scalar | Expr[Any] | None = None,
+        *columns: str,
+        strategy: str | None = None,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        if not columns:
+            raise ValueError("fill_null_subset requires at least one column")
+        return self.fill_null(value, *columns, strategy=strategy)
+
+    def fill_null_many(
+        self,
+        mapping: Mapping[str, Scalar | Expr[Any]],
+        *,
+        strict: bool = True,
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        if not mapping:
+            raise ValueError("fill_null_many requires non-empty mapping")
+
+        out: Frame[SchemaT, BackendFrameT, BackendExprT] = self
+        for name, value in mapping.items():
+            if strict:
+                out._schema.get(name)
+                out = out.fill_null(value, name)
+            else:
+                if name in out._schema.field_map():
+                    out = out.fill_null(value, name)
+        return out
+
     def melt(
         self,
         *,

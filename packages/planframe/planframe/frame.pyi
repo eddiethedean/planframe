@@ -975,6 +975,18 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         strategy: str,
     ) -> Self: ...
+    def fill_null_subset(
+        self,
+        value: Scalar | Expr[Any] | None = ...,
+        *columns: LiteralString,
+        strategy: str | None = ...,
+    ) -> Self: ...
+    def fill_null_many(
+        self,
+        mapping: Mapping[LiteralString, Scalar | Expr[Any]],
+        *,
+        strict: bool = ...,
+    ) -> Self: ...
     def melt(
         self,
         *,

@@ -336,6 +336,17 @@ def test_execute_plan_select_schema_lowers_to_select() -> None:
     assert res == [{"id": 1, "b": 20}]
 
 
+def test_execute_plan_fill_null_subset_and_many_lower_to_fill_null() -> None:
+    adapter = SpyAdapter()
+    pf = Frame.source([{"id": 1, "a": None, "b": 2}], adapter=adapter, schema=S)
+
+    out = pf.fill_null_subset(0, "a").fill_null_many({"a": 1})
+    res, calls = _run(out)
+    assert calls == ["fill_null", "fill_null"]
+    # SpyAdapter.fill_null applies eagerly; second fill_null doesn't change non-null values.
+    assert res == [{"id": 1, "a": 0, "b": 2}]
+
+
 def test_execute_plan_posexplode() -> None:
     adapter = SpyAdapter()
 
