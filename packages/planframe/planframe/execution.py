@@ -46,6 +46,7 @@ from planframe.plan.nodes import (
     Unique,
     Unnest,
     WithColumn,
+    WithRowCount,
 )
 from planframe.schema.ir import Schema
 from planframe.typing.frame_like import FrameLike
@@ -138,6 +139,8 @@ def execute_plan(
             return adapter.with_column(_eval(node.prev), node.name, _compile(node.expr))
         if isinstance(node, Cast):
             return adapter.cast(_eval(node.prev), node.name, node.dtype)
+        if isinstance(node, WithRowCount):
+            return adapter.with_row_count(_eval(node.prev), name=node.name, offset=node.offset)
         if isinstance(node, Filter):
             return adapter.filter(_eval(node.prev), _compile(node.predicate))
         if isinstance(node, Sort):

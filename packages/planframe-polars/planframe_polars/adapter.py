@@ -66,6 +66,12 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     def cast(self, df: PolarsBackendFrame, name: str, dtype: object) -> PolarsBackendFrame:
         return df.with_columns(pl.col(name).cast(cast(Any, dtype)))
 
+    def with_row_count(
+        self, df: PolarsBackendFrame, *, name: str = "row_nr", offset: int = 0
+    ) -> PolarsBackendFrame:
+        # Polars row_index is 0-based, offset supported natively.
+        return df.with_row_index(name=name, offset=offset)
+
     def filter(self, df: PolarsBackendFrame, predicate: pl.Expr) -> PolarsBackendFrame:
         return df.filter(predicate)
 
@@ -250,40 +256,36 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         base = pl.col(column)
 
         if isinstance(window_size, int):
+            kwargs: dict[str, Any] = {"window_size": window_size, "min_periods": min_periods}
             if op == "sum":
-                expr = base.rolling_sum(window_size=window_size, min_periods=min_periods)
+                expr = base.rolling_sum(**kwargs)  # type: ignore[call-arg]
             elif op == "mean":
-                expr = base.rolling_mean(window_size=window_size, min_periods=min_periods)
+                expr = base.rolling_mean(**kwargs)  # type: ignore[call-arg]
             elif op == "min":
-                expr = base.rolling_min(window_size=window_size, min_periods=min_periods)
+                expr = base.rolling_min(**kwargs)  # type: ignore[call-arg]
             elif op == "max":
-                expr = base.rolling_max(window_size=window_size, min_periods=min_periods)
+                expr = base.rolling_max(**kwargs)  # type: ignore[call-arg]
             elif op == "count":
                 expr = (
-                    base.is_not_null()
-                    .cast(pl.Int64)
-                    .rolling_sum(window_size=window_size, min_periods=min_periods)
+                    base.is_not_null().cast(pl.Int64).rolling_sum(**kwargs)  # type: ignore[call-arg]
                 )
             else:
                 raise ValueError(f"Unsupported rolling op: {op!r}")
         else:
             # time-based rolling, use *_by on the on-column.
             by_col = pl.col(on)
+            kwargs2: dict[str, Any] = {"window_size": window_size, "min_periods": min_periods}
             if op == "sum":
-                expr = base.rolling_sum_by(by_col, window_size=window_size, min_periods=min_periods)
+                expr = base.rolling_sum_by(by_col, **kwargs2)  # type: ignore[call-arg]
             elif op == "mean":
-                expr = base.rolling_mean_by(
-                    by_col, window_size=window_size, min_periods=min_periods
-                )
+                expr = base.rolling_mean_by(by_col, **kwargs2)  # type: ignore[call-arg]
             elif op == "min":
-                expr = base.rolling_min_by(by_col, window_size=window_size, min_periods=min_periods)
+                expr = base.rolling_min_by(by_col, **kwargs2)  # type: ignore[call-arg]
             elif op == "max":
-                expr = base.rolling_max_by(by_col, window_size=window_size, min_periods=min_periods)
+                expr = base.rolling_max_by(by_col, **kwargs2)  # type: ignore[call-arg]
             elif op == "count":
                 expr = (
-                    base.is_not_null()
-                    .cast(pl.Int64)
-                    .rolling_sum_by(by_col, window_size=window_size, min_periods=min_periods)
+                    base.is_not_null().cast(pl.Int64).rolling_sum_by(by_col, **kwargs2)  # type: ignore[call-arg]
                 )
             else:
                 raise ValueError(f"Unsupported rolling op: {op!r}")

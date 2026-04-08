@@ -55,6 +55,7 @@ from planframe.plan.nodes import (
     Unnest,
     UnnestItem,
     WithColumn,
+    WithRowCount,
 )
 from planframe.plan.optimize import optimize_plan
 from planframe.schema.ir import Field, Schema, collect_col_names_in_expr
@@ -466,6 +467,19 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data,
             _adapter=self._adapter,
             _plan=Cast(self._plan, name=name, dtype=dtype),
+            _schema=schema2,
+        )
+
+    def with_row_count(
+        self, *, name: str = "row_nr", offset: int = 0
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        if offset < 0:
+            raise ValueError("with_row_count offset must be non-negative")
+        schema2 = self._schema.with_row_count(name)
+        return Frame(
+            _data=self._data,
+            _adapter=self._adapter,
+            _plan=WithRowCount(self._plan, name=name, offset=offset),
             _schema=schema2,
         )
 

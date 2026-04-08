@@ -89,6 +89,13 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
         out[name] = out[name].astype(dtype)  # type: ignore[call-arg]
         return out
 
+    def with_row_count(
+        self, df: pd.DataFrame, *, name: str = "row_nr", offset: int = 0
+    ) -> pd.DataFrame:
+        out = df.copy()
+        out[name] = range(offset, offset + len(out))
+        return out
+
     def filter(self, df: pd.DataFrame, predicate: PandasBackendExpr) -> pd.DataFrame:
         if isinstance(predicate, AggExprSpec):
             raise PlanFrameBackendError("AggExpr is only supported inside group_by(...).agg(...)")

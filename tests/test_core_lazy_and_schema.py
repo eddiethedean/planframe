@@ -154,6 +154,12 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         self.calls.append(("cast", (name, dtype)))
         return df
 
+    def with_row_count(
+        self, df: list[dict[str, Any]], *, name: str = "row_nr", offset: int = 0
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("with_row_count", (name, offset)))
+        return [{**row, name: i} for i, row in enumerate(df, start=offset)]
+
     def filter(self, df: list[dict[str, Any]], predicate: object) -> list[dict[str, Any]]:
         self.calls.append(("filter", predicate))
         return df[:1]
@@ -1398,6 +1404,19 @@ def test_new_transforms_are_lazy() -> None:
     )
     assert adapter.calls == []
     _ = out.collect()
+
+
+def test_with_row_count_is_lazy_and_respects_offset() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1, "age": 2}, {"id": 2, "age": 3}, {"id": 3, "age": 4}]
+    pf = Frame.source(data, adapter=adapter, schema=UserDC)
+
+    out = pf.select("id").with_row_count(name="rn", offset=10)
+    assert adapter.calls == []
+
+    rows = out.collect()
+    assert rows == [{"id": 1, "rn": 10}, {"id": 2, "rn": 11}, {"id": 3, "rn": 12}]
+    assert [c[0] for c in adapter.calls] == ["select", "with_row_count", "collect"]
 
 
 def test_unnest_plan_node_carries_fields() -> None:
