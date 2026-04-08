@@ -8,16 +8,5 @@ from typing import TypeAlias
 # This is intentionally conservative (and backend-agnostic): adapters may support
 # additional literal types, but these cover the typical cross-backend set.
 Scalar: TypeAlias = (
-    None
-    | bool
-    | int
-    | float
-    | str
-    | bytes
-    | date
-    | datetime
-    | time
-    | timedelta
-    | Decimal
+    None | bool | int | float | str | bytes | date | datetime | time | timedelta | Decimal
 )
-

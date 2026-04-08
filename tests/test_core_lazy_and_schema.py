@@ -358,7 +358,9 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
 
         if strategy is not None:
             if strategy not in {"forward", "backward"}:
-                raise NotImplementedError(f"SpyAdapter.fill_null strategy not supported: {strategy}")
+                raise NotImplementedError(
+                    f"SpyAdapter.fill_null strategy not supported: {strategy}"
+                )
             rows = [dict(r) for r in df]
             if strategy == "forward":
                 last: dict[str, Any] = {}

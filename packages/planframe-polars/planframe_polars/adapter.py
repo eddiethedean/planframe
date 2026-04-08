@@ -12,9 +12,9 @@ from planframe.backend.adapter import (
 )
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
-from planframe_polars.compile_expr import compile_expr
 from planframe.typing.scalars import Scalar
 from planframe.typing.storage import StorageOptions
+from planframe_polars.compile_expr import compile_expr
 
 PolarsBackendFrame = pl.DataFrame | pl.LazyFrame
 
@@ -61,7 +61,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         return df.with_columns(expr.alias(name))
 
     def cast(self, df: PolarsBackendFrame, name: str, dtype: object) -> PolarsBackendFrame:
-        return df.with_columns(pl.col(name).cast(dtype))
+        return df.with_columns(pl.col(name).cast(cast(Any, dtype)))
 
     def filter(self, df: PolarsBackendFrame, predicate: pl.Expr) -> PolarsBackendFrame:
         return df.filter(predicate)
@@ -230,10 +230,17 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
             raise ValueError("fill_null requires exactly one of value or strategy")
 
         if strategy is not None:
+            allowed = {"forward", "backward", "min", "max", "mean", "zero", "one"}
+            if strategy not in allowed:
+                raise ValueError(f"Unsupported fill_null strategy={strategy!r}")
+            strat_lit = cast(
+                Literal["forward", "backward", "min", "max", "mean", "zero", "one"],
+                strategy,
+            )
             if subset is None:
                 # Polars supports strategy-based fill on eager and lazy frames.
-                return df.fill_null(strategy=strategy)  # type: ignore[call-arg]
-            exprs = [pl.col(c).fill_null(strategy=strategy) for c in subset]  # type: ignore[call-arg]
+                return df.fill_null(strategy=strat_lit)
+            exprs = [pl.col(c).fill_null(strategy=strat_lit) for c in subset]
             return df.with_columns(exprs)
 
         # value-based fill (literal or Expr)

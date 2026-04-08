@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
-from planframe.backend.errors import PlanFrameSchemaError
 from planframe.backend.adapter import BackendAdapter
+from planframe.backend.errors import PlanFrameSchemaError
 from planframe.expr.api import AggExpr, Expr, infer_dtype
 from planframe.plan.nodes import Agg, GroupBy, JoinKeyColumn, JoinKeyExpr, PlanNode
 from planframe.schema.ir import Field, Schema, collect_col_names_in_expr

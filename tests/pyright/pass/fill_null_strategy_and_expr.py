@@ -15,4 +15,3 @@ pf = S({"id": [1], "a": [None], "b": [2]})
 _ = pf.fill_null(0, "a")
 _ = pf.fill_null(add(col("b"), lit(1)), "a")
 _ = pf.fill_null(None, "a", strategy="forward")
-

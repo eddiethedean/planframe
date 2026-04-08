@@ -12,4 +12,3 @@ pf = S({"id": [1], "a": [None]})
 
 # should error: neither value nor strategy
 pf.fill_null()
-

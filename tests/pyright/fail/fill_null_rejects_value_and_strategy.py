@@ -12,4 +12,3 @@ pf = S({"id": [1], "a": [None]})
 
 # should error: value and strategy together
 pf.fill_null(0, "a", strategy="forward")
-

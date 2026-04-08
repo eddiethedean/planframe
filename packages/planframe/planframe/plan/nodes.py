@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
+from planframe.typing.frame_like import FrameLike
 from planframe.typing.scalars import Scalar
 
 
@@ -175,7 +176,7 @@ class Melt(PlanNode):
 @dataclass(frozen=True, slots=True)
 class Join(PlanNode):
     prev: PlanNode
-    right: object
+    right: FrameLike
     left_keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
     right_keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
     how: str = "inner"
@@ -205,7 +206,7 @@ class Tail(PlanNode):
 @dataclass(frozen=True, slots=True)
 class ConcatVertical(PlanNode):
     prev: PlanNode
-    other: object
+    other: FrameLike
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,7 +236,7 @@ class Unnest(PlanNode):
 @dataclass(frozen=True, slots=True)
 class ConcatHorizontal(PlanNode):
     prev: PlanNode
-    other: object
+    other: FrameLike
 
 
 @dataclass(frozen=True, slots=True)
