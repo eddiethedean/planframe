@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Generic, Literal, TypeAlias, TypeGuard, TypeVar
+from typing import Any, Generic, Literal, TypeAlias, TypeGuard, TypeVar, cast
 
 from planframe.backend.errors import PlanFrameExpressionError
 
@@ -557,7 +557,7 @@ def is_bool_expr(expr: Expr[object]) -> TypeGuard[BoolExpr]:
 
 def _assert_bool(expr: Expr[object]) -> Expr[bool]:
     if is_bool_expr(expr):
-        return expr
+        return cast(Expr[bool], expr)
     raise PlanFrameExpressionError(f"Expected boolean Expr, got: {type(expr).__name__}")
 
 

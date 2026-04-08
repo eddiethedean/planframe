@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Literal
+from collections.abc import Callable
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, create_model
 
@@ -13,7 +14,8 @@ def materialize_dataclass(name: str, schema: Schema) -> type[Any]:
     for f in schema.fields:
         namespace["__annotations__"][f.name] = f.dtype
     cls = type(name, (), namespace)
-    return dataclasses.dataclass(frozen=True)(cls)
+    deco = cast(Callable[[type[Any]], type[Any]], dataclasses.dataclass(frozen=True))
+    return deco(cls)
 
 
 def materialize_pydantic(name: str, schema: Schema) -> type[BaseModel]:

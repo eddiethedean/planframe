@@ -227,25 +227,101 @@ class Schema:
     def fill_null(self) -> Schema:
         return self
 
-    def explode(self, column: str) -> Schema:
-        self.get(column)  # validate
+    def explode(self, columns: Iterable[str]) -> Schema:
+        cols = tuple(columns)
+        if not cols:
+            raise PlanFrameSchemaError("explode requires at least one column")
+        for c in cols:
+            self.get(c)  # validate
         return self
 
-    def unnest(self, column: str, *, fields: tuple[str, ...]) -> Schema:
-        if not fields:
-            raise PlanFrameSchemaError("unnest requires non-empty fields")
+    def _infer_unnest_fields(self, dtype: PFType) -> tuple[str, ...] | None:
+        # Dataclass model type.
+        if isinstance(dtype, type) and is_dataclass(dtype):
+            return tuple(f.name for f in fields(dtype))
+
+        # TypedDict class.
+        if (
+            isinstance(dtype, type)
+            and hasattr(dtype, "__total__")
+            and hasattr(dtype, "__annotations__")
+        ):
+            ann = getattr(dtype, "__annotations__", {})
+            if isinstance(ann, dict):
+                return tuple(ann.keys())
+
+        # Pydantic BaseModel type (v1).
+        try:
+            from pydantic import BaseModel  # type: ignore
+
+            if isinstance(dtype, type) and issubclass(dtype, BaseModel):
+                fd = getattr(dtype, "__fields__", None)
+                if isinstance(fd, dict):
+                    return tuple(fd.keys())
+        except Exception:  # noqa: BLE001
+            pass
+
+        return None
+
+    def unnest(
+        self, columns: Iterable[str]
+    ) -> tuple[Schema, tuple[tuple[str, tuple[str, ...]], ...]]:
+        cols = tuple(columns)
+        if not cols:
+            raise PlanFrameSchemaError("unnest requires at least one column")
+        if len(set(cols)) != len(cols):
+            raise PlanFrameSchemaError("unnest columns must be unique")
+
+        fm = self.field_map()
+        missing = set(cols).difference(fm.keys())
+        if missing:
+            raise PlanFrameSchemaError(f"Cannot unnest missing columns: {sorted(missing)}")
+
+        # Drop columns, then append inferred fields for each column.
+        remaining = [f for f in self.fields if f.name not in set(cols)]
+        out_names = {f.name for f in remaining}
+        items: list[tuple[str, tuple[str, ...]]] = []
+
+        for col in cols:
+            inferred = self._infer_unnest_fields(fm[col].dtype)
+            if not inferred:
+                raise PlanFrameSchemaError(
+                    "unnest requires schema field names; annotate the column as a dataclass, "
+                    "TypedDict, or pydantic BaseModel type"
+                )
+            if len(set(inferred)) != len(inferred):
+                raise PlanFrameSchemaError(f"unnest inferred duplicate field names for: {col!r}")
+            for name in inferred:
+                if name in out_names:
+                    raise PlanFrameSchemaError(f"unnest would create duplicate column name: {name}")
+                out_names.add(name)
+                remaining.append(Field(name=name, dtype=object))
+            items.append((col, inferred))
+
+        return Schema(fields=tuple(remaining)), tuple(items)
+
+    def posexplode(self, column: str, *, pos: str, value: str) -> Schema:
         fm = self.field_map()
         if column not in fm:
-            raise PlanFrameSchemaError(f"Cannot unnest missing column: {column}")
-        if len(set(fields)) != len(fields):
-            raise PlanFrameSchemaError("unnest fields must be unique")
-        remaining = [f for f in self.fields if f.name != column]
-        out_names = {f.name for f in remaining}
-        for name in fields:
-            if name in out_names:
-                raise PlanFrameSchemaError(f"unnest would create duplicate column name: {name}")
-            out_names.add(name)
-            remaining.append(Field(name=name, dtype=object))
+            raise PlanFrameSchemaError(f"Cannot posexplode missing column: {column}")
+        if pos == value:
+            raise PlanFrameSchemaError("posexplode pos and value columns must be distinct")
+
+        remaining: list[Field] = []
+        out_names: set[str] = set()
+        for f in self.fields:
+            if f.name == column:
+                continue
+            remaining.append(f)
+            out_names.add(f.name)
+
+        if pos in out_names:
+            raise PlanFrameSchemaError(f"posexplode would create duplicate column name: {pos}")
+        if value in out_names:
+            raise PlanFrameSchemaError(f"posexplode would create duplicate column name: {value}")
+
+        remaining.append(Field(name=pos, dtype=int))
+        remaining.append(Field(name=value, dtype=object))
         return Schema(fields=tuple(remaining))
 
     def melt(

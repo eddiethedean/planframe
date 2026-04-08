@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cmp_to_key
-from typing import Any, cast
+from typing import Any, TypedDict, cast
 
 import pytest
 from pydantic import BaseModel
@@ -22,8 +22,18 @@ from planframe.expr import Expr, add, col, eq, lit, mul, over
 from planframe.expr.api import Add, AggExpr, Col, Lit, Mul, StrLower, Sub, TrueDiv
 from planframe.frame import Frame
 from planframe.plan.join_options import JoinOptions
-from planframe.plan.nodes import Project
+from planframe.plan.nodes import Project, UnnestItem
 from planframe.schema.ir import collect_col_names_in_expr
+
+
+class _SStructAB(TypedDict):
+    a: int
+    b: int | None
+
+
+class _SStructABStrict(TypedDict):
+    a: int
+    b: int
 
 
 @dataclass(frozen=True)
@@ -532,31 +542,69 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
                 rec[colname] = row[values]
         return list(out.values())
 
-    def explode(self, df: list[dict[str, Any]], column: str) -> list[dict[str, Any]]:
-        self.calls.append(("explode", column))
-        out: list[dict[str, Any]] = []
-        for r in df:
-            vals = r.get(column) or []
-            for v in vals:
-                r2 = dict(r)
-                r2[column] = v
-                out.append(r2)
+    def explode(
+        self, df: list[dict[str, Any]], columns: tuple[str, ...], *, outer: bool = False
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("explode", (columns, outer)))
+        if outer:
+            raise NotImplementedError("SpyAdapter explode(outer=True) not implemented for tests")
+        out: list[dict[str, Any]] = list(df)
+        # Sequential explode to mimic typical semantics.
+        for colname in columns:
+            next_out: list[dict[str, Any]] = []
+            for r in out:
+                vals = r.get(colname) or []
+                for v in vals:
+                    r2 = dict(r)
+                    r2[colname] = v
+                    next_out.append(r2)
+            out = next_out
         return out
 
     def unnest(
-        self, df: list[dict[str, Any]], column: str, *, fields: tuple[str, ...]
+        self, df: list[dict[str, Any]], items: tuple[UnnestItem, ...]
     ) -> list[dict[str, Any]]:
-        self.calls.append(("unnest", (column, fields)))
+        self.calls.append(("unnest", tuple((it.column, it.fields) for it in items)))
+        out = list(df)
+        for it in items:
+            next_out: list[dict[str, Any]] = []
+            for r in out:
+                s = r.get(it.column) or {}
+                r2 = dict(r)
+                r2.pop(it.column, None)
+                if isinstance(s, dict):
+                    for k in it.fields:
+                        if k in s:
+                            r2[k] = s[k]
+                next_out.append(r2)
+            out = next_out
+        return out
+
+    def posexplode(
+        self,
+        df: list[dict[str, Any]],
+        column: str,
+        *,
+        pos: str = "pos",
+        value: str | None = None,
+        outer: bool = False,
+    ) -> list[dict[str, Any]]:
+        self.calls.append(("posexplode", (column, pos, value, outer)))
+        value_name = column if value is None else value
         out: list[dict[str, Any]] = []
         for r in df:
-            s = r.get(column) or {}
-            r2 = dict(r)
-            r2.pop(column, None)
-            if isinstance(s, dict):
-                for k in fields:
-                    if k in s:
-                        r2[k] = s[k]
-            out.append(r2)
+            vals = r.get(column)
+            seq = (
+                list(vals) if isinstance(vals, (list, tuple)) else ([] if vals is None else [vals])
+            )
+            if outer and not seq:
+                seq = [None]
+            for i, v in enumerate(seq):
+                r2 = dict(r)
+                r2.pop(column, None)
+                r2[pos] = i
+                r2[value_name] = v
+                out.append(r2)
         return out
 
     def drop_nulls_all(
@@ -1274,7 +1322,7 @@ def test_new_transforms_are_lazy() -> None:
         id: int
         x: int
         lst: object
-        s: object
+        s: _SStructAB
 
     data = [{"id": 1, "x": 1, "lst": [1, 2], "s": {"a": 1, "b": None}}]
     pf = Frame.source(data, adapter=adapter, schema=S)
@@ -1285,7 +1333,7 @@ def test_new_transforms_are_lazy() -> None:
         .concat_horizontal(pf.select("lst", "s"))
         .concat_horizontal(pf.select("id").rename(id="id2"))
         .explode("lst")
-        .unnest("s", fields=("a", "b"))
+        .unnest("s")
         .drop_nulls_all("a", "b")
     )
     assert adapter.calls == []
@@ -1298,12 +1346,29 @@ def test_unnest_plan_node_carries_fields() -> None:
     @dataclass(frozen=True)
     class S:
         id: int
-        s: object
+        s: _SStructABStrict
 
     pf = Frame.source([{"id": 1, "s": {"a": 1, "b": 2}}], adapter=adapter, schema=S)
-    out = pf.unnest("s", fields=("a", "b")).collect()
+    out = pf.unnest("s").collect()
     assert out == [{"id": 1, "a": 1, "b": 2}]
-    assert ("unnest", ("s", ("a", "b"))) in adapter.calls
+    assert ("unnest", (("s", ("a", "b")),)) in adapter.calls
+
+
+def test_posexplode_is_lazy_and_adds_pos_and_value_columns() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S:
+        id: int
+        xs: list[int]
+
+    pf = Frame.source([{"id": 1, "xs": [10, 20]}], adapter=adapter, schema=S)
+    out = pf.posexplode("xs")
+    assert adapter.calls == []
+
+    rows = out.collect()
+    assert rows == [{"id": 1, "pos": 0, "xs": 10}, {"id": 1, "pos": 1, "xs": 20}]
+    assert [c[0] for c in adapter.calls] == ["posexplode", "collect"]
 
 
 def test_write_methods_execute_and_are_boundaries(tmp_path: Any) -> None:

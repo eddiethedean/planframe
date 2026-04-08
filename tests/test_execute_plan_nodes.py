@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypedDict
 
 import pytest
 from test_core_lazy_and_schema import SpyAdapter
@@ -28,7 +28,11 @@ class ExplodeSchema:
 @dataclass(frozen=True)
 class UnnestSchema:
     id: int
-    s: dict[str, int]
+    s: UnnestStruct
+
+
+class UnnestStruct(TypedDict):
+    k: int
 
 
 @dataclass(frozen=True)
@@ -287,9 +291,7 @@ def test_execute_plan_melt_pivot_explode_unnest_sample() -> None:
     assert calls_e == ["explode"]
     assert [r["xs"] for r in res_e] == [1, 2]
 
-    un = Frame.source([{"id": 1, "s": {"k": 1}}], adapter=adapter, schema=UnnestSchema).unnest(
-        "s", fields=("k",)
-    )
+    un = Frame.source([{"id": 1, "s": {"k": 1}}], adapter=adapter, schema=UnnestSchema).unnest("s")
     res_u, calls_u = _run(un)
     assert calls_u == ["unnest"]
     assert res_u == [{"id": 1, "k": 1}]
@@ -298,6 +300,21 @@ def test_execute_plan_melt_pivot_explode_unnest_sample() -> None:
     res_s, calls_s = _run(samp)
     assert calls_s == ["sample"]
     assert len(res_s) == 1
+
+
+def test_execute_plan_posexplode() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S2:
+        id: int
+        xs: list[int]
+
+    pf = Frame.source([{"id": 1, "xs": [5, 6]}], adapter=adapter, schema=S2)
+    out = pf.posexplode("xs")
+    res, calls = _run(out)
+    assert calls == ["posexplode"]
+    assert res == [{"id": 1, "pos": 0, "xs": 5}, {"id": 1, "pos": 1, "xs": 6}]
 
 
 def test_execute_plan_join_and_concat_and_backend_mismatch_errors() -> None:

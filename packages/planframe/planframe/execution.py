@@ -30,6 +30,7 @@ from planframe.plan.nodes import (
     Melt,
     Pivot,
     PlanNode,
+    Posexplode,
     Project,
     ProjectPick,
     Rename,
@@ -259,9 +260,17 @@ def execute_plan(
                 separator=node.separator,
             )
         if isinstance(node, Explode):
-            return adapter.explode(_eval(node.prev), node.column)
+            return adapter.explode(_eval(node.prev), node.columns, outer=node.outer)
         if isinstance(node, Unnest):
-            return adapter.unnest(_eval(node.prev), node.column, fields=node.fields)
+            return adapter.unnest(_eval(node.prev), node.items)
+        if isinstance(node, Posexplode):
+            return adapter.posexplode(
+                _eval(node.prev),
+                node.column,
+                pos=node.pos,
+                value=node.value,
+                outer=node.outer,
+            )
         if isinstance(node, Sample):
             return adapter.sample(
                 _eval(node.prev),
