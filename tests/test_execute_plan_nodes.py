@@ -80,7 +80,11 @@ def test_execute_plan_join_passes_join_execution_hints() -> None:
     left = Frame.source([{"id": 1, "a": 1, "b": 0}], adapter=adapter, schema=S)
     right = Frame.source([{"id": 1, "a": 2, "b": 0}], adapter=adapter, schema=S)
 
-    joined = left.join(right, on=("id",), options=JoinOptions(allow_parallel=True))
+    joined = left.join(
+        right,
+        on=("id",),
+        options=JoinOptions(allow_parallel=True, engine_streaming=False),
+    )
 
     adapter.calls.clear()
     _ = execute_plan(
@@ -95,6 +99,7 @@ def test_execute_plan_join_passes_join_execution_hints() -> None:
     options = args[-1]
     assert isinstance(options, JoinOptions)
     assert options.allow_parallel is True
+    assert options.engine_streaming is False
 
 
 def test_execute_plan_select_project_with_column_cast_filter_sort_slice_head_tail() -> None:

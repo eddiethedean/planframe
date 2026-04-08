@@ -363,7 +363,7 @@ class PandasAdapter:
 
 ## 10. Join Support
 
-Joins are **implemented** in the shipped `BaseAdapter`: symmetric `on` or asymmetric `left_on` / `right_on`, each key a column name or compiled expression (`CompiledJoinKey`), optional `JoinOptions` (including execution hints like `allow_parallel` / `force_parallel`), and schema merge / suffix rules owned by core PlanFrame.
+Joins are **implemented** in the shipped `BaseAdapter`: symmetric `on` or asymmetric `left_on` / `right_on`, each key a column name or compiled expression (`CompiledJoinKey`), optional `JoinOptions` (including execution hints like `streaming` / `engine_streaming`, `allow_parallel` / `force_parallel`), and schema merge / suffix rules owned by core PlanFrame.
 
 Historical note: early drafts deferred joins until collision semantics were fixed; the current protocol and Polars adapter reflect the merged design.
 
