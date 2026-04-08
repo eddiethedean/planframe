@@ -1,6 +1,16 @@
 ## planframe
 
+[![Docs](https://readthedocs.org/projects/planframe/badge/?version=latest)](https://planframe.readthedocs.io/en/latest/planframe/)
+[![PyPI](https://img.shields.io/pypi/v/planframe)](https://pypi.org/project/planframe/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-informational)](../../LICENSE)
+
 Core package for PlanFrame (typed planning layer). Import as `planframe`.
+
+Documentation (ReadTheDocs):
+
+- Core (adapter authors): `https://planframe.readthedocs.io/en/latest/planframe/`
+- Design docs: `https://planframe.readthedocs.io/en/latest/planframe/design/`
+- Light API reference: `https://planframe.readthedocs.io/en/latest/planframe/reference/api/`
 
 ### What you get
 - `planframe.Frame`: immutable, schema-aware transformation plan (**always lazy**)
@@ -11,7 +21,7 @@ Core package for PlanFrame (typed planning layer). Import as `planframe`.
 ### Note on backends
 `planframe` is backend-agnostic. It does not execute anything until `collect()` (even for eager backends). To execute plans you need an adapter package (e.g. `planframe-polars`).
 
-For async stacks, `Frame.acollect()`, `Frame.ato_dicts()`, and `Frame.ato_dict()` await adapter hooks (`BaseAdapter.acollect` and friends); defaults run sync methods in a thread pool. See `docs/planframe_backend_adapter_design.md`.
+For async stacks, `Frame.acollect()`, `Frame.ato_dicts()`, and `Frame.ato_dict()` await adapter hooks (`BaseAdapter.acollect` and friends); defaults run sync methods in a thread pool. See `https://planframe.readthedocs.io/en/latest/planframe/design/backend-adapter-design/`.
 
 ### Typing
 PlanFrame includes `py.typed` plus generated stubs (notably `planframe/frame.pyi`) to improve static typing in editors and Pyright.

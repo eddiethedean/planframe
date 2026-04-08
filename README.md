@@ -1,5 +1,10 @@
 ## PlanFrame
 
+[![Docs](https://readthedocs.org/projects/planframe/badge/?version=latest)](https://planframe.readthedocs.io/en/latest/)
+[![PyPI - planframe](https://img.shields.io/pypi/v/planframe)](https://pypi.org/project/planframe/)
+[![PyPI - planframe-polars](https://img.shields.io/pypi/v/planframe-polars)](https://pypi.org/project/planframe-polars/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-informational)](LICENSE)
+
 PlanFrame is a typed relational planning layer for Python DataFrames.
 
 **Principle**: PlanFrame is **always lazy**. Every transformation builds a typed plan and evolves schema metadata. **No backend work runs** until you call `collect()`.
@@ -8,10 +13,17 @@ This repository is a mono-repo that currently ships:
 - **`planframe`**: core package (import as `planframe`)
 - **`planframe-polars`**: Polars adapter (import as `planframe_polars`)
 
-### Guides
+### Documentation (ReadTheDocs)
 
-- **PlanFrame (core) – creating an adapter**: `https://github.com/eddiethedean/planframe/blob/main/docs/guides/planframe/creating-an-adapter.md`
-- **PlanFrame-Polars – using planframe-polars**: `https://github.com/eddiethedean/planframe/blob/main/docs/guides/planframe-polars/using-planframe-polars.md`
+The docs are organized into two clear tracks:
+
+- **PlanFrame (core)** (adapter authors): `https://planframe.readthedocs.io/en/latest/planframe/`
+- **planframe-polars** (end users): `https://planframe.readthedocs.io/en/latest/planframe_polars/`
+
+Key pages:
+
+- **Creating an adapter**: `https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/`
+- **Using planframe-polars**: `https://planframe.readthedocs.io/en/latest/planframe_polars/guides/using-planframe-polars/`
 
 ### Install (development)
 
@@ -51,24 +63,11 @@ Output = out.materialize_model("Output", kind="dataclass")
 df = out.collect()
 ```
 
-### API surface
+### Learn more
 
-- **Frames**: `Frame.source(...)` (or backend frame constructors like `class User(PolarsFrame): ...; User(data)`), immutable chaining (lazy)
-- **Transforms**:
-  - **projection**: `select` (column names and/or `("out_name", expr)` tuples in one step; lowers to `Project` when expressions are present), `drop`, `select_exclude`
-  - **column order**: `reorder_columns`, `select_first`, `select_last`, `move`
-  - **rename helpers**: `rename` (optional `strict=False` ignores unknown source names, like `drop`), `rename_prefix`, `rename_suffix`, `rename_replace`
-  - **row ops**: `head`, `tail`, `limit`, `slice`
-  - **null helpers**: `drop_nulls`, `fill_null`
-  - **reshape**: `melt`, `pivot` (see note below)
-  - **set-like**: `concat_vertical`
-  - **dedupe**: `unique`, `duplicated`
-  - **joins**: `join` (`on` / `left_on` / `right_on` may mix column names and `Expr` keys)
-  - **grouping**: `group_by(...).agg(...)` (keys may be column names or expressions; expression keys appear as `__pf_g0`, `__pf_g1`, … in the result schema; aggregations may be `(op, column)` or `agg_sum(expr)` / `agg_mean(expr)` / … over any supported expression)
-  - **core**: `with_column`, `cast`, `filter`, `sort` (keys may be column names and/or `Expr`; schema unchanged)
-- **Boundaries**:
-  - `collect()` executes the accumulated plan using the adapter/backend
-  - `materialize_model(kind="dataclass" | "pydantic")` materializes a Python model from the derived schema (no execution)
+- **Core concepts & design**: `https://planframe.readthedocs.io/en/latest/planframe/design/`
+- **Light API reference (core)**: `https://planframe.readthedocs.io/en/latest/planframe/reference/api/`
+- **Light API reference (polars)**: `https://planframe.readthedocs.io/en/latest/planframe_polars/reference/api/`
 
 ### Public API (stable imports)
 

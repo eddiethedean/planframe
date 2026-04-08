@@ -1,28 +1,29 @@
 ## planframe-polars
 
+[![Docs](https://readthedocs.org/projects/planframe/badge/?version=latest)](https://planframe.readthedocs.io/en/latest/planframe_polars/)
+[![PyPI](https://img.shields.io/pypi/v/planframe-polars)](https://pypi.org/project/planframe-polars/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-informational)](../../LICENSE)
+
 Polars adapter package for PlanFrame. Import as `planframe_polars`.
+
+Documentation (ReadTheDocs):
+
+- Polars track (end users): `https://planframe.readthedocs.io/en/latest/planframe_polars/`
+- Light API reference: `https://planframe.readthedocs.io/en/latest/planframe_polars/reference/api/`
 
 ### Usage
 
 ```python
 import polars as pl
-from dataclasses import dataclass
 
 from planframe_polars import PolarsFrame
 
 
-@dataclass(frozen=True)
-class UserSchema:
-    id: int
-    age: int
-
-
-lf = pl.DataFrame({"id": [1], "age": [2]}).lazy()
 class User(PolarsFrame):
     id: int
     age: int
 
-pf = User(lf)
+pf = User(pl.DataFrame({"id": [1], "age": [2]}))
 df = pf.select("id").collect()
 
 # Or construct from python data:
