@@ -70,6 +70,17 @@ df = out.collect()
   - `collect()` executes the accumulated plan using the adapter/backend
   - `materialize_model(kind="dataclass" | "pydantic")` materializes a Python model from the derived schema (no execution)
 
+### Public API (stable imports)
+
+Preferred imports:
+
+- `from planframe import Frame, Schema, JoinOptions, execute_plan`
+- `from planframe import expr` (then `expr.col`, `expr.lit`, `expr.add`, ...)
+
+Backend-specific frames (example):
+
+- `from planframe_polars import PolarsFrame`
+
 ### Execution model
 
 - **Always lazy**: chaining operations does not touch backend data.
