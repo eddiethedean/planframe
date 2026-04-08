@@ -305,7 +305,9 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     def explode(self, df: BackendFrameT, column: str) -> BackendFrameT: ...
 
     @abstractmethod
-    def unnest(self, df: BackendFrameT, column: str) -> BackendFrameT: ...
+    def unnest(
+        self, df: BackendFrameT, column: str, *, fields: tuple[str, ...]
+    ) -> BackendFrameT: ...
 
     @abstractmethod
     def drop_nulls_all(

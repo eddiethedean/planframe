@@ -203,7 +203,7 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
     def explode(self, df: RowsFrame, column: str) -> RowsFrame:
         raise NotImplementedError
 
-    def unnest(self, df: RowsFrame, column: str) -> RowsFrame:
+    def unnest(self, df: RowsFrame, column: str, *, fields: tuple[str, ...]) -> RowsFrame:
         raise NotImplementedError
 
     def concat_horizontal(self, left: RowsFrame, right: RowsFrame) -> RowsFrame:

@@ -485,7 +485,11 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     def explode(self, df: PolarsBackendFrame, column: str) -> PolarsBackendFrame:
         return df.explode(column)
 
-    def unnest(self, df: PolarsBackendFrame, column: str) -> PolarsBackendFrame:
+    def unnest(
+        self, df: PolarsBackendFrame, column: str, *, fields: tuple[str, ...]
+    ) -> PolarsBackendFrame:
+        # Polars can unnest without explicit field selection; PlanFrame schema determines
+        # which output columns are expected.
         return df.unnest(column)
 
     def drop_nulls_all(
