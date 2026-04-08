@@ -84,10 +84,15 @@ def test_pandas_melt_pivot_explode_unnest(tmp_path: Any) -> None:
     )
 
     melted = pf.melt(id_vars=("id",), value_vars=("a", "b"), variable_name="k", value_name="v")
-    piv = melted.pivot(index=("id",), on="k", values="v", on_columns=("a", "b"), agg="first")
+    piv = melted.pivot(index=("id",), columns="k", values="v", on_columns=("a", "b"), agg="first")
     df = piv.sort("id").collect()
     assert df.columns.tolist() == ["id", "a", "b"]
     assert df.to_dict(orient="list") == {"id": [1, 2], "a": [10, 11], "b": [20, 21]}
+
+    # unpivot alias
+    unp = pf.unpivot(index=("id",), on=("a", "b"), variable_name="k", value_name="v")
+    df_unp = unp.sort("id").collect()
+    assert set(df_unp.columns.tolist()) == {"id", "k", "v"}
 
     exploded = pf.explode("parts").select("id", "parts").sort("id")
     df2 = exploded.collect()

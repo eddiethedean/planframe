@@ -235,10 +235,11 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         *,
         index: tuple[str, ...],
         on: str,
-        values: str,
+        values: Columns,
         agg: str = "first",
         on_columns: tuple[str, ...] | None = None,
         separator: str = "_",
+        sort_columns: bool = False,
     ) -> BackendFrameT: ...
 
     @abstractmethod

@@ -954,29 +954,19 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         strategy: str,
     ) -> Self: ...
-    @overload
     def melt(
         self,
         *,
-        id_vars: tuple[LiteralString, ...],
-        value_vars: tuple[LiteralString, ...],
+        id_vars: tuple[LiteralString, ...] | None = ...,
+        value_vars: tuple[LiteralString, ...] | None = ...,
         variable_name: str = ...,
         value_name: str = ...,
     ) -> Self: ...
-    @overload
-    def melt(
+    def unpivot(
         self,
         *,
-        id_vars: tuple[str, ...],
-        value_vars: tuple[str, ...],
-        variable_name: str = ...,
-        value_name: str = ...,
-    ) -> Self: ...
-    def melt(
-        self,
-        *,
-        id_vars: tuple[Any, ...],
-        value_vars: tuple[Any, ...],
+        index: tuple[LiteralString, ...] | None = ...,
+        on: tuple[LiteralString, ...] | None = ...,
         variable_name: str = ...,
         value_name: str = ...,
     ) -> Self: ...
@@ -1020,37 +1010,17 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     @overload
     def drop_nulls_all(self, *subset: str) -> Self: ...
     def drop_nulls_all(self, *subset: Any) -> Self: ...
-    @overload
     def pivot(
         self,
         *,
         index: tuple[LiteralString, ...],
-        on: LiteralString,
-        values: LiteralString,
+        columns: LiteralString | None = ...,
+        on: LiteralString | None = ...,
+        values: LiteralString | tuple[LiteralString, ...],
         agg: Literal["first", "last", "sum", "mean", "min", "max", "count", "len", "median"] = ...,
         on_columns: tuple[str, ...] | None = ...,
         separator: str = ...,
-    ) -> Self: ...
-    @overload
-    def pivot(
-        self,
-        *,
-        index: tuple[str, ...],
-        on: str,
-        values: str,
-        agg: Literal["first", "last", "sum", "mean", "min", "max", "count", "len", "median"] = ...,
-        on_columns: tuple[str, ...] | None = ...,
-        separator: str = ...,
-    ) -> Self: ...
-    def pivot(
-        self,
-        *,
-        index: tuple[Any, ...],
-        on: Any,
-        values: Any,
-        agg: Any = ...,
-        on_columns: tuple[str, ...] | None = ...,
-        separator: str = ...,
+        sort_columns: bool = ...,
     ) -> Self: ...
     def sample(
         self,

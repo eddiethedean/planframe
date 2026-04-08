@@ -364,10 +364,11 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         *,
         index: tuple[str, ...],
         on: str,
-        values: str,
+        values: tuple[str, ...],
         agg: str = "first",
         on_columns: tuple[str, ...] | None = None,
         separator: str = "_",
+        sort_columns: bool = False,
     ) -> PolarsBackendFrame:
         allowed_agg = {
             "min",
@@ -398,7 +399,9 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
                 | pl.Expr
             ) = "len"
         elif agg == "n_unique":
-            agg_arg = pl.col(values).n_unique()
+            if len(values) != 1:
+                raise ValueError("pivot agg='n_unique' requires a single values column")
+            agg_arg = pl.col(values[0]).n_unique()
         else:
             agg_arg = cast(
                 Literal[
@@ -414,13 +417,16 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
                 agg,
             )
 
+        if sort_columns and on_columns is not None:
+            on_columns = tuple(sorted(on_columns))
+
         if isinstance(df, pl.LazyFrame):
             if on_columns is None:
                 raise ValueError("Lazy pivot requires on_columns to be provided")
             return df.pivot(
                 index=list(index),
                 on=on,
-                values=values,
+                values=list(values),
                 aggregate_function=agg_arg,
                 on_columns=list(on_columns),
                 separator=separator,
@@ -429,7 +435,7 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         return df.pivot(
             index=list(index),
             on=on,
-            values=values,
+            values=list(values),
             aggregate_function=agg_arg,
             on_columns=list(on_columns) if on_columns is not None else None,
             separator=separator,

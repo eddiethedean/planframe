@@ -525,21 +525,29 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         *,
         index: tuple[str, ...],
         on: str,
-        values: str,
+        values: tuple[str, ...],
         agg: str = "first",
         on_columns: tuple[str, ...] | None = None,
         separator: str = "_",
+        sort_columns: bool = False,
     ) -> list[dict[str, Any]]:
-        self.calls.append(("pivot", (index, on, values, agg, on_columns, separator)))
+        self.calls.append(("pivot", (index, on, values, agg, on_columns, separator, sort_columns)))
         if on_columns is None:
             raise NotImplementedError("SpyAdapter pivot requires on_columns")
+        if sort_columns:
+            on_columns = tuple(sorted(on_columns))
+        if len(values) != 1:
+            raise NotImplementedError(
+                "SpyAdapter pivot supports only a single values column in tests"
+            )
+        value = values[0]
         out: dict[Any, dict[str, Any]] = {}
         for row in df:
             k = tuple(row[c] for c in index)
             rec = out.setdefault(k, {index[i]: k[i] for i in range(len(index))})
             colname = row[on]
             if colname in on_columns:
-                rec[colname] = row[values]
+                rec[colname] = row[value]
         return list(out.values())
 
     def explode(
