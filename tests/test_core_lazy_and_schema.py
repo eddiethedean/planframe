@@ -1417,6 +1417,28 @@ def test_new_transforms_are_lazy() -> None:
     _ = out.collect()
 
 
+def test_pivot_longer_and_pivot_wider_are_lazy() -> None:
+    adapter = SpyAdapter()
+
+    @dataclass(frozen=True)
+    class S:
+        id: int
+        a: int
+        b: int
+
+    pf = Frame.source([{"id": 1, "a": 10, "b": 20}], adapter=adapter, schema=S)
+    out = pf.pivot_longer(id_vars=("id",), value_vars=("a", "b")).pivot_wider(
+        index=("id",),
+        names_from="variable",
+        values_from="value",
+        on_columns=("a", "b"),
+        aggregate_function="first",
+    )
+    assert adapter.calls == []
+    _ = out.collect()
+    assert [c[0] for c in adapter.calls] == ["melt", "pivot", "collect"]
+
+
 def test_with_row_count_is_lazy_and_respects_offset() -> None:
     adapter = SpyAdapter()
     data = [{"id": 1, "age": 2}, {"id": 2, "age": 3}, {"id": 3, "age": 4}]

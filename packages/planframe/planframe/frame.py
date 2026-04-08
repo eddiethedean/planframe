@@ -1021,6 +1021,44 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             value_name=value_name,
         )
 
+    def pivot_longer(
+        self,
+        *,
+        id_vars: Sequence[str] | None = None,
+        value_vars: Sequence[str] | None = None,
+        names_to: str = "variable",
+        values_to: str = "value",
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        return self.melt(
+            id_vars=id_vars,
+            value_vars=value_vars,
+            variable_name=names_to,
+            value_name=values_to,
+        )
+
+    def pivot_wider(
+        self,
+        *,
+        index: Sequence[str],
+        names_from: str,
+        values_from: str | Sequence[str],
+        aggregate_function: Literal[
+            "first", "last", "sum", "mean", "min", "max", "count", "len", "median"
+        ] = "first",
+        on_columns: Sequence[str] | None = None,
+        sort_columns: bool = False,
+        separator: str = "_",
+    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+        return self.pivot(
+            index=index,
+            columns=names_from,
+            values=values_from,
+            agg=aggregate_function,
+            on_columns=(tuple(on_columns) if on_columns is not None else None),
+            sort_columns=sort_columns,
+            separator=separator,
+        )
+
     def join(
         self,
         other: Frame[Any, BackendFrameT, BackendExprT],

@@ -313,6 +313,28 @@ def test_execute_plan_with_row_count() -> None:
     assert res == [{"id": 1, "rn": 7}, {"id": 2, "rn": 8}, {"id": 3, "rn": 9}]
 
 
+def test_execute_plan_pivot_longer_and_wider() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1, "a": 10, "b": 20}]
+    pf = Frame.source(data, adapter=adapter, schema=S)
+
+    out = pf.pivot_longer(id_vars=("id",), value_vars=("a", "b"), names_to="k", values_to="v")
+    res1, calls1 = _run(out)
+    assert calls1 == ["melt"]
+    assert len(res1) == 2
+
+    out2 = out.pivot_wider(
+        index=("id",),
+        names_from="k",
+        values_from="v",
+        on_columns=("a", "b"),
+        aggregate_function="first",
+    )
+    res2, calls2 = _run(out2)
+    assert calls2 == ["melt", "pivot"]
+    assert res2 == [{"id": 1, "a": 10, "b": 20}]
+
+
 def test_execute_plan_cast_many_and_subset_lower_to_cast() -> None:
     adapter = SpyAdapter()
     pf = Frame.source([{"id": 1, "a": None, "b": 2}], adapter=adapter, schema=S)
