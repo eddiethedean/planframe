@@ -137,9 +137,11 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         self,
         df: BackendFrameT,
         *,
-        keys: tuple[str, ...],
+        keys: tuple[CompiledJoinKey[BackendExprT], ...],
         named_aggs: dict[str, tuple[str, str]],
-    ) -> BackendFrameT: ...
+    ) -> BackendFrameT:
+        """Group *df* by *keys* (column or compiled expression per slot), then apply *named_aggs*."""
+        ...
 
     @abstractmethod
     def drop_nulls(

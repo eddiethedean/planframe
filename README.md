@@ -64,7 +64,7 @@ df = out.collect()
   - **set-like**: `concat_vertical`
   - **dedupe**: `unique`, `duplicated`
   - **joins**: `join` (`on` / `left_on` / `right_on` may mix column names and `Expr` keys)
-  - **grouping**: `group_by(...).agg(...)`
+  - **grouping**: `group_by(...).agg(...)` (keys may be column names or expressions; expression keys appear as `__pf_g0`, `__pf_g1`, … in the result schema)
   - **core**: `with_column`, `cast`, `filter`, `sort` (keys may be column names and/or `Expr`; schema unchanged)
 - **Boundaries**:
   - `collect()` executes the accumulated plan using the adapter/backend

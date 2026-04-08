@@ -321,6 +321,20 @@ def test_group_by_agg() -> None:
     assert collected["n"].to_list() == [2, 1]
 
 
+def test_group_by_expression_key_polars() -> None:
+    pf = User({"name": ["A", "a", "B"], "age": [1, 2, 10], "id": [1, 2, 3]})
+    out = (
+        pf.group_by(lower(col("name")))
+        .agg(n=("count", "age"), total=("sum", "age"))
+        .sort("__pf_g0")
+    )
+    collected = out.collect()
+    assert collected.columns == ["__pf_g0", "n", "total"]
+    assert collected["__pf_g0"].to_list() == ["a", "b"]
+    assert collected["n"].to_list() == [2, 1]
+    assert collected["total"].to_list() == [3, 10]
+
+
 def test_sort_descending() -> None:
     pf = User({"id": [2, 1, 3], "name": ["b", "a", "c"], "age": [20, 10, 30]})
     out = pf.sort("id", descending=True).collect()

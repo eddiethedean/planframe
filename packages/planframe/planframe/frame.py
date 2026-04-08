@@ -54,7 +54,7 @@ from planframe.plan.nodes import (
     Unnest,
     WithColumn,
 )
-from planframe.schema.ir import Field, Schema
+from planframe.schema.ir import Field, Schema, collect_col_names_in_expr
 from planframe.schema.materialize import materialize_model
 from planframe.schema.source import schema_from_type
 
@@ -231,9 +231,10 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             # prev is a GroupBy node
             if not isinstance(node.prev, GroupBy):
                 raise PlanFrameBackendError("Agg must follow GroupBy")
+            compiled_keys = self._compile_join_keys_tuple(node.prev.keys)
             return self._adapter.group_by_agg(
                 self._eval(node.prev.prev),
-                keys=node.prev.keys,
+                keys=compiled_keys,
                 named_aggs=node.named_aggs,
             )
         if isinstance(node, DropNulls):
@@ -648,16 +649,29 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
-    def group_by(self, *keys: str) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]:
+    def group_by(
+        self, *keys: str | Expr[Any]
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]:
         if not keys:
             raise PlanFrameBackendError("group_by requires at least one key")
-        self._schema.select(keys)  # validate
+        items = self._normalize_join_keys(tuple(keys))
+        fm = self._schema.field_map()
+        for k in items:
+            if isinstance(k, JoinKeyColumn):
+                self._schema.get(k.name)
+            else:
+                missing = collect_col_names_in_expr(k.expr).difference(fm.keys())
+                if missing:
+                    raise PlanFrameSchemaError(
+                        "group_by expression references unknown columns: "
+                        f"{sorted(missing)}"
+                    )
         return GroupedFrame(
             _data=self._data,
             _adapter=self._adapter,
             _plan=self._plan,
             _schema=self._schema,
-            _keys=tuple(keys),
+            _key_items=items,
         )
 
     def drop_nulls(self, *subset: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:

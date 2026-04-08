@@ -324,7 +324,61 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         keep: Literal["first", "last"] | bool = ...,
         out_name: str = ...,
     ) -> Self: ...
+    @overload
+    def group_by(
+        self,
+        __gk1: LiteralString,
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
+    def group_by(
+        self,
+        __gk1: LiteralString, __gk2: LiteralString,
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
+    def group_by(
+        self,
+        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString,
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
+    def group_by(
+        self,
+        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString,
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
+    def group_by(
+        self,
+        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString,
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
+    def group_by(
+        self,
+        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString, __gk6: LiteralString,
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
+    def group_by(
+        self,
+        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString, __gk6: LiteralString, __gk7: LiteralString,
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
+    def group_by(
+        self,
+        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString, __gk6: LiteralString, __gk7: LiteralString, __gk8: LiteralString,
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
+    def group_by(
+        self,
+        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString, __gk6: LiteralString, __gk7: LiteralString, __gk8: LiteralString, __gk9: LiteralString,
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
+    def group_by(
+        self,
+        __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString, __gk5: LiteralString, __gk6: LiteralString, __gk7: LiteralString, __gk8: LiteralString, __gk9: LiteralString, __gk10: LiteralString,
+    ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
     def group_by(self, *keys: LiteralString) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    @overload
+    def group_by(self, *keys: LiteralString | Expr[Any]) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
+    def group_by(self, *keys: Any) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     def drop_nulls(self, *subset: LiteralString) -> Self: ...
     def fill_null(self, value: Any, *subset: LiteralString) -> Self: ...
     def melt(

@@ -6,7 +6,7 @@ from typing_extensions import LiteralString
 
 from planframe.backend.adapter import BackendAdapter
 from planframe.frame import Frame
-from planframe.plan.nodes import PlanNode
+from planframe.plan.nodes import JoinKeyColumn, JoinKeyExpr, PlanNode
 from planframe.schema.ir import Schema
 
 BackendFrameT = TypeVar("BackendFrameT")
@@ -23,7 +23,7 @@ class GroupedFrame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         _adapter: BackendAdapter[BackendFrameT, BackendExprT],
         _plan: PlanNode,
         _schema: Schema,
-        _keys: tuple[str, ...],
+        _key_items: tuple[JoinKeyColumn | JoinKeyExpr, ...],
     ) -> None: ...
     def agg(
         self, **named_aggs: tuple[AggOp, LiteralString]
