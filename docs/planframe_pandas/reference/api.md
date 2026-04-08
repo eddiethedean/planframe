@@ -2,7 +2,7 @@
 
 ## `planframe_pandas.frame.PandasFrame`
 
-:::: planframe_pandas.frame.PandasFrame
+::: planframe_pandas.frame.PandasFrame
     options:
       members:
         - __init__
@@ -10,5 +10,5 @@
 
 ## `planframe_pandas.adapter.PandasAdapter`
 
-:::: planframe_pandas.adapter.PandasAdapter
+::: planframe_pandas.adapter.PandasAdapter
 
