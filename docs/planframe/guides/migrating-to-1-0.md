@@ -51,10 +51,10 @@ out = df.with_columns(new_col=expr)
 
 ### IO naming
 
-PlanFrame is lazy-first, so IO methods are named as sinks:
+PlanFrame is lazy-first, so IO methods are exposed as sinks. For Polars familiarity, PlanFrame also exposes `write_*` convenience entrypoints with the same typed surface as the corresponding `sink_*` methods:
 
-- **Removed**: `write_*` methods (e.g. `write_parquet`, `write_csv`, ...)
-- **Use**: `sink_*` methods (e.g. `sink_parquet`, `sink_csv`, ...)
+- **Available**: `sink_*` methods (e.g. `sink_parquet`, `sink_csv`, ...)
+- **Also available**: `write_*` methods (e.g. `write_parquet`, `write_csv`, ...)
 
 ## Notes for adapter authors
 

@@ -191,22 +191,9 @@ class PandasLikeFrame(
         pred = expr.expr if isinstance(expr, Series) else expr
         return cast(PandasLikeFrame[Any, Any, Any], super().filter(pred))
 
-    @overload
-    def filter(self, predicate: Series[bool] | Expr[bool]) -> PandasLikeFrame[Any, Any, Any]: ...  # noqa: A003
-
-    @overload
     def filter(  # noqa: A003
         self,
-        *,
-        items: Sequence[str] | None = None,
-        like: str | None = None,
-        regex: str | None = None,
-    ) -> PandasLikeFrame[Any, Any, Any]: ...
-
-    def filter(  # noqa: A003
-        self,
-        predicate: Series[bool] | Expr[bool] | None = None,
-        *,
+        *predicates: Series[bool] | Expr[bool],
         items: Sequence[str] | None = None,
         like: str | None = None,
         regex: str | None = None,
@@ -217,15 +204,17 @@ class PandasLikeFrame(
         - `df.filter(items=...|like=...|regex=...)` behaves like pandas column selection.
         """
 
-        if predicate is not None:
-            pred_expr = predicate.expr if isinstance(predicate, Series) else predicate
-            return cast(PandasLikeFrame[Any, Any, Any], super().filter(pred_expr))
+        if predicates:
+            if any(x is not None for x in (items, like, regex)):
+                raise ValueError(
+                    "filter row predicates cannot be combined with items=, like=, or regex="
+                )
+            pred_exprs = tuple(p.expr if isinstance(p, Series) else p for p in predicates)
+            return cast(PandasLikeFrame[Any, Any, Any], super().filter(*pred_exprs))
 
         provided = sum(x is not None for x in (items, like, regex))
         if provided != 1:
-            raise ValueError(
-                "filter requires either predicate or exactly one of: items=, like=, regex="
-            )
+            raise ValueError("filter requires row predicates or exactly one of: items=, like=, regex=")
         if items is not None:
             cols = tuple(items)
             if not cols:

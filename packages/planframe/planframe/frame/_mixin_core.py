@@ -113,6 +113,28 @@ class FramePlanMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data, _adapter=self._adapter, _plan=plan2, _schema=self._schema
         )
 
+    # ---- Polars surface (explicitly unsupported in core) ----
+    def explain(self, *_: object, **__: object) -> str:
+        """Polars-like method placeholder (unsupported)."""
+
+        raise NotImplementedError(
+            "PlanFrame does not implement LazyFrame.explain(); use frame.plan()"
+        )
+
+    def profile(self, *_: object, **__: object) -> object:
+        """Polars-like method placeholder (unsupported)."""
+
+        raise NotImplementedError(
+            "PlanFrame does not implement LazyFrame.profile(); use adapter tooling"
+        )
+
+    def show_graph(self, *_: object, **__: object) -> str | None:
+        """Polars-like method placeholder (unsupported)."""
+
+        raise NotImplementedError(
+            "PlanFrame does not implement LazyFrame.show_graph(); use frame.plan() and external visualization"
+        )
+
     @property
     def _plan_compiler(self) -> PlanCompileContext[BackendFrameT, BackendExprT]:
         ctx = self._compile_ctx

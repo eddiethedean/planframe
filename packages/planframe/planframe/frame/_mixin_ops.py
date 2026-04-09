@@ -14,7 +14,7 @@ from typing_extensions import Self
 
 from planframe.backend.errors import PlanFrameBackendError, PlanFrameSchemaError
 from planframe.dynamic_groupby import DynamicGroupedFrame
-from planframe.expr.api import Alias, Col, Expr, clip, col, infer_dtype, lit
+from planframe.expr.api import Alias, Col, Expr, and_, clip, col, infer_dtype, lit
 from planframe.frame._utils import _coerce_sort_flags
 from planframe.groupby import GroupedFrame
 from planframe.plan.join_options import JoinOptions
@@ -83,8 +83,12 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         ) -> None: ...
         def _normalize_join_keys(self, items: tuple[str | Expr[Any], ...]) -> tuple[Any, ...]: ...
 
-    def select(self, *columns: str | tuple[str, Expr[Any]] | Expr[Any]) -> Self:
-        if not columns:
+    def select(
+        self,
+        *columns: str | tuple[str, Expr[Any]] | Expr[Any],
+        **named_exprs: Expr[Any],
+    ) -> Self:
+        if not columns and not named_exprs:
             cols: tuple[str, ...] = tuple()
             schema2 = self._schema.select(cols)
             return type(self)(
@@ -93,7 +97,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 _plan=Select(self._plan, cols),
                 _schema=schema2,
             )
-        if all(isinstance(c, str) for c in columns):
+        if not named_exprs and all(isinstance(c, str) for c in columns):
             cols = cast(tuple[str, ...], tuple(columns))
             schema2 = self._schema.select(cols)
             return type(self)(
@@ -123,6 +127,10 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                     "select arguments must be column names (str), (name, Expr) tuples, "
                     "column Exprs (col('x')), or aliased Exprs (expr.alias('name'))"
                 )
+        for name, expr in named_exprs.items():
+            if not isinstance(expr, Expr):
+                raise TypeError("select named expressions must be Expr values")
+            items.append(ProjectExpr(name=name, expr=expr))
         tup = tuple(items)
         schema3 = self._schema.project(tup)
         return type(self)(
@@ -537,12 +545,36 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             )
         return out
 
-    def filter(self, predicate: Expr[bool]) -> Self:
+    def filter(self, *predicates: Expr[bool]) -> Self:
+        if not predicates:
+            raise ValueError("filter requires at least one predicate expression")
+        pred = predicates[0]
+        for p in predicates[1:]:
+            pred = and_(pred, p)
         return type(self)(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Filter(self._plan, predicate=predicate),
+            _plan=Filter(self._plan, predicate=pred),
             _schema=self._schema,
+        )
+
+    # ---- Polars surface (explicitly unsupported in core) ----
+    def cache(self) -> Self:
+        raise NotImplementedError("PlanFrame does not implement LazyFrame.cache()")
+
+    def sql(self, query: str, *, table_name: str = "self") -> Self:
+        raise NotImplementedError(
+            "PlanFrame does not implement LazyFrame.sql(); use adapter-specific SQL integration"
+        )
+
+    def map_batches(self, *_: object, **__: object) -> Self:
+        raise NotImplementedError(
+            "PlanFrame does not implement LazyFrame.map_batches(); it is not compatible with strict typing"
+        )
+
+    def pipe(self, *_: object, **__: object) -> object:
+        raise NotImplementedError(
+            "PlanFrame does not implement LazyFrame.pipe(); use regular Python functions on Frame instead"
         )
 
     def sort(

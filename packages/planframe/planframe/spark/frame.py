@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Generic, Literal, TypeVar, cast
+from typing import Any, Generic, Literal, NoReturn, TypeVar, cast
 
 from typing_extensions import LiteralString, Self
 
@@ -144,9 +144,12 @@ class SparkFrame(
             super().rename(strict=True, **{existing: new}),
         )
 
-    def select(self, *columns: Any) -> SparkFrame[SchemaT, BackendFrameT, BackendExprT]:
+    def select(
+        self, *columns: Any, **named_exprs: Column[Any] | Expr[Any]
+    ) -> SparkFrame[SchemaT, BackendFrameT, BackendExprT]:
         args = tuple(_norm_select_arg(c) for c in columns)
-        return cast(SparkFrame[SchemaT, BackendFrameT, BackendExprT], super().select(*args))
+        named = {k: unwrap_expr(v) for k, v in named_exprs.items()}
+        return cast(SparkFrame[SchemaT, BackendFrameT, BackendExprT], super().select(*args, **named))
 
     def drop(
         self, *cols: str | Column[Any] | Expr[Any], strict: bool = True
@@ -163,8 +166,8 @@ class SparkFrame(
             SparkFrame[SchemaT, BackendFrameT, BackendExprT], super().filter(_bool_expr(condition))
         )
 
-    def filter(self, predicate: Expr[bool]) -> Self:  # noqa: A003
-        return cast(Self, self.where(predicate))
+    def filter(self, *predicates: Expr[bool]) -> Self:  # noqa: A003
+        return cast(Self, super().filter(*predicates))
 
     def orderBy(  # noqa: N802
         self,
@@ -426,7 +429,7 @@ class SparkFrame(
     def coalesce(self, _numPartitions: int) -> SparkFrame[Any, Any, Any]:  # noqa: N803
         raise NotImplementedError("coalesce (Spark partitions) is not applicable to PlanFrame.")
 
-    def cache(self) -> SparkFrame[Any, Any, Any]:  # noqa: A003
+    def cache(self) -> NoReturn:  # noqa: A003
         raise NotImplementedError("cache() is not implemented for PlanFrame plans.")
 
     def persist(self, *args: Any, **kwargs: Any) -> SparkFrame[Any, Any, Any]:  # noqa: ARG002

@@ -25,6 +25,64 @@ class _HasFrameIODeps(Protocol[BackendFrameT, BackendExprT]):
 
     def _eval(self, node: object) -> BackendFrameT: ...
 
+    # Methods from `FrameIOMixin` itself. Declared so that helpers on this mixin can
+    # call each other (e.g. `write_*` delegating to `sink_*`) without confusing type checkers.
+    def sink_parquet(
+        self,
+        path: str,
+        *,
+        compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"],
+        row_group_size: int | None,
+        partition_by: tuple[str, ...] | None,
+        storage_options: StorageOptions | None,
+    ) -> None: ...
+
+    def sink_csv(
+        self,
+        path: str,
+        *,
+        separator: str,
+        include_header: bool,
+        storage_options: StorageOptions | None,
+    ) -> None: ...
+
+    def sink_ndjson(self, path: str, *, storage_options: StorageOptions | None) -> None: ...
+
+    def sink_ipc(
+        self,
+        path: str,
+        *,
+        compression: Literal["uncompressed", "lz4", "zstd"],
+        storage_options: StorageOptions | None,
+    ) -> None: ...
+
+    def sink_database(
+        self,
+        table_name: str,
+        *,
+        connection: object,
+        if_table_exists: Literal["fail", "replace", "append"],
+        engine: str | None,
+    ) -> None: ...
+
+    def sink_excel(self, path: str, *, worksheet: str) -> None: ...
+
+    def sink_delta(
+        self,
+        target: str,
+        *,
+        mode: Literal["error", "append", "overwrite", "ignore", "merge"],
+        storage_options: StorageOptions | None,
+    ) -> None: ...
+
+    def sink_avro(
+        self,
+        path: str,
+        *,
+        compression: Literal["uncompressed", "snappy", "deflate"],
+        name: str,
+    ) -> None: ...
+
 
 class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     """Collect, async materialization, and sink IO."""
@@ -133,6 +191,93 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             raise PlanFrameExecutionError(
                 f"Backend ato_dict failed for {self._adapter.name}"
             ) from e
+
+    def write_parquet(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        path: str,
+        *,
+        compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = "zstd",
+        row_group_size: int | None = None,
+        partition_by: tuple[str, ...] | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.sink_parquet(
+            path,
+            compression=compression,
+            row_group_size=row_group_size,
+            partition_by=partition_by,
+            storage_options=storage_options,
+        )
+
+    def write_csv(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        path: str,
+        *,
+        separator: str = ",",
+        include_header: bool = True,
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.sink_csv(
+            path,
+            separator=separator,
+            include_header=include_header,
+            storage_options=storage_options,
+        )
+
+    def write_ndjson(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        path: str,
+        *,
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.sink_ndjson(path, storage_options=storage_options)
+
+    def write_ipc(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        path: str,
+        *,
+        compression: Literal["uncompressed", "lz4", "zstd"] = "uncompressed",
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.sink_ipc(path, compression=compression, storage_options=storage_options)
+
+    def write_database(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        table_name: str,
+        *,
+        connection: object,
+        if_table_exists: Literal["fail", "replace", "append"] = "fail",
+        engine: str | None = None,
+    ) -> None:
+        self.sink_database(
+            table_name,
+            connection=connection,
+            if_table_exists=if_table_exists,
+            engine=engine,
+        )
+
+    def write_excel(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT], path: str, *, worksheet: str = "Sheet1"
+    ) -> None:
+        self.sink_excel(path, worksheet=worksheet)
+
+    def write_delta(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        target: str,
+        *,
+        mode: Literal["error", "append", "overwrite", "ignore", "merge"] = "error",
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.sink_delta(target, mode=mode, storage_options=storage_options)
+
+    def write_avro(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        path: str,
+        *,
+        compression: Literal["uncompressed", "snappy", "deflate"] = "uncompressed",
+        name: str = "",
+    ) -> None:
+        self.sink_avro(path, compression=compression, name=name)
 
     def sink_parquet(
         self: _HasFrameIODeps[BackendFrameT, BackendExprT],

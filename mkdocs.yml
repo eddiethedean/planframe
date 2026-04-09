@@ -45,6 +45,13 @@ nav:
           - Package plan: planframe/design/package-plan.md
           - Core layout: planframe/design/core-layout.md
           - Backend adapter design: planframe/design/backend-adapter-design.md
+          - Interface parity (Polars): planframe/design/interface-parity-polars.md
+          - Interface parity (pandas): planframe/design/interface-parity-pandas.md
+          - Interface parity (Spark): planframe/design/interface-parity-spark.md
+          - Interface inventory (generated):
+              - Polars: planframe/design/_generated/interface-inventory-polars.md
+              - pandas: planframe/design/_generated/interface-inventory-pandas.md
+              - Spark: planframe/design/_generated/interface-inventory-spark.md
           - Typing design: planframe/design/typing-design.md
           - Thesis: planframe/design/thesis.md
   - planframe-polars:

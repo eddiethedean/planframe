@@ -26,8 +26,8 @@ PlanFrame remains **lazy-first** (plans execute at `collect()` boundaries), so w
 | `is_duplicated(...)` | `Frame.is_duplicated(...)` | Typed-parity | Implemented as a wrapper over `duplicated(...)`. |
 | `join(...)` | `Frame.join(...)` | Typed-parity | Options forwarded via `JoinOptions` where supported. |
 | `vstack/hstack` | `Frame.vstack(...)` / `Frame.hstack(...)` | Typed-parity | Schema validation enforced. |
-| `unpivot(...)` | `Frame.unpivot(...)` | Typed-parity | `melt(...)` remains as deprecated alias. |
-| `sink_*` | `Frame.sink_parquet/csv/...` | Divergence | Polars uses `sink_*` on `LazyFrame` and `write_*` on `DataFrame`; PlanFrame exposes `sink_*` and keeps `write_*` deprecated wrappers. |
+| `unpivot(...)` | `Frame.unpivot(...)` | Typed-parity | PlanFrame uses `unpivot` as the canonical name (Polars also exposes `melt`). |
+| `sink_*` | `Frame.sink_parquet/csv/...` | Divergence | PlanFrame exposes `sink_*` for lazy IO boundaries, and also provides `write_*` convenience entrypoints with the same typed surface. |
 
 ## Known gaps / divergences (to address)
 
