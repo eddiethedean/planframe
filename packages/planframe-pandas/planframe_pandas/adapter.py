@@ -508,11 +508,14 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
         how: Literal["any", "all"] = "any",
         threshold: int | None = None,
     ) -> pd.DataFrame:
-        kwargs: dict[str, Any] = {"how": how}
+        # pandas rejects passing both how= and thresh=; thresh-only matches Polars threshold path.
+        kwargs: dict[str, Any] = {}
         if subset is not None:
             kwargs["subset"] = list(subset)
         if threshold is not None:
             kwargs["thresh"] = threshold
+        else:
+            kwargs["how"] = how
         return df.dropna(**kwargs).copy()
 
     def drop_nulls_all(self, df: pd.DataFrame, subset: tuple[str, ...] | None) -> pd.DataFrame:
@@ -530,11 +533,18 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
         strategy: str | None = None,
     ) -> pd.DataFrame:
         if strategy is not None:
-            if strategy == "forward":
-                return df.ffill().copy()
-            if strategy == "backward":
-                return df.bfill().copy()
-            raise PlanFrameBackendError(f"Unsupported fill_null strategy for pandas: {strategy!r}")
+            if strategy not in ("forward", "backward"):
+                raise PlanFrameBackendError(
+                    f"Unsupported fill_null strategy for pandas: {strategy!r}"
+                )
+            out = df.copy()
+            cols = list(subset) if subset is not None else list(out.columns)
+            for c in cols:
+                if strategy == "forward":
+                    out[c] = out[c].ffill()
+                else:
+                    out[c] = out[c].bfill()
+            return out
         if value is None:
             raise PlanFrameBackendError("fill_null requires value when strategy is not provided")
 

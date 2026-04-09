@@ -4,10 +4,12 @@ from typing import Any, TypedDict
 
 import pandas as pd
 import pytest
+from pandas.testing import assert_frame_equal
 
 from planframe.backend.errors import PlanFrameExecutionError
 from planframe.expr import add, agg_sum, col, lit, ne
 from planframe_pandas import PandasFrame
+from planframe_polars import PolarsFrame
 
 
 class _Meta(TypedDict):
@@ -130,3 +132,53 @@ def test_pandas_write_parquet_raises_clear_error_without_pyarrow(tmp_path: Any) 
     out_path = tmp_path / "out.parquet"
     with pytest.raises(PlanFrameExecutionError):
         pf.write_parquet(str(out_path))
+
+
+def test_pandas_drop_nulls_threshold_matches_polars() -> None:
+    class RowP(PandasFrame):
+        a: int | None
+        b: int | None
+
+    class RowL(PolarsFrame):
+        a: int | None
+        b: int | None
+
+    data = {"a": [1, None, None], "b": [None, 2, None]}
+    p = RowP(data).drop_nulls("a", "b", threshold=1).collect()
+    polars_out = RowL(data).drop_nulls("a", "b", threshold=1).collect()
+    assert_frame_equal(
+        p.reset_index(drop=True),
+        polars_out.to_pandas().reset_index(drop=True),
+        check_dtype=False,
+    )
+
+    p_all = RowP(data).drop_nulls("a", "b", how="all", threshold=1).collect()
+    polars_all = RowL(data).drop_nulls("a", "b", how="all", threshold=1).collect()
+    assert_frame_equal(
+        p_all.reset_index(drop=True),
+        polars_all.to_pandas().reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
+def test_pandas_fill_null_strategy_respects_subset_matches_polars() -> None:
+    """Strategy fill must not forward/backward-fill columns outside subset (pandas/polars parity)."""
+
+    class RowP(PandasFrame):
+        a: float | None
+        b: float | None
+
+    class RowL(PolarsFrame):
+        a: float | None
+        b: float | None
+
+    data = {"a": [None, None, 1.0], "b": [100.0, None, None]}
+    p_out = RowP(data).fill_null(None, "a", strategy="forward").collect()
+    l_out = RowL(data).fill_null(None, "a", strategy="forward").collect()
+
+    def _floats(series: Any) -> list[float | None]:
+        return [None if (x is None or (isinstance(x, float) and pd.isna(x))) else float(x) for x in series]  # type: ignore[arg-type]
+
+    assert _floats(p_out["a"]) == _floats(l_out["a"])
+    assert _floats(p_out["b"]) == _floats(l_out["b"])
+    assert _floats(p_out["b"]) == [100.0, None, None]

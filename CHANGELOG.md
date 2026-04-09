@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here. Versions follow the workspace packages (`planframe`, `planframe-polars`, `planframe-pandas`), which are released together at the same version.
 
+## 0.7.1
+
+### Fixed
+
+- **pandas**: `fill_null(..., strategy=...)` applies forward/backward fill only to the selected subset columns (matches Polars).
+- **pandas**: `drop_nulls(..., threshold=...)` no longer passes both `how` and `thresh` to pandas (avoids `TypeError`; threshold semantics align with Polars).
+- **schema**: `Schema` unnest field inference supports Pydantic v2 models via `model_fields`.
+- **planframe-polars**: `JoinOptions.force_parallel` forwards to Polars `force_parallel` (not mapped onto `allow_parallel`); `JoinOptions` documents Polars join hint precedence.
+
+### Tests
+
+- Parity tests for pandas vs Polars (`fill_null` strategy subset, `drop_nulls` with threshold); Polars join option kwargs coverage.
+
 ## 0.7.0
 
 ### Added

@@ -67,7 +67,14 @@ Output = out.materialize_model("Output", kind="dataclass")
 df = out.collect()
 ```
 
-### What’s new in v0.7.0
+### What’s new in v0.7.1
+
+- **pandas**: `fill_null(..., strategy=...)` fills only the requested subset columns (parity with Polars).
+- **pandas**: `drop_nulls(..., threshold=...)` no longer triggers a pandas `how`/`thresh` conflict; behavior matches Polars for threshold-based dropping.
+- **schema**: unnest field names inferred from Pydantic v2 `BaseModel` types (`model_fields`).
+- **planframe-polars**: `JoinOptions.force_parallel` maps to Polars `force_parallel`; join hint precedence documented on `JoinOptions`.
+
+### What shipped in v0.7.0
 
 - **Async materialization**: `Frame.acollect()`, `Frame.ato_dicts()`, `Frame.ato_dict()` with `ExecutionOptions`; `BaseAdapter` provides async hooks (defaults use `asyncio.to_thread` around sync methods).
 - **`drop_nulls`**: `how="any"` / `how="all"` and optional `threshold` (row-wise null logic), aligned with common dataframe semantics.

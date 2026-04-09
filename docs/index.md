@@ -16,6 +16,10 @@ Choose a path:
 
 ## What’s new (high-level)
 
+**v0.7.1**
+
+- Bug fixes: pandas `fill_null` strategy respects subset; `drop_nulls` + `threshold` matches Polars and avoids pandas `how`/`thresh` conflict; Pydantic v2 unnest schema inference; Polars `JoinOptions.force_parallel` forwarding and documented join hint precedence.
+
 **v0.7.0**
 
 - Async boundaries: `acollect` / `ato_dicts` / `ato_dict` and `ExecutionOptions` on materialization.

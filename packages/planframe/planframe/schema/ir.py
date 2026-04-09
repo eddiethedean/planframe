@@ -255,16 +255,21 @@ class Schema:
             if isinstance(ann, dict):
                 return tuple(ann.keys())
 
-        # Pydantic BaseModel type (v1).
+        # Pydantic BaseModel type (v2: model_fields; v1: __fields__).
         try:
             from pydantic import BaseModel
-
-            if isinstance(dtype, type) and issubclass(dtype, BaseModel):
-                fd = getattr(dtype, "__fields__", None)
-                if isinstance(fd, dict):
-                    return tuple(fd.keys())
-        except Exception:  # noqa: BLE001
-            pass
+        except ImportError:
+            return None
+        if isinstance(dtype, type):
+            try:
+                if issubclass(dtype, BaseModel):
+                    if hasattr(dtype, "model_fields"):
+                        return tuple(dtype.model_fields.keys())
+                    fd = getattr(dtype, "__fields__", None)
+                    if fd is not None:
+                        return tuple(fd.keys())
+            except TypeError:
+                pass
 
         return None
 

@@ -115,6 +115,19 @@ def test_schema_ir_unnest_branches() -> None:
         schema3.unnest(("s",))
 
 
+def test_schema_ir_unnest_pydantic_v2_base_model() -> None:
+    from pydantic import BaseModel
+
+    class M(BaseModel):
+        x: int
+        y: str
+
+    schema = Schema(fields=(Field(name="id", dtype=int), Field(name="s", dtype=M)))
+    out_schema, items = schema.unnest(("s",))
+    assert items == (("s", ("x", "y")),)
+    assert {f.name for f in out_schema.fields} == {"id", "x", "y"}
+
+
 def test_schema_ir_melt_duplicate_names_and_missing_columns() -> None:
     schema = Schema(
         fields=(Field(name="id", dtype=int), Field(name="a", dtype=int), Field(name="b", dtype=int))
