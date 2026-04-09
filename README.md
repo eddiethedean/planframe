@@ -18,11 +18,12 @@ This repository is a mono-repo that ships:
 
 ### Documentation (ReadTheDocs)
 
-The docs are organized into two clear tracks:
+Documentation is organized **by package**:
 
-- **PlanFrame (core)** (adapter authors): `https://planframe.readthedocs.io/en/latest/planframe/`
-- **planframe-polars** (end users): `https://planframe.readthedocs.io/en/latest/planframe_polars/`
-- **planframe-pandas** (end users): `https://planframe.readthedocs.io/en/latest/planframe_pandas/`
+- **[PlanFrame (core)](https://planframe.readthedocs.io/en/latest/planframe/)** — planning layer, adapter contracts, and shared guides (primary audience: adapter authors and contributors)
+- **[planframe-polars](https://planframe.readthedocs.io/en/latest/planframe_polars/)** — Polars adapter
+- **[planframe-pandas](https://planframe.readthedocs.io/en/latest/planframe_pandas/)** — pandas adapter
+- **[planframe-sparkless](https://planframe.readthedocs.io/en/latest/planframe_sparkless/)** — sparkless adapter
 
 Key pages:
 
