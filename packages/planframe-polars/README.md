@@ -39,7 +39,9 @@ pf2 = User.source(pl.DataFrame({"id": [1], "age": [2]}).lazy(), adapter=User._ad
 
 PlanFrame is always lazy:
 - Chaining methods (like `.select(...)`) does **not** run Polars operations.
-- `collect()` evaluates the full plan. If the source is a `polars.LazyFrame`, this naturally compiles into a single lazy query before collecting.
+- `collect()` evaluates the full plan (and returns `list[pydantic.BaseModel]`).
+- If you need a backend-native `polars.DataFrame` / `polars.LazyFrame`, use `collect_backend()`.
+- If you want to iterate rows, use `stream_dicts()` / `stream()` (see the [Streaming rows](https://planframe.readthedocs.io/en/latest/planframe/guides/streaming-rows/) guide).
 
 ### Optional API skins (core)
 

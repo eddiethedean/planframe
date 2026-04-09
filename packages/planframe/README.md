@@ -11,6 +11,7 @@ Documentation (ReadTheDocs):
 - Core (adapter authors): `https://planframe.readthedocs.io/en/latest/planframe/`
 - Design docs: `https://planframe.readthedocs.io/en/latest/planframe/design/`
 - Light API reference: `https://planframe.readthedocs.io/en/latest/planframe/reference/api/`
+- Streaming rows: `https://planframe.readthedocs.io/en/latest/planframe/guides/streaming-rows/`
 - Optional API skins: [PySpark-like (`planframe.spark`)](https://planframe.readthedocs.io/en/latest/planframe/guides/pyspark-like-api/), [pandas-like (`planframe.pandas`)](https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/)
 
 ### What you get

@@ -5,9 +5,18 @@ This guide covers the intended public usage pattern:
 - define a schema as a **`PandasFrame` subclass**
 - construct frames from **Python-native data** (PlanFrame constructs pandas internally)
 - chain transforms (always lazy)
-- execute via boundaries (`collect`, `to_dicts`, `to_dict`, `collect_backend`, or async: `acollect`, `ato_dicts`, `ato_dict`, `acollect_backend`)
+- execute via boundaries (`collect`, `to_dicts`, `to_dict`, `collect_backend`, `stream_dicts`, or async: `acollect`, `ato_dicts`, `ato_dict`, `acollect_backend`, `astream_dicts`)
 
 Optional **`ExecutionOptions`** can be passed at those boundaries when you need streaming hints.
+
+## Streaming rows
+
+If you want to iterate rows (and potentially avoid building large intermediate lists), use:
+
+- `stream_dicts()` / `astream_dicts()`: yield `dict[str, object]`
+- `stream(name=...)` / `astream(name=...)`: yield schema-derived `pydantic.BaseModel`
+
+See the core guide: [Streaming rows](../../planframe/guides/streaming-rows.md).
 
 ## Pandas-like helpers (`PandasLikeFrame`)
 
