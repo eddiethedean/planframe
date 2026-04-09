@@ -1,0 +1,32 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly: Mondays 12:00 UTC
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: Dependency audit (pip-audit + uv.lock)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dev dependencies (pip-audit, etc.)
+        run: uv sync --all-extras --group dev
+
+      - name: Audit exported requirements from lockfile
+        run: bash scripts/audit-deps.sh

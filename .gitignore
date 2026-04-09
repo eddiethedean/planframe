@@ -24,6 +24,7 @@ pip-wheel-metadata/
 .installed.cfg
 
 # Test / coverage artifacts
+.hypothesis/
 .pytest_cache/
 .coverage
 .coverage.*

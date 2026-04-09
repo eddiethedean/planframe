@@ -151,5 +151,20 @@ pytest -m typing
 
 # only backend conformance (Polars) tests
 pytest -m conformance
+
+# property-based (Hypothesis) tests
+pytest -m property
 ```
+
+Dependency vulnerability scan (uses `uv.lock` via `uv export` + `pip-audit`):
+
+```bash
+bash scripts/audit-deps.sh
+```
+
+Install tooling (included in `pip install -e ".[dev]"`): `hypothesis`, `pytest-cases`, `pip-audit`.
+
+### Security
+
+See `SECURITY.md` for how to report vulnerabilities. Dependency scanning runs in CI (`.github/workflows/security.yml`) and locally via `bash scripts/audit-deps.sh`.
  

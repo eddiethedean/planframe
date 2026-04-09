@@ -32,6 +32,9 @@ dev = [
   "xlsxwriter",
   "fastexcel>=0.7.0",
   "deltalake",
+  "hypothesis>=6.100",
+  "pytest-cases>=3.8",
+  "pip-audit>=2.7",
 ]
 docs = [
   "mkdocs>=1.6",
@@ -44,7 +47,7 @@ docs = [
 [tool.hatch.build.targets.wheel]
 # Root is a workspace/meta package; nothing to ship.
 packages = []
-include = ["README.md", "LICENSE", "pyproject.toml", "CHANGELOG.md"]
+include = ["README.md", "LICENSE", "pyproject.toml", "CHANGELOG.md", "SECURITY.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -52,6 +55,7 @@ markers = [
   "typing: typing-only tests (pyright stub regression suite)",
   "conformance: backend conformance/integration tests (e.g. Polars)",
   "slow: slower tests (opt-in for local/CI filtering)",
+  "property: Hypothesis property-based tests (may run longer)",
 ]
 
 [tool.ruff]
@@ -118,5 +122,8 @@ fail_under = 95
 [dependency-groups]
 dev = [
     "pytest-xdist>=3.8.0",
+    "hypothesis>=6.100",
+    "pytest-cases>=3.8",
+    "pip-audit>=2.7",
 ]
 
