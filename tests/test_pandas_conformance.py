@@ -119,6 +119,13 @@ def test_pandas_clip_subset_and_all_numeric() -> None:
 
 
 def test_pandas_write_parquet_raises_clear_error_without_pyarrow(tmp_path: Any) -> None:
+    try:
+        import pyarrow  # noqa: F401
+    except ImportError:
+        pass
+    else:
+        pytest.skip("This path only applies when pyarrow is not installed (e.g. minimal env).")
+
     pf = User({"id": [1], "name": ["a"], "age": [10]})
     out_path = tmp_path / "out.parquet"
     with pytest.raises(PlanFrameExecutionError):
