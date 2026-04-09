@@ -588,7 +588,8 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
         storage_options: StorageOptions | None = None,
     ) -> None:
         try:
-            df.to_parquet(path, compression=compression, index=False)  # type: ignore[call-arg]
+            # BaseAdapter uses plain str; pandas stubs narrow compression literals.
+            df.to_parquet(path, compression=cast(Any, compression), index=False)
         except ImportError as e:
             raise PlanFrameBackendError(
                 "Parquet support requires installing planframe-pandas[parquet]"
