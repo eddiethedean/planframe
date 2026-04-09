@@ -7,12 +7,14 @@ Choose a path:
 - **PlanFrame (core)**: build a statically-typed adapter for a backend engine.
 - **planframe-polars**: use PlanFrame on top of Polars.
 - **planframe-pandas**: use PlanFrame on top of Pandas.
+- **planframe-sparkless**: use PlanFrame’s Spark-like interface on top of `sparkless`.
 
 ## Start here
 
 - [PlanFrame (core)](planframe/index.md)
 - [planframe-polars](planframe_polars/index.md)
 - [planframe-pandas](planframe_pandas/index.md)
+- [planframe-sparkless](planframe_sparkless/index.md)
 - [PySpark-like API (`planframe.spark`)](planframe/guides/pyspark-like-api.md)
 - [Pandas-like API (`planframe.pandas`)](planframe/guides/pandas-like-api.md)
 

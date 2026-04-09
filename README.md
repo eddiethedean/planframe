@@ -30,6 +30,7 @@ Key pages:
 - **Pandas-like API (`planframe.pandas`)**: `https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/`
 - **Using planframe-polars**: `https://planframe.readthedocs.io/en/latest/planframe_polars/guides/using-planframe-polars/`
 - **Using planframe-pandas**: `https://planframe.readthedocs.io/en/latest/planframe_pandas/guides/using-planframe-pandas/`
+- **Using planframe-sparkless**: `https://planframe.readthedocs.io/en/latest/planframe_sparkless/`
 
 ### Install (development)
 

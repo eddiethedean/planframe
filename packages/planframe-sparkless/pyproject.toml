@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "planframe-sparkless"
+version = "0.1.0"
+description = "sparkless backend adapter for PlanFrame (SparkFrame UI + sparkless engine)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "PlanFrame Contributors" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "License :: OSI Approved :: MIT License",
+  "Typing :: Typed",
+]
+dependencies = [
+  "planframe>=1.0.0,<2.0.0",
+  "sparkless>=4.5",
+]
+
+[project.urls]
+Repository = "https://github.com/eddiethedean/planframe"
+Documentation = "https://planframe.readthedocs.io/en/latest/planframe_sparkless/"
+Issues = "https://github.com/eddiethedean/planframe/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["planframe_sparkless"]
+

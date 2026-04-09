@@ -23,6 +23,12 @@ Show a minimal example:
 - run 2–3 transforms
 - collect / materialize
 
+See the official adapters for concrete examples:
+
+- `planframe-polars`
+- `planframe-pandas`
+- `planframe-sparkless` (Spark UI + `sparkless` engine)
+
 ## Backend notes
 
 - dtype mapping expectations
