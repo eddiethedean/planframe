@@ -81,7 +81,7 @@ df = out.collect()
 - **pandas**: `drop_nulls(..., threshold=...)` no longer triggers a pandas `how`/`thresh` conflict; behavior matches Polars for threshold-based dropping.
 - **schema**: unnest field names inferred from Pydantic v2 `BaseModel` types (`model_fields`).
 - **planframe-polars**: `JoinOptions.force_parallel` maps to Polars `force_parallel`; join hint precedence documented on `JoinOptions`.
-- **`planframe.spark`**: PySpark-like `SparkFrame`, `Column`, and `functions` on the core package (no Spark dependency); the old standalone `planframe-spark` package is retired.
+- **`planframe.spark`**: PySpark-like `SparkFrame`, `Column`, and `functions` on the core package (no Spark dependency).
 
 ### What shipped in v0.7.0
 

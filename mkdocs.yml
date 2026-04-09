@@ -36,7 +36,7 @@ nav:
       - Overview: planframe/index.md
       - Guides:
           - Creating an adapter: planframe/guides/creating-an-adapter.md
-          - Migrating to v0.8.0: planframe/guides/migrating-to-0-8.md
+          - Migrating to v1.0.0: planframe/guides/migrating-to-1-0.md
           - PySpark-like API (SparkFrame): planframe/guides/pyspark-like-api.md
           - Pandas-like API (PandasLikeFrame): planframe/guides/pandas-like-api.md
       - Reference:
@@ -63,12 +63,6 @@ nav:
           - API (light): planframe_pandas/reference/api.md
       - Design:
           - Parity matrix: planframe_pandas/design/parity.md
-  - planframe-spark:
-      - Overview: planframe_spark/index.md
-      - Guides:
-          - Using planframe-spark: planframe_spark/guides/using-planframe-spark.md
-      - Design:
-          - Parity matrix: planframe_spark/design/parity.md
   - Adapters:
       - Adapter catalog: adapters/index.md
       - Adapter docs template: adapters/template/README.md

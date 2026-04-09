@@ -25,7 +25,7 @@ All notable changes to this project are documented here. Versions follow the wor
 
 ### Changed
 
-- The PySpark-like API is no longer shipped as **`planframe-spark`** on PyPI; use `from planframe.spark import SparkFrame` (and `functions` / `Column`) instead.
+- The PySpark-like API is provided by core `planframe` via `planframe.spark` (no Spark dependency).
 
 ### Documentation
 
