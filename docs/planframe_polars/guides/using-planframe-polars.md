@@ -5,14 +5,16 @@ This guide covers the intended public usage pattern:
 - define a schema as a **`PolarsFrame` subclass**
 - construct frames from **Python-native data** (PlanFrame constructs Polars internally)
 - chain transforms (always lazy)
-- execute via boundaries (`collect`, `to_dicts`, `to_dict`, `collect(kind=...)`)
+- execute via boundaries (`collect`, `to_dicts`, `to_dict`, `collect(kind=...)`, or async: `acollect`, `ato_dicts`, `ato_dict`)
+
+Optional **`ExecutionOptions`** (`streaming`, `engine_streaming`) can be passed at materialization time on `collect` / `to_dicts` / `to_dict` and the async variants.
 
 ## Quickstart
 
 Run:
 
 ```bash
-./.venv310/bin/python docs/planframe_polars/guides/examples/basic_usage.py
+./.venv/bin/python docs/planframe_polars/guides/examples/basic_usage.py
 ```
 
 Expected output:
@@ -92,7 +94,7 @@ out = (
 Runnable script (from repo root):
 
 ```bash
-./.venv310/bin/python docs/planframe_polars/guides/examples/group_by_usage.py
+./.venv/bin/python docs/planframe_polars/guides/examples/group_by_usage.py
 ```
 
 Expected output:

@@ -12,8 +12,19 @@ This is a light API reference intended for quick discovery. For the full surface
         - plan
         - optimize
         - collect
+        - acollect
         - to_dicts
+        - ato_dicts
         - to_dict
+        - ato_dict
+
+## `planframe.execution_options.ExecutionOptions`
+
+::: planframe.execution_options.ExecutionOptions
+
+## `planframe.plan.join_options.JoinOptions`
+
+::: planframe.plan.join_options.JoinOptions
 
 ## `planframe.execution.execute_plan`
 

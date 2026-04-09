@@ -5,14 +5,16 @@ This guide covers the intended public usage pattern:
 - define a schema as a **`PandasFrame` subclass**
 - construct frames from **Python-native data** (PlanFrame constructs pandas internally)
 - chain transforms (always lazy)
-- execute via boundaries (`collect`, `to_dicts`, `to_dict`, `collect(kind=...)`)
+- execute via boundaries (`collect`, `to_dicts`, `to_dict`, `collect(kind=...)`, or async: `acollect`, `ato_dicts`, `ato_dict`)
+
+Optional **`ExecutionOptions`** can be passed at those boundaries when you need streaming hints.
 
 ## Quickstart
 
 Run:
 
 ```bash
-./.venv310/bin/python docs/planframe_pandas/guides/examples/basic_usage.py
+./.venv/bin/python docs/planframe_pandas/guides/examples/basic_usage.py
 ```
 
 Expected output:

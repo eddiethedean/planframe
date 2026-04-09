@@ -16,6 +16,15 @@ Choose a path:
 
 ## What’s new (high-level)
 
+**v0.7.0**
+
+- Async boundaries: `acollect` / `ato_dicts` / `ato_dict` and `ExecutionOptions` on materialization.
+- `drop_nulls(..., how=..., threshold=...)` for row-wise null handling.
+- `JoinOptions.engine_streaming`; expanded adapter guide for execution vs join hints.
+- `ColumnSelector` is runtime-checkable (`isinstance` supported).
+
+**Earlier releases**
+
 - `Frame.with_row_count(...)`: add a monotonically increasing row-number column (lazy).
 - `Frame.clip(...)`: clamp numeric columns (lazy).
 - `Frame.select_schema(...)`: schema-only column selectors (backend-independent).

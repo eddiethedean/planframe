@@ -8,3 +8,11 @@ No. PlanFrame is a typed planning layer that delegates execution to a backend vi
 
 No. PlanFrame is always lazy; execution happens at explicit boundaries like `collect()`.
 
+## Is there an async API?
+
+Yes. `Frame` exposes `acollect`, `ato_dicts`, and `ato_dict`, which await the adapter’s async hooks (`BaseAdapter.acollect`, etc.). Defaults run synchronous adapter methods in a worker thread so existing backends keep working without code changes.
+
+## Can I detect PlanFrame column selectors at runtime?
+
+Yes. `planframe.selector.ColumnSelector` is a `@runtime_checkable` protocol, so `isinstance(obj, ColumnSelector)` works for built-in selector types and for structural matches (objects with a compatible `select(self, schema)` method).
+

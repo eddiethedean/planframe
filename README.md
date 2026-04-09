@@ -67,9 +67,15 @@ Output = out.materialize_model("Output", kind="dataclass")
 df = out.collect()
 ```
 
-### New in v0.6.x
+### What’s new in v0.7.0
 
-Common primitives added recently:
+- **Async materialization**: `Frame.acollect()`, `Frame.ato_dicts()`, `Frame.ato_dict()` with `ExecutionOptions`; `BaseAdapter` provides async hooks (defaults use `asyncio.to_thread` around sync methods).
+- **`drop_nulls`**: `how="any"` / `how="all"` and optional `threshold` (row-wise null logic), aligned with common dataframe semantics.
+- **Join hints**: `JoinOptions.engine_streaming` (alongside `streaming`) for backends that distinguish user- vs engine-level streaming.
+- **Selectors**: `ColumnSelector` is `@runtime_checkable`, so `isinstance(obj, ColumnSelector)` works for built-in selector types and structural matches.
+- **Docs**: the [Creating an adapter](https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/) guide now documents `ExecutionOptions` at materialization boundaries and the full `JoinOptions` field list (omit-`None` forwarding).
+
+### Highlights from v0.6.x
 
 - `Frame.with_row_count(name="row_nr", offset=0)` to add a monotonically increasing row number column (lazy).
 - `Frame.clip(lower=..., upper=..., subset=...)` to clamp numeric columns (lazy; `subset=None` clamps all numeric schema fields).
@@ -77,7 +83,7 @@ Common primitives added recently:
 - Multi-column helpers: `cast_many`, `cast_subset`, `fill_null_subset`, `fill_null_many`.
 - Rename helpers: `rename_upper`, `rename_lower`, `rename_title`, `rename_strip`.
 - Reshape helpers: `pivot_longer`, `pivot_wider`.
-- Execution hints: `ExecutionOptions(...)` at materialization time and join hints via `JoinOptions(allow_parallel=..., force_parallel=...)`.
+- Execution hints: `ExecutionOptions(...)` at materialization time and join hints via `JoinOptions` (e.g. `allow_parallel`, `force_parallel`).
 
 ### Learn more
 
