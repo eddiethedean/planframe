@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Generic, Literal, TypeAlias, TypeGuard, TypeVar, cast
 
-from planframe.backend.errors import PlanFrameExpressionError
+from ..backend.errors import PlanFrameExpressionError
 
 T = TypeVar("T")
 
