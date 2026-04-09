@@ -173,4 +173,20 @@ See `SECURITY.md` for how to report vulnerabilities. Dependency scanning runs in
 ### Continuous integration
 
 On each push and pull request to `main`, CI runs Ruff, `ty`, the full pytest suite (including Pyright stub checks), a strict MkDocs build, and smoke wheel builds for all published packages (`.github/workflows/ci.yml`).
- 
+
+### Releasing to PyPI
+
+Build wheels and sdists locally:
+
+```bash
+bash scripts/build-dist.sh
+```
+
+Upload (requires a [PyPI API token](https://pypi.org/manage/account/token/) with scope for the relevant projects):
+
+```bash
+UV_PUBLISH_TOKEN=pypi-... uv publish "dist/*"
+```
+
+Or use GitHub Actions **Publish to PyPI** (`.github/workflows/publish-pypi.yml`): run the workflow manually, or trigger it by [publishing a GitHub Release](https://github.com/eddiethedean/planframe/releases). Configure [trusted publishing](https://docs.pypi.org/trusted-publishers/) on PyPI for each package (`planframe`, `planframe-polars`, `planframe-pandas`, `planframe-sparkless`) so OIDC can upload without a long-lived token.
+
