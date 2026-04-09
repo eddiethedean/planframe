@@ -222,23 +222,20 @@ def test_string_datetime_math_window_expressions() -> None:
         dt: object
 
     pf = S(data)
-    out = (
-        pf.select("id", "s", "x", "dt")
-        .with_columns(
-            has_hello=contains(lower(col("s")), "hello"),
-            sw_h=starts_with(col("s"), "H"),
-            ew_o=ends_with(col("s"), "o"),
-            s_len=length(col("s")),
-            s2=replace(col("s"), "l", "L", literal=True),
-            y=year(col("dt")),
-            m=month(col("dt")),
-            d=day(col("dt")),
-            btw=between(col("x"), lit(1.5), lit(3.0)),
-            clp=clip(col("x"), lower=lit(1.5)),
-            p=pow_(col("x"), lit(2)),
-            lg=log(exp(lit(1.0))),
-            x_over=over(col("x"), partition_by=("id",)),
-        )
+    out = pf.select("id", "s", "x", "dt").with_columns(
+        has_hello=contains(lower(col("s")), "hello"),
+        sw_h=starts_with(col("s"), "H"),
+        ew_o=ends_with(col("s"), "o"),
+        s_len=length(col("s")),
+        s2=replace(col("s"), "l", "L", literal=True),
+        y=year(col("dt")),
+        m=month(col("dt")),
+        d=day(col("dt")),
+        btw=between(col("x"), lit(1.5), lit(3.0)),
+        clp=clip(col("x"), lower=lit(1.5)),
+        p=pow_(col("x"), lit(2)),
+        lg=log(exp(lit(1.0))),
+        x_over=over(col("x"), partition_by=("id",)),
     )
     df = out.collect()
     assert "x_over" in df.columns
@@ -251,13 +248,11 @@ def test_string_ops_nulls_and_literal_replace() -> None:
         s: str | None
 
     pf = S(data)
-    out = (
-        pf.with_columns(
-            c1=contains(col("s"), ".", literal=True),
-            c2=contains(col("s"), ".", literal=False),
-            r=replace(col("s"), ".", "_", literal=True),
-            ln=length(col("s")),
-        )
+    out = pf.with_columns(
+        c1=contains(col("s"), ".", literal=True),
+        c2=contains(col("s"), ".", literal=False),
+        r=replace(col("s"), ".", "_", literal=True),
+        ln=length(col("s")),
     )
     df = out.collect()
     assert df.columns.tolist() == ["s", "c1", "c2", "r", "ln"]

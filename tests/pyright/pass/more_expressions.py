@@ -14,17 +14,14 @@ class S(PolarsFrame):
 
 
 pf = S({"id": [1], "x": [-1.2], "a": [None], "b": [10]})
-out = (
-    pf.select("id", "x", "a", "b")
-    .with_columns(
-        ax=abs_(col("x")),
-        rx=round_(col("x"), 0),
-        fx=floor(col("x")),
-        cx=ceil(col("x")),
-        c=coalesce(col("a"), col("b")),
-        flag=xor(eq(col("id"), lit(1)), eq(col("id"), lit(2))),
-        picked=if_else(eq(col("id"), lit(1)), lit("one"), lit("other")),
-    )
+out = pf.select("id", "x", "a", "b").with_columns(
+    ax=abs_(col("x")),
+    rx=round_(col("x"), 0),
+    fx=floor(col("x")),
+    cx=ceil(col("x")),
+    c=coalesce(col("a"), col("b")),
+    flag=xor(eq(col("id"), lit(1)), eq(col("id"), lit(2))),
+    picked=if_else(eq(col("id"), lit(1)), lit("one"), lit("other")),
 )
 
 df = out.collect()

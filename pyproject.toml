@@ -24,6 +24,7 @@ dev = [
   "ruff>=0.9",
   "ty>=0.0.25",
   "coverage[toml]>=7.6",
+  "pyspark>=3.5",
   "pandas>=2.0",
   "pyarrow>=14",
   "connectorx",
@@ -55,7 +56,12 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-src = ["packages/planframe", "packages/planframe-polars", "packages/planframe-pandas"]
+src = [
+    "packages/planframe",
+    "packages/planframe-polars",
+    "packages/planframe-pandas",
+    "packages/planframe-spark",
+]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -73,12 +79,17 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["planframe", "planframe_polars", "planframe_pandas"]
+known-first-party = ["planframe", "planframe_polars", "planframe_pandas", "planframe_spark"]
 
 # Astral ty — https://docs.astral.sh/ty/reference/configuration/
 [tool.ty.environment]
 python-version = "3.10"
-root = ["packages/planframe", "packages/planframe-polars", "packages/planframe-pandas"]
+root = [
+    "packages/planframe",
+    "packages/planframe-polars",
+    "packages/planframe-pandas",
+    "packages/planframe-spark",
+]
 
 # First-party code only; tests remain covered by Pyright (`tests/pyright/`, `test_pyright_typing.py`).
 [tool.ty.src]

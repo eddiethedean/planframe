@@ -10,7 +10,7 @@ import re
 from collections.abc import Mapping, Sequence
 from typing import Any, Generic, Literal, TypeVar, cast, overload
 
-from typing_extensions import LiteralString
+from typing_extensions import LiteralString, Self
 
 from planframe.expr.api import Expr, lit
 from planframe.frame import Frame
@@ -79,7 +79,7 @@ class PandasLikeFrame(
 
         out: Frame[Any, BackendFrameT, BackendExprT] = self
         for name, value in columns.items():
-            out = out.with_columns(**{cast(LiteralString, name): _expr(value)})
+            out = out.with_columns(exprs={cast(LiteralString, name): _expr(value)})
         return cast(PandasLikeFrame[Any, Any, Any], out)
 
     def sort_values(
@@ -147,32 +147,27 @@ class PandasLikeFrame(
         strict2 = errors != "ignore"
         return cast(PandasLikeFrame[Any, Any, Any], super().drop(*col_tuple, strict=strict2))
 
-    @overload
-    def rename(self, *, strict: bool = True, **mapping: str) -> PandasLikeFrame[Any, Any, Any]: ...
-
-    @overload
-    def rename(
-        self,
-        *,
-        columns: Mapping[str, str] | None = None,
-        errors: Literal["ignore", "raise"] = "raise",
-    ) -> PandasLikeFrame[Any, Any, Any]: ...
-
     def rename(  # type: ignore[override]
         self,
+        mapping: Mapping[str, str] | None = None,
         *,
         strict: bool = True,
+        **named: str,
+    ) -> Self:
+        return cast(Self, super().rename(mapping=mapping, strict=strict, **named))
+
+    def rename_pandas(
+        self,
+        *,
         columns: Mapping[str, str] | None = None,
         errors: Literal["ignore", "raise"] = "raise",
-        **mapping: str,
-    ) -> PandasLikeFrame[Any, Any, Any]:
-        # PlanFrame-style rename(**mapping) remains supported for compatibility.
-        if mapping:
-            return cast(PandasLikeFrame[Any, Any, Any], super().rename(strict=strict, **mapping))
+    ) -> Self:
+        """Pandas-style rename(columns=..., errors=...)."""
+
         if not columns:
-            return cast(PandasLikeFrame[Any, Any, Any], self)
+            return self
         strict2 = errors != "ignore"
-        return cast(PandasLikeFrame[Any, Any, Any], super().rename(strict=strict2, **dict(columns)))
+        return cast(Self, super().rename(mapping=dict(columns), strict=strict2))
 
     def dropna(
         self,

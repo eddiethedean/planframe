@@ -21,6 +21,21 @@ AggSpec: TypeAlias = tuple[str, ColumnName] | BackendExprT
 
 
 @dataclass(frozen=True, slots=True)
+class AdapterCapabilities:
+    """Optional backend capability flags.
+
+    Adapters should expose these conservatively (False unless truly supported) so
+    frontend layers can decide whether to offer a method as exact parity,
+    typed-parity, or explicitly unsupported.
+    """
+
+    explode_outer: bool = False
+    posexplode_outer: bool = False
+    lazy_sample: bool = False
+    storage_options: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class CompiledProjectItem(Generic[BackendExprT]):
     """One output column for :meth:`BaseAdapter.project`.
 
@@ -60,6 +75,10 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     """
 
     name: str
+
+    @property
+    def capabilities(self) -> AdapterCapabilities:
+        return AdapterCapabilities()
 
     @abstractmethod
     def select(self, df: BackendFrameT, columns: Columns) -> BackendFrameT: ...

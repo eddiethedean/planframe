@@ -21,4 +21,4 @@ def get_comp() -> str:
 
 
 # should fail: compression must be a known Literal
-pf.write_parquet("out.parquet", compression=get_comp())
+pf.sink_parquet("out.parquet", compression=get_comp())

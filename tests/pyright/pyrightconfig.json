@@ -8,7 +8,9 @@
       "root": ".",
       "extraPaths": [
         "../../packages/planframe",
-        "../../packages/planframe-polars"
+        "../../packages/planframe-polars",
+        "../../packages/planframe-pandas",
+        "../../packages/planframe-spark"
       ]
     }
   ],

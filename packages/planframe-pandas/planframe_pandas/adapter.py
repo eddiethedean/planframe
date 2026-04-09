@@ -6,6 +6,7 @@ from typing import Any, Literal, cast
 import pandas as pd
 
 from planframe.backend.adapter import (
+    AdapterCapabilities,
     BaseAdapter,
     Columns,
     CompiledJoinKey,
@@ -33,6 +34,15 @@ class _JoinKey:
 
 class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
     name = "pandas"
+
+    @property
+    def capabilities(self) -> AdapterCapabilities:
+        return AdapterCapabilities(
+            explode_outer=False,
+            posexplode_outer=True,
+            lazy_sample=True,
+            storage_options=False,
+        )
 
     def select(self, df: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
         return df.loc[:, list(columns)].copy()

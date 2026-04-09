@@ -16,4 +16,4 @@ class S:
 pf = PolarsFrame.from_polars(pl.DataFrame({"s": ["x"]}).lazy(), schema=S)
 
 # should fail: literal must be bool
-_out = pf.with_column("bad", contains(col("s"), "x", literal="yes"))
+_out = pf.with_columns(bad=contains(col("s"), "x", literal="yes"))

@@ -21,4 +21,4 @@ def get_mode() -> str:
 
 
 # should fail: if_table_exists must be a known Literal
-pf.write_database("t", connection=object(), if_table_exists=get_mode())
+pf.sink_database("t", connection=object(), if_table_exists=get_mode())

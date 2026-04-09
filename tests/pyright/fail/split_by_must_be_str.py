@@ -16,4 +16,4 @@ class S:
 pf = PolarsFrame.from_polars(pl.DataFrame({"s": ["a,b"]}).lazy(), schema=S)
 
 # should fail: by must be str
-_out = pf.with_column("x", split(col("s"), 1))
+_out = pf.with_columns(x=split(col("s"), 1))

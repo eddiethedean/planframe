@@ -111,7 +111,7 @@ class SparkFrame(
     ) -> SparkFrame[SchemaT, BackendFrameT, BackendExprT]:  # noqa: N802, N803
         out: Frame[Any, BackendFrameT, BackendExprT] = self
         for name, expr in colsMap.items():
-            out = out.with_columns(**{cast(LiteralString, name): unwrap_expr(expr)})
+            out = out.with_columns(exprs={cast(LiteralString, name): unwrap_expr(expr)})
         return cast(SparkFrame[SchemaT, BackendFrameT, BackendExprT], out)
 
     def hint(self, *hints: str, **kv: object) -> SparkFrame[SchemaT, BackendFrameT, BackendExprT]:
@@ -133,7 +133,7 @@ class SparkFrame(
     ) -> SparkFrame[SchemaT, BackendFrameT, BackendExprT]:  # noqa: N802, N803
         return cast(
             SparkFrame[SchemaT, BackendFrameT, BackendExprT],
-            super().with_columns(**{colName: unwrap_expr(col)}),
+            super().with_columns(exprs={colName: unwrap_expr(col)}),
         )
 
     def withColumnRenamed(  # noqa: N802

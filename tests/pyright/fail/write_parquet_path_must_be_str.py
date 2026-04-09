@@ -16,4 +16,4 @@ class S:
 pf = cast(Any, PolarsFrame[S])(pl.DataFrame({"id": [1]}).lazy())
 
 # should fail: path must be str
-pf.write_parquet(123)
+pf.sink_parquet(123)

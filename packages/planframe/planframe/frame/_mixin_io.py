@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, Generic, Literal, Protocol, TypeVar
 
 from planframe.backend.errors import PlanFrameExecutionError
-from planframe._deprecations import warn_renamed
 from planframe.execution_options import ExecutionOptions
 from planframe.plan.nodes import PlanNode
 from planframe.schema.ir import Schema
@@ -159,31 +158,6 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend sink_parquet failed for {self._adapter.name}"
             ) from e
 
-    def write_parquet(
-        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
-        path: str,
-        *,
-        compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = "zstd",
-        row_group_size: int | None = None,
-        partition_by: tuple[str, ...] | None = None,
-        storage_options: StorageOptions | None = None,
-    ) -> None:
-        warn_renamed(old="Frame.write_parquet", new="Frame.sink_parquet", remove_in="v0.10.0")
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_parquet(
-                planned,
-                path,
-                compression=compression,
-                row_group_size=row_group_size,
-                partition_by=partition_by,
-                storage_options=storage_options,
-            )
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_parquet failed for {self._adapter.name}"
-            ) from e
-
     def sink_csv(
         self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         path: str,
@@ -206,29 +180,6 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend sink_csv failed for {self._adapter.name}"
             ) from e
 
-    def write_csv(
-        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
-        path: str,
-        *,
-        separator: str = ",",
-        include_header: bool = True,
-        storage_options: StorageOptions | None = None,
-    ) -> None:
-        warn_renamed(old="Frame.write_csv", new="Frame.sink_csv", remove_in="v0.10.0")
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_csv(
-                planned,
-                path,
-                separator=separator,
-                include_header=include_header,
-                storage_options=storage_options,
-            )
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_csv failed for {self._adapter.name}"
-            ) from e
-
     def sink_ndjson(
         self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         path: str,
@@ -241,21 +192,6 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend sink_ndjson failed for {self._adapter.name}"
-            ) from e
-
-    def write_ndjson(
-        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
-        path: str,
-        *,
-        storage_options: StorageOptions | None = None,
-    ) -> None:
-        warn_renamed(old="Frame.write_ndjson", new="Frame.sink_ndjson", remove_in="v0.10.0")
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_ndjson(planned, path, storage_options=storage_options)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_ndjson failed for {self._adapter.name}"
             ) from e
 
     def sink_ipc(
@@ -273,24 +209,6 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend sink_ipc failed for {self._adapter.name}"
-            ) from e
-
-    def write_ipc(
-        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
-        path: str,
-        *,
-        compression: Literal["uncompressed", "lz4", "zstd"] = "uncompressed",
-        storage_options: StorageOptions | None = None,
-    ) -> None:
-        warn_renamed(old="Frame.write_ipc", new="Frame.sink_ipc", remove_in="v0.10.0")
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_ipc(
-                planned, path, compression=compression, storage_options=storage_options
-            )
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_ipc failed for {self._adapter.name}"
             ) from e
 
     def sink_database(
@@ -315,29 +233,6 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend sink_database failed for {self._adapter.name}"
             ) from e
 
-    def write_database(
-        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
-        table_name: str,
-        *,
-        connection: object,
-        if_table_exists: Literal["fail", "replace", "append"] = "fail",
-        engine: str | None = None,
-    ) -> None:
-        warn_renamed(old="Frame.write_database", new="Frame.sink_database", remove_in="v0.10.0")
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_database(
-                planned,
-                table_name=table_name,
-                connection=connection,
-                if_table_exists=if_table_exists,
-                engine=engine,
-            )
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_database failed for {self._adapter.name}"
-            ) from e
-
     def sink_excel(
         self: _HasFrameIODeps[BackendFrameT, BackendExprT], path: str, *, worksheet: str = "Sheet1"
     ) -> None:
@@ -347,18 +242,6 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend sink_excel failed for {self._adapter.name}"
-            ) from e
-
-    def write_excel(
-        self: _HasFrameIODeps[BackendFrameT, BackendExprT], path: str, *, worksheet: str = "Sheet1"
-    ) -> None:
-        warn_renamed(old="Frame.write_excel", new="Frame.sink_excel", remove_in="v0.10.0")
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_excel(planned, path, worksheet=worksheet)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_excel failed for {self._adapter.name}"
             ) from e
 
     def sink_delta(
@@ -376,22 +259,6 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend sink_delta failed for {self._adapter.name}"
             ) from e
 
-    def write_delta(
-        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
-        target: str,
-        *,
-        mode: Literal["error", "append", "overwrite", "ignore", "merge"] = "error",
-        storage_options: StorageOptions | None = None,
-    ) -> None:
-        warn_renamed(old="Frame.write_delta", new="Frame.sink_delta", remove_in="v0.10.0")
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_delta(planned, target, mode=mode, storage_options=storage_options)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_delta failed for {self._adapter.name}"
-            ) from e
-
     def sink_avro(
         self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         path: str,
@@ -405,22 +272,6 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend sink_avro failed for {self._adapter.name}"
-            ) from e
-
-    def write_avro(
-        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
-        path: str,
-        *,
-        compression: Literal["uncompressed", "snappy", "deflate"] = "uncompressed",
-        name: str = "",
-    ) -> None:
-        warn_renamed(old="Frame.write_avro", new="Frame.sink_avro", remove_in="v0.10.0")
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_avro(planned, path, compression=compression, name=name)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_avro failed for {self._adapter.name}"
             ) from e
 
     def materialize_model(

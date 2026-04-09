@@ -1,6 +1,6 @@
 # Migrating to v0.8.0
 
-This guide summarizes the main changes when upgrading to **PlanFrame v0.8.0** (workspace release for `planframe`, `planframe-polars`, and `planframe-pandas`).
+This guide summarizes the main changes when upgrading to **PlanFrame v0.8.0** (workspace release for `planframe`, `planframe-polars`, `planframe-pandas`, and `planframe-spark`).
 
 ## Quick upgrade checklist
 
@@ -8,8 +8,9 @@ This guide summarizes the main changes when upgrading to **PlanFrame v0.8.0** (w
   - `planframe==0.8.0`
   - `planframe-polars==0.8.0` (if you use Polars)
   - `planframe-pandas==0.8.0` (if you use pandas)
+  - `planframe-spark==0.8.0` (if you use the Spark frontend)
 - If you use the pandas backend, note that `PandasFrame` now includes the pandas-like skin by default (see below).
-- If you previously used `planframe-spark`, switch to the **core Spark skin** (`planframe.spark`) (see below).
+- If you previously used the Spark skin under `planframe.spark`, switch to the dedicated package: **`planframe_spark`** (see below).
 
 ## What’s new in v0.8.0 (high level)
 
@@ -38,15 +39,15 @@ In v0.8.0, **`planframe_pandas.PandasFrame` subclasses `PandasLikeFrame`**, so y
 
 If you already had helper methods with the same names (e.g. your own `assign`, `query`, `sort_values`), you may need to rename them to avoid method resolution conflicts.
 
-## Core change: Spark skin (`planframe.spark`)
+## Core change: Spark frontend (`planframe_spark`)
 
-### If you used `planframe-spark` previously
+### New import path
 
-The PySpark-like API is now provided by the core package:
+The PySpark-like API is now provided by the dedicated `planframe-spark` package:
 
-- `from planframe.spark import SparkFrame`
-- `from planframe.spark import Column`
-- `from planframe.spark import functions as F`
+- `from planframe_spark import SparkFrame`
+- `from planframe_spark import Column`
+- `from planframe_spark import functions as F`
 
 There is **no Spark dependency**; this is an API skin that still executes via an adapter at `collect()`.
 
@@ -80,5 +81,6 @@ If you created your own `Frame` subclasses with methods like `assign`, `query`, 
 - Changelog: `CHANGELOG.md` (v0.8.0 section)
 - pandas-like API guide: `planframe/guides/pandas-like-api.md`
 - PySpark-like API guide: `planframe/guides/pyspark-like-api.md`
+- planframe-spark docs: `planframe_spark/index.md`
 - Creating an adapter: `planframe/guides/creating-an-adapter.md`
 

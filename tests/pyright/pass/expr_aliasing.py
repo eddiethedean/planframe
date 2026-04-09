@@ -20,4 +20,3 @@ df = out.collect()
 
 reveal_type(out)
 reveal_type(df)
-

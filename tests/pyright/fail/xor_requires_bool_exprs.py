@@ -16,4 +16,4 @@ class S:
 pf = cast(Any, PolarsFrame[S])({"id": [1], "x": [1.2]})
 
 # should fail: xor requires Expr[bool]
-_out = pf.with_column("bad", xor(col("id"), col("x")))
+_out = pf.with_columns(bad=xor(col("id"), col("x")))

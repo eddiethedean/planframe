@@ -646,9 +646,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         exprs: Mapping[LiteralString, Expr[Any]] | None = ...,
         **named_exprs: Expr[Any],
     ) -> Self: ...
-    def with_column(self, name: LiteralString, expr: Expr[T]) -> Self: ...
     def with_row_index(self, *, name: str = ..., offset: int = ...) -> Self: ...
-    def with_row_count(self, *, name: str = ..., offset: int = ...) -> Self: ...
     def clip(
         self,
         *,
@@ -959,24 +957,12 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         period: str | None = ...,
         by: tuple[LiteralString, ...] | None = ...,
     ) -> DynamicGroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
-    @overload
-    def drop_nulls(
-        self, *subset: LiteralString, how: Literal["any", "all"] = ..., threshold: int | None = ...
-    ) -> Self: ...
-    @overload
-    def drop_nulls(
-        self, *subset: str, how: Literal["any", "all"] = ..., threshold: int | None = ...
-    ) -> Self: ...
-    @overload
     def drop_nulls(
         self,
+        subset: tuple[LiteralString, ...] | LiteralString | None = ...,
         *,
-        subset: tuple[LiteralString, ...] | None = ...,
         how: Literal["any", "all"] = ...,
         threshold: int | None = ...,
-    ) -> Self: ...
-    def drop_nulls(
-        self, *subset: Any, how: Any = ..., threshold: int | None = ..., **kwargs: Any
     ) -> Self: ...
     @overload
     def fill_null(self, value: Scalar, *subset: LiteralString) -> Self: ...
@@ -1011,14 +997,6 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         mapping: Mapping[LiteralString, Scalar | Expr[Any]],
         *,
         strict: bool = ...,
-    ) -> Self: ...
-    def melt(
-        self,
-        *,
-        id_vars: tuple[LiteralString, ...] | None = ...,
-        value_vars: tuple[LiteralString, ...] | None = ...,
-        variable_name: str = ...,
-        value_name: str = ...,
     ) -> Self: ...
     def unpivot(
         self,
@@ -1055,8 +1033,6 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def tail(self, n: int) -> Self: ...
     def vstack(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...
     def hstack(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...
-    def concat_vertical(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...
-    def concat_horizontal(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...
     def union_distinct(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...
     @overload
     def explode(
@@ -1553,54 +1529,6 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         storage_options: StorageOptions | None = ...,
     ) -> None: ...
     def sink_avro(
-        self,
-        path: str,
-        *,
-        compression: Literal["uncompressed", "snappy", "deflate"] = ...,
-        name: str = ...,
-    ) -> None: ...
-    def write_parquet(
-        self,
-        path: str,
-        *,
-        compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = ...,
-        row_group_size: int | None = ...,
-        partition_by: tuple[LiteralString, ...] | None = ...,
-        storage_options: StorageOptions | None = ...,
-    ) -> None: ...
-    def write_csv(
-        self,
-        path: str,
-        *,
-        separator: str = ...,
-        include_header: bool = ...,
-        storage_options: StorageOptions | None = ...,
-    ) -> None: ...
-    def write_ndjson(self, path: str, *, storage_options: StorageOptions | None = ...) -> None: ...
-    def write_ipc(
-        self,
-        path: str,
-        *,
-        compression: Literal["uncompressed", "lz4", "zstd"] = ...,
-        storage_options: StorageOptions | None = ...,
-    ) -> None: ...
-    def write_database(
-        self,
-        table_name: str,
-        *,
-        connection: object,
-        if_table_exists: Literal["fail", "replace", "append"] = ...,
-        engine: str | None = ...,
-    ) -> None: ...
-    def write_excel(self, path: str, *, worksheet: str = ...) -> None: ...
-    def write_delta(
-        self,
-        target: str,
-        *,
-        mode: Literal["error", "append", "overwrite", "ignore", "merge"] = ...,
-        storage_options: StorageOptions | None = ...,
-    ) -> None: ...
-    def write_avro(
         self,
         path: str,
         *,

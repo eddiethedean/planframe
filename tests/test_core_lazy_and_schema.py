@@ -1387,11 +1387,7 @@ def test_call_order_for_mixed_ops_including_pivot_and_concat() -> None:
         schema=S,
     )
 
-    out = (
-        left.vstack(right)
-        .pivot(index=("id",), on="k", values="v", on_columns=("a", "b"))
-        .head(1)
-    )
+    out = left.vstack(right).pivot(index=("id",), on="k", values="v", on_columns=("a", "b")).head(1)
     assert adapter.calls == []
     collected = out.collect()
     assert collected == [{"id": 1, "a": 10, "b": 20}]

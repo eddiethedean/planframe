@@ -112,7 +112,9 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("    @overload")
     a("    def select(self, *columns: LiteralString) -> Self: ...")
     a("    @overload")
-    a("    def select(self, *columns: LiteralString | tuple[str, Expr[Any]] | Expr[Any]) -> Self: ...")
+    a(
+        "    def select(self, *columns: LiteralString | tuple[str, Expr[Any]] | Expr[Any]) -> Self: ..."
+    )
     a("    def select(self, *columns: Any) -> Self: ...")
     a("")
     a("    def select_prefix(self, prefix: str) -> Self: ...")
@@ -230,10 +232,8 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a(
         "    def with_columns(self, *expressions: Expr[Any], exprs: Mapping[LiteralString, Expr[Any]] | None = ..., **named_exprs: Expr[Any]) -> Self: ..."
     )
-    a("    def with_column(self, name: LiteralString, expr: Expr[T]) -> Self: ...")
     a("")
     a("    def with_row_index(self, *, name: str = ..., offset: int = ...) -> Self: ...")
-    a("    def with_row_count(self, *, name: str = ..., offset: int = ...) -> Self: ...")
     a("")
     a("    def clip(")
     a("        self,")
@@ -362,20 +362,8 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        period: str | None = ...,")
     a("        by: tuple[LiteralString, ...] | None = ...,")
     a("    ) -> DynamicGroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...")
-    a("    @overload")
     a(
-        '    def drop_nulls(self, *subset: LiteralString, how: Literal["any", "all"] = ..., threshold: int | None = ...) -> Self: ...'
-    )
-    a(
-        "    @overload\n"
-        '    def drop_nulls(self, *subset: str, how: Literal["any", "all"] = ..., threshold: int | None = ...) -> Self: ...'
-    )
-    a("    @overload")
-    a(
-        '    def drop_nulls(self, *, subset: tuple[LiteralString, ...] | None = ..., how: Literal["any", "all"] = ..., threshold: int | None = ...) -> Self: ...'
-    )
-    a(
-        "    def drop_nulls(self, *subset: Any, how: Any = ..., threshold: int | None = ..., **kwargs: Any) -> Self: ..."
+        '    def drop_nulls(self, subset: tuple[LiteralString, ...] | LiteralString | None = ..., *, how: Literal["any", "all"] = ..., threshold: int | None = ...) -> Self: ...'
     )
     a("    @overload")
     a("    def fill_null(self, value: Scalar, *subset: LiteralString) -> Self: ...")
@@ -410,14 +398,6 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        mapping: Mapping[LiteralString, Scalar | Expr[Any]],")
     a("        *,")
     a("        strict: bool = ...,")
-    a("    ) -> Self: ...")
-    a("    def melt(")
-    a("        self,")
-    a("        *,")
-    a("        id_vars: tuple[LiteralString, ...] | None = ...,")
-    a("        value_vars: tuple[LiteralString, ...] | None = ...,")
-    a("        variable_name: str = ...,")
-    a("        value_name: str = ...,")
     a("    ) -> Self: ...")
     a("    def unpivot(")
     a("        self,")
@@ -456,8 +436,6 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("    def tail(self, n: int) -> Self: ...")
     a("    def vstack(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
     a("    def hstack(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
-    a("    def concat_vertical(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
-    a("    def concat_horizontal(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
     a(
         "    def union_distinct(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ..."
     )
@@ -629,7 +607,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        path: str,")
     a("        *,")
     a(
-        '        compression: Literal[\"uncompressed\", \"snappy\", \"gzip\", \"brotli\", \"zstd\", \"lz4\"] = ...,'
+        '        compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = ...,'
     )
     a("        row_group_size: int | None = ...,")
     a("        partition_by: tuple[LiteralString, ...] | None = ...,")
@@ -650,7 +628,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        self,")
     a("        path: str,")
     a("        *,")
-    a('        compression: Literal[\"uncompressed\", \"lz4\", \"zstd\"] = ...,')
+    a('        compression: Literal["uncompressed", "lz4", "zstd"] = ...,')
     a("        storage_options: StorageOptions | None = ...,")
     a("    ) -> None: ...")
     a("    def sink_database(")
@@ -658,7 +636,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        table_name: str,")
     a("        *,")
     a("        connection: object,")
-    a('        if_table_exists: Literal[\"fail\", \"replace\", \"append\"] = ...,')
+    a('        if_table_exists: Literal["fail", "replace", "append"] = ...,')
     a("        engine: str | None = ...,")
     a("    ) -> None: ...")
     a("    def sink_excel(self, path: str, *, worksheet: str = ...) -> None: ...")
@@ -666,62 +644,10 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        self,")
     a("        target: str,")
     a("        *,")
-    a('        mode: Literal[\"error\", \"append\", \"overwrite\", \"ignore\", \"merge\"] = ...,')
-    a("        storage_options: StorageOptions | None = ...,")
-    a("    ) -> None: ...")
-    a("    def sink_avro(")
-    a("        self,")
-    a("        path: str,")
-    a("        *,")
-    a('        compression: Literal[\"uncompressed\", \"snappy\", \"deflate\"] = ...,')
-    a("        name: str = ...,")
-    a("    ) -> None: ...")
-    a("    def write_parquet(")
-    a("        self,")
-    a("        path: str,")
-    a("        *,")
-    a(
-        '        compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = ...,'
-    )
-    a("        row_group_size: int | None = ...,")
-    a("        partition_by: tuple[LiteralString, ...] | None = ...,")
-    a("        storage_options: StorageOptions | None = ...,")
-    a("    ) -> None: ...")
-    a("    def write_csv(")
-    a("        self,")
-    a("        path: str,")
-    a("        *,")
-    a("        separator: str = ...,")
-    a("        include_header: bool = ...,")
-    a("        storage_options: StorageOptions | None = ...,")
-    a("    ) -> None: ...")
-    a(
-        "    def write_ndjson(self, path: str, *, storage_options: StorageOptions | None = ...) -> None: ..."
-    )
-    a("    def write_ipc(")
-    a("        self,")
-    a("        path: str,")
-    a("        *,")
-    a('        compression: Literal["uncompressed", "lz4", "zstd"] = ...,')
-    a("        storage_options: StorageOptions | None = ...,")
-    a("    ) -> None: ...")
-    a("    def write_database(")
-    a("        self,")
-    a("        table_name: str,")
-    a("        *,")
-    a("        connection: object,")
-    a('        if_table_exists: Literal["fail", "replace", "append"] = ...,')
-    a("        engine: str | None = ...,")
-    a("    ) -> None: ...")
-    a("    def write_excel(self, path: str, *, worksheet: str = ...) -> None: ...")
-    a("    def write_delta(")
-    a("        self,")
-    a("        target: str,")
-    a("        *,")
     a('        mode: Literal["error", "append", "overwrite", "ignore", "merge"] = ...,')
     a("        storage_options: StorageOptions | None = ...,")
     a("    ) -> None: ...")
-    a("    def write_avro(")
+    a("    def sink_avro(")
     a("        self,")
     a("        path: str,")
     a("        *,")

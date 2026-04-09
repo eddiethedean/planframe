@@ -6,6 +6,7 @@ from typing import Any, Literal, cast
 import polars as pl
 
 from planframe.backend.adapter import (
+    AdapterCapabilities,
     BaseAdapter,
     Columns,
     CompiledJoinKey,
@@ -29,6 +30,15 @@ _LAZYFRAME_JOIN_PARAM_NAMES = frozenset(inspect.signature(pl.LazyFrame.join).par
 
 class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     name = "polars"
+
+    @property
+    def capabilities(self) -> AdapterCapabilities:
+        return AdapterCapabilities(
+            explode_outer=False,
+            posexplode_outer=False,
+            lazy_sample=False,
+            storage_options=False,
+        )
 
     def _collect_df(self, df: PolarsBackendFrame) -> pl.DataFrame:
         out = df.collect() if isinstance(df, pl.LazyFrame) else df
@@ -688,7 +698,10 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         self, df: PolarsBackendFrame, columns: Columns, *, outer: bool = False
     ) -> PolarsBackendFrame:
         if outer:
-            raise PlanFrameBackendError("polars adapter does not support explode(outer=True)")
+            raise PlanFrameBackendError(
+                "polars adapter does not support explode(outer=True) "
+                "(capabilities.explode_outer=False)"
+            )
         return df.explode(list(columns))
 
     def unnest(self, df: PolarsBackendFrame, items: tuple[UnnestItem, ...]) -> PolarsBackendFrame:
@@ -707,7 +720,10 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         outer: bool = False,
     ) -> PolarsBackendFrame:
         if outer:
-            raise PlanFrameBackendError("polars adapter does not support posexplode(outer=True)")
+            raise PlanFrameBackendError(
+                "polars adapter does not support posexplode(outer=True) "
+                "(capabilities.posexplode_outer=False)"
+            )
 
         value_name = column if value is None else value
         # Build a parallel position list column, then explode both.
@@ -747,7 +763,8 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         if isinstance(df, pl.LazyFrame):
             raise PlanFrameBackendError(
                 "Polars LazyFrame does not support sample() in this adapter. "
-                "Collect first, or construct the frame with lazy=False."
+                "Collect first, or construct the frame with lazy=False. "
+                "(capabilities.lazy_sample=False)"
             )
         df2 = self._collect_df(df)
         if n is not None:

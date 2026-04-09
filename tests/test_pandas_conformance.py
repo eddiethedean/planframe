@@ -131,7 +131,7 @@ def test_pandas_write_parquet_raises_clear_error_without_pyarrow(tmp_path: Any) 
     pf = User({"id": [1], "name": ["a"], "age": [10]})
     out_path = tmp_path / "out.parquet"
     with pytest.raises(PlanFrameExecutionError):
-        pf.write_parquet(str(out_path))
+        pf.sink_parquet(str(out_path))
 
 
 def test_pandas_drop_nulls_threshold_matches_polars() -> None:
