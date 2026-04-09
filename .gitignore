@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual environments
 .venv/
+.venv*/
 venv/
 ENV/
 env/
@@ -19,6 +20,8 @@ dist-release/
 *.egg-info/
 *.egg
 pip-wheel-metadata/
+.python-version
+.installed.cfg
 
 # Test / coverage artifacts
 .pytest_cache/
@@ -27,11 +30,14 @@ pip-wheel-metadata/
 coverage.xml
 htmlcov/
 site/
+.tox/
+.nox/
 
 # Type check / lint caches
 .mypy_cache/
 .pyright/
 .ruff_cache/
+.ty_cache/
 
 # Notebook checkpoints
 .ipynb_checkpoints/

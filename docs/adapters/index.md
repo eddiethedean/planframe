@@ -8,6 +8,10 @@ PlanFrame is backend-agnostic. Execution is provided by **adapters**.
 - **planframe-pandas**: pandas backend adapter (end-user docs live under the `planframe-pandas` track).
 - **planframe-sparkless**: sparkless backend adapter (end-user docs live under the `planframe-sparkless` track; provides real execution for the Spark UI).
 
+See also:
+
+- [Adapter capability matrix](capability-matrix.md)
+
 ## Adding a new adapter
 
 Start from the core guide:

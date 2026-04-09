@@ -11,11 +11,15 @@ Documentation (ReadTheDocs):
 - Polars track (end users): `https://planframe.readthedocs.io/en/latest/planframe_polars/`
 - Light API reference: `https://planframe.readthedocs.io/en/latest/planframe_polars/reference/api/`
 
+### Install
+
+```bash
+pip install planframe-polars
+```
+
 ### Usage
 
 ```python
-import polars as pl
-
 from planframe_polars import PolarsFrame
 
 
@@ -32,6 +36,8 @@ pf3 = pf.with_row_index(name="row_nr").clip(lower=0, subset=("age",))
 pf4 = pf.rename_upper().cast_many({"age": float})
 
 # If you already have a Polars DataFrame/LazyFrame, use `Frame.source(...)`:
+import polars as pl
+
 pf2 = User.source(pl.DataFrame({"id": [1], "age": [2]}).lazy(), adapter=User._adapter_singleton, schema=User)
 ```
 

@@ -9,6 +9,24 @@ Choose a path:
 - **planframe-pandas**: use PlanFrame on top of Pandas.
 - **planframe-sparkless**: use PlanFrame’s Spark-like interface on top of `sparkless`.
 
+## Install
+
+Install an adapter package (recommended):
+
+```bash
+pip install planframe-polars
+# or
+pip install planframe-pandas
+# or
+pip install planframe-sparkless
+```
+
+Core-only (adapter authors / libraries):
+
+```bash
+pip install planframe
+```
+
 ## Start here
 
 - [PlanFrame (core)](planframe/index.md)
@@ -17,33 +35,12 @@ Choose a path:
 - [planframe-sparkless](planframe_sparkless/index.md)
 - [PySpark-like API (`planframe.spark`)](planframe/guides/pyspark-like-api.md)
 - [Pandas-like API (`planframe.pandas`)](planframe/guides/pandas-like-api.md)
+- [Adapter capability matrix](adapters/capability-matrix.md)
+- [Stability & compatibility](shared/stability-and-compatibility.md)
 
 ## What’s new (high-level)
 
-**v0.8.0**
-
-- **`planframe.pandas`**: pandas-like `PandasLikeFrame` / `Series` skin on the core package; **planframe-pandas**’s `PandasFrame` uses that skin.
-- **Spark skin** (`planframe.spark`): column sugar, `withColumns`, typed `groupBy().agg`, and plan-level `hint()` with a core `Hint` node and optional adapter hook.
-
-**v0.7.1**
-
-- Bug fixes: pandas `fill_null` strategy respects subset; `drop_nulls` + `threshold` matches Polars and avoids pandas `how`/`thresh` conflict; Pydantic v2 unnest schema inference; Polars `JoinOptions.force_parallel` forwarding and documented join hint precedence.
-
-**v0.7.0**
-
-- Async boundaries: `acollect` / `ato_dicts` / `ato_dict` and `ExecutionOptions` on materialization.
-- `drop_nulls(..., how=..., threshold=...)` for row-wise null handling.
-- `JoinOptions.engine_streaming`; expanded adapter guide for execution vs join hints.
-- `ColumnSelector` is runtime-checkable (`isinstance` supported).
-
-**Earlier releases**
-
-- `Frame.with_row_count(...)`: add a monotonically increasing row-number column (lazy).
-- `Frame.clip(...)`: clamp numeric columns (lazy).
-- `Frame.select_schema(...)`: schema-only column selectors (backend-independent).
-- Multi-column helpers: `cast_many` / `cast_subset` and `fill_null_many` / `fill_null_subset`.
-- Rename helpers: `rename_upper` / `rename_lower` / `rename_title` / `rename_strip`.
-- Reshape helpers: `pivot_longer` / `pivot_wider`.
+See the project changelog: `https://github.com/eddiethedean/planframe/blob/main/CHANGELOG.md`
 
 ## Adding a new adapter
 

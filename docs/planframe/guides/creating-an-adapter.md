@@ -98,6 +98,18 @@ class MyAdapter(..., AdapterRowStreamer[MyBackendFrame]):
 
 If your IO layer is truly async (native async HTTP/S3/DB drivers), override `BaseAdapter.areader` / `BaseAdapter.awriter`. If you don’t, PlanFrame’s defaults wrap the sync reader/writer via `asyncio.to_thread`.
 
+## Production readiness checklist (adapter authors)
+
+If you plan to ship your adapter as a package used outside a single codebase:
+
+- **Packaging**: publish `py.typed` for typing support; set `requires-python`; pin compatible dependency ranges.
+- **Contracts**:
+  - Implement `ExecutionOptions` passthrough on materialization boundaries (`collect`/exports) even if you ignore hints.
+  - If you implement row streaming, implement **both** `stream_dicts` and `astream_dicts` (`AdapterRowStreamer` contract).
+  - Prefer consistent async behavior: if you override `acollect`, consider also overriding `ato_dicts` / `ato_dict` (or ensure the defaults are acceptable).
+- **Tests**: add regression tests for join semantics, null ordering, and empty-shape exports (`to_dict`); include async boundary tests if you claim async-native support.
+- **Docs**: document limitations and backend-specific semantics (e.g. null placement, streaming guarantees, supported joins).
+
 ### Example: accept and forward hints
 
 ```python

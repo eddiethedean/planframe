@@ -14,6 +14,16 @@ Documentation (ReadTheDocs):
 - Streaming rows: `https://planframe.readthedocs.io/en/latest/planframe/guides/streaming-rows/`
 - Optional API skins: [PySpark-like (`planframe.spark`)](https://planframe.readthedocs.io/en/latest/planframe/guides/pyspark-like-api/), [pandas-like (`planframe.pandas`)](https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/)
 
+### Install
+
+`planframe` is backend-agnostic; you typically install an adapter package like `planframe-polars` or `planframe-pandas`.
+
+If you only want the core planning layer:
+
+```bash
+pip install planframe
+```
+
 ### What you get
 - `planframe.Frame`: immutable, schema-aware transformation plan (**always lazy**)
 - `planframe.expr`: typed expression IR (`col`, `lit`, arithmetic/compare/boolean ops, `coalesce`, `if_else`, etc.), plus **aggregation wrappers** for use inside `group_by(...).agg(...)`: `agg_sum`, `agg_mean`, `agg_min`, `agg_max`, `agg_count`, `agg_n_unique` (these build `AggExpr` nodes)

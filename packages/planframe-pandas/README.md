@@ -11,6 +11,27 @@ Documentation (ReadTheDocs):
 - pandas track (end users): `https://planframe.readthedocs.io/en/latest/planframe_pandas/`
 - Light API reference: `https://planframe.readthedocs.io/en/latest/planframe_pandas/reference/api/`
 
+### Install
+
+```bash
+pip install planframe-pandas
+```
+
+### Usage
+
+```python
+from planframe_pandas import PandasFrame
+
+
+class User(PandasFrame):
+    id: int
+    age: int
+
+
+pf = User([{"id": 1, "age": 10}, {"id": 2, "age": 20}])
+rows = pf.select("id").to_dicts()
+```
+
 ### Notes
 
 - **`PandasFrame`** subclasses core **`planframe.pandas.PandasLikeFrame`**, so you get pandas-flavored helpers (`assign`, `sort_values`, boolean indexing, column `filter`, `astype`, `eval`, `drop_duplicates`, …) on top of the shared `Frame` plan. See the [pandas-like API](https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/) guide.

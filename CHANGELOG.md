@@ -1,6 +1,19 @@
 # Changelog
 
-All notable changes to this project are documented here. Versions follow the workspace packages (`planframe`, `planframe-polars`, `planframe-pandas`), which are released together at the same version.
+All notable changes to this repository are documented here.
+
+- `planframe`, `planframe-polars`, and `planframe-pandas` are released together at the same version.
+- `planframe-sparkless` is versioned independently.
+
+## 1.0.0
+
+### Added
+
+- Stable 1.0 packaging for `planframe`, `planframe-polars`, and `planframe-pandas`.
+
+### Changed
+
+- Documentation and READMEs were refreshed to reflect 1.0+ install paths and current contracts (async boundaries, streaming hooks, adapter notes).
 
 ## 0.8.0
 
@@ -16,6 +29,12 @@ All notable changes to this project are documented here. Versions follow the wor
 ### Documentation
 
 - Guides: [PySpark-like API](https://planframe.readthedocs.io/en/latest/planframe/guides/pyspark-like-api/) and [pandas-like API](https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/).
+
+## planframe-sparkless 0.1.0
+
+### Added
+
+- Initial `planframe-sparkless` adapter package (Spark-like UI on top of the `sparkless` engine).
 
 ## 0.7.1
 

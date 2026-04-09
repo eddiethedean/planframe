@@ -75,8 +75,10 @@ nav:
       - Overview: planframe_sparkless/index.md
   - Adapters:
       - Adapter catalog: adapters/index.md
+      - Capability matrix: adapters/capability-matrix.md
       - Adapter docs template: adapters/template/README.md
   - Shared:
       - Glossary: shared/glossary.md
       - FAQ: shared/faq.md
+      - Stability & compatibility: shared/stability-and-compatibility.md
 
