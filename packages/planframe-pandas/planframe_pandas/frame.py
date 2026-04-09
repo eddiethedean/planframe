@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, ClassVar, Generic, Literal, TypeVar, cast
+from typing import Any, ClassVar, Generic, Literal, NoReturn, TypeVar, cast
 
 import pandas as pd
 
-from planframe.backend.errors import PlanFrameBackendError
 from planframe.pandas import PandasLikeFrame
 from planframe.typing.storage import StorageOptions
 from planframe_pandas.adapter import PandasAdapter, PandasBackendExpr, PandasBackendFrame
@@ -96,6 +95,121 @@ class PandasFrame(
     _adapter_singleton: ClassVar[PandasAdapter] = PandasAdapter()
     __planframe_model__ = True
 
+    # ---- pandas-only runtime UI ----
+    #
+    # PandasFrame is intentionally a pandas-flavored surface. The core/Polars-style
+    # verbs are still available on the underlying plan engine, but are blocked on
+    # this backend package to keep the runtime API aligned with pandas.
+
+    def select(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError(
+            'PandasFrame.select is not supported. Use df[["col", ...]] or df.filter(...).'
+        )
+
+    def with_columns(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError(
+            "PandasFrame.with_columns is not supported. Use .assign(...) instead."
+        )
+
+    def with_row_index(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError("PandasFrame.with_row_index is not supported in the pandas UI.")
+
+    def drop_nulls(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError(
+            "PandasFrame.drop_nulls is not supported. Use .dropna(...) instead."
+        )
+
+    def drop_nulls_all(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError(
+            "PandasFrame.drop_nulls_all is not supported. Use .dropna(how='all', ...) instead."
+        )
+
+    def unpivot(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError("PandasFrame.unpivot is not supported. Use .melt(...) instead.")
+
+    def vstack(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError("PandasFrame.vstack is not supported in the pandas UI.")
+
+    def hstack(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError("PandasFrame.hstack is not supported in the pandas UI.")
+
+    def sort(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError(
+            "PandasFrame.sort is not supported. Use .sort_values(...) instead."
+        )
+
+    def join(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError("PandasFrame.join is not supported. Use .merge(...) instead.")
+
+    def unique(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError(
+            "PandasFrame.unique is not supported. Use .drop_duplicates(...) instead."
+        )
+
+    def duplicated(self, *_: object, **__: object) -> NoReturn:
+        raise NotImplementedError(
+            "PandasFrame.duplicated is not supported. Use .duplicated(...) (pandas UI) instead."
+        )
+
+    # ---- pandas-style IO aliases ----
+    @classmethod
+    def read_csv(
+        cls,
+        path: str,
+        *,
+        schema: type[SchemaT],
+        storage_options: StorageOptions | None = None,
+    ) -> PandasFrame[SchemaT]:
+        return cls.scan_csv(path, schema=schema, storage_options=storage_options)
+
+    @classmethod
+    def read_parquet(
+        cls,
+        path: str,
+        *,
+        schema: type[SchemaT],
+        storage_options: StorageOptions | None = None,
+    ) -> PandasFrame[SchemaT]:
+        return cls.scan_parquet(path, schema=schema, storage_options=storage_options)
+
+    @classmethod
+    def read_json(
+        cls,
+        path: str,
+        *,
+        schema: type[SchemaT],
+        storage_options: StorageOptions | None = None,
+    ) -> PandasFrame[SchemaT]:
+        # NDJSON / JSON-lines
+        return cls.scan_ndjson(path, schema=schema, storage_options=storage_options)
+
+    def to_csv(
+        self,
+        path: str,
+        *,
+        sep: str = ",",
+        header: bool = True,
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.sink_csv(path, separator=sep, include_header=header, storage_options=storage_options)
+
+    def to_parquet(
+        self,
+        path: str,
+        *,
+        compression: str = "zstd",
+        row_group_size: int | None = None,
+        partition_cols: tuple[str, ...] | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.sink_parquet(
+            path,
+            compression=cast(Any, compression),
+            row_group_size=row_group_size,
+            partition_by=cast(Any, partition_cols),
+            storage_options=storage_options,
+        )
+
     @classmethod
     def scan_parquet(
         cls,
@@ -105,13 +219,11 @@ class PandasFrame(
         hive_partitioning: bool | None = None,
         storage_options: StorageOptions | None = None,
     ) -> PandasFrame[SchemaT]:
-        # pandas is eager; this is a convenience loader, not a lazy scan.
-        try:
-            df = pd.read_parquet(path, storage_options=storage_options)  # type: ignore[call-arg]
-        except ImportError as e:
-            raise PlanFrameBackendError(
-                "Parquet support requires installing planframe-pandas[parquet]"
-            ) from e
+        df = cls._adapter_singleton.reader.scan_parquet(
+            path,
+            hive_partitioning=hive_partitioning,
+            storage_options=storage_options,
+        )
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -122,10 +234,10 @@ class PandasFrame(
         schema: type[SchemaT],
         storage_options: StorageOptions | None = None,
     ) -> PandasFrame[SchemaT]:
-        raise PlanFrameBackendError(
-            "pandas adapter does not implement scan_parquet_dataset; "
-            "use scan_parquet on a single file or implement dataset loading externally."
+        df = cls._adapter_singleton.reader.scan_parquet_dataset(
+            path_or_glob, storage_options=storage_options
         )
+        return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
     def scan_csv(
@@ -135,7 +247,7 @@ class PandasFrame(
         schema: type[SchemaT],
         storage_options: StorageOptions | None = None,
     ) -> PandasFrame[SchemaT]:
-        df = pd.read_csv(path, storage_options=storage_options)  # type: ignore[call-arg]
+        df = cls._adapter_singleton.reader.scan_csv(path, storage_options=storage_options)
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -146,7 +258,7 @@ class PandasFrame(
         schema: type[SchemaT],
         storage_options: StorageOptions | None = None,
     ) -> PandasFrame[SchemaT]:
-        df = pd.read_json(path, lines=True, storage_options=storage_options)  # type: ignore[call-arg]
+        df = cls._adapter_singleton.reader.scan_ndjson(path, storage_options=storage_options)
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -158,7 +270,12 @@ class PandasFrame(
         hive_partitioning: bool | None = None,
         storage_options: StorageOptions | None = None,
     ) -> PandasFrame[SchemaT]:
-        raise PlanFrameBackendError("pandas adapter does not implement scan_ipc")
+        df = cls._adapter_singleton.reader.scan_ipc(
+            path,
+            hive_partitioning=hive_partitioning,
+            storage_options=storage_options,
+        )
+        return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
     def scan_delta(
@@ -169,7 +286,12 @@ class PandasFrame(
         version: int | str | None = None,
         storage_options: StorageOptions | None = None,
     ) -> PandasFrame[SchemaT]:
-        raise PlanFrameBackendError("pandas adapter does not implement scan_delta")
+        df = cls._adapter_singleton.reader.scan_delta(
+            source,
+            version=version,
+            storage_options=storage_options,
+        )
+        return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
     def read_delta(
@@ -180,7 +302,12 @@ class PandasFrame(
         version: int | str | None = None,
         storage_options: StorageOptions | None = None,
     ) -> PandasFrame[SchemaT]:
-        raise PlanFrameBackendError("pandas adapter does not implement read_delta")
+        df = cls._adapter_singleton.reader.read_delta(
+            source,
+            version=version,
+            storage_options=storage_options,
+        )
+        return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
     def read_excel(
@@ -190,28 +317,19 @@ class PandasFrame(
         schema: type[SchemaT],
         sheet_name: str | None = None,
     ) -> PandasFrame[SchemaT]:
-        # pandas uses openpyxl for xlsx by default.
-        try:
-            df = pd.read_excel(path, sheet_name=sheet_name)  # type: ignore[call-arg]
-        except ImportError as e:
-            raise PlanFrameBackendError(
-                "Excel support requires installing planframe-pandas[excel]"
-            ) from e
-        if isinstance(df, dict):
-            raise PlanFrameBackendError(
-                "pandas read_excel returned multiple sheets; pass sheet_name= to select one"
-            )
+        df = cls._adapter_singleton.reader.read_excel(path, sheet_name=sheet_name)
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
     def read_avro(cls, path: str, *, schema: type[SchemaT]) -> PandasFrame[SchemaT]:
-        raise PlanFrameBackendError("pandas adapter does not implement read_avro")
+        df = cls._adapter_singleton.reader.read_avro(path)
+        return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
     def read_database(
         cls, query: str, *, connection: object, schema: type[SchemaT]
     ) -> PandasFrame[SchemaT]:
-        df = pd.read_sql_query(query, con=connection)  # type: ignore[arg-type]
+        df = cls._adapter_singleton.reader.read_database(query, connection=connection)
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -223,11 +341,5 @@ class PandasFrame(
         engine: Literal["connectorx", "adbc"] | None = None,
         schema: type[SchemaT],
     ) -> PandasFrame[SchemaT]:
-        if engine is not None:
-            raise PlanFrameBackendError(
-                "pandas adapter does not support engine= for read_database_uri"
-            )
-        raise PlanFrameBackendError(
-            "pandas adapter does not implement read_database_uri. "
-            "Use read_database(query, connection=...) with a DBAPI/SQLAlchemy connection."
-        )
+        df = cls._adapter_singleton.reader.read_database_uri(query, uri=uri, engine=engine)
+        return cls.source(df, adapter=cls._adapter_singleton, schema=schema)

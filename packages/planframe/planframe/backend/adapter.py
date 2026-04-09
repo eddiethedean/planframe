@@ -3,8 +3,14 @@ from __future__ import annotations
 import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Generic, Literal, TypeAlias, TypeVar
+from typing import Generic, Literal, TypeAlias, TypeVar, cast
 
+from planframe.backend.io import (
+    AdapterAsyncReader,
+    AdapterAsyncWriter,
+    AdapterReader,
+    AdapterWriter,
+)
 from planframe.execution_options import ExecutionOptions
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import UnnestItem
@@ -64,6 +70,314 @@ class CompiledSortKey(Generic[BackendExprT]):
 CompiledJoinKey = CompiledSortKey
 
 
+@dataclass(frozen=True, slots=True)
+class _DefaultAdapterWriter(Generic[BackendFrameT, BackendExprT]):
+    """Default `AdapterWriter` wrapper around legacy `write_*` adapter methods."""
+
+    adapter: BaseAdapter[BackendFrameT, BackendExprT]
+
+    def sink_parquet(
+        self,
+        df: BackendFrameT,
+        path: str,
+        *,
+        compression: str = "zstd",
+        row_group_size: int | None = None,
+        partition_by: tuple[str, ...] | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.adapter.write_parquet(
+            df,
+            path,
+            compression=compression,
+            row_group_size=row_group_size,
+            partition_by=partition_by,
+            storage_options=storage_options,
+        )
+
+    def sink_csv(
+        self,
+        df: BackendFrameT,
+        path: str,
+        *,
+        separator: str = ",",
+        include_header: bool = True,
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.adapter.write_csv(
+            df,
+            path,
+            separator=separator,
+            include_header=include_header,
+            storage_options=storage_options,
+        )
+
+    def sink_ndjson(
+        self, df: BackendFrameT, path: str, *, storage_options: StorageOptions | None = None
+    ) -> None:
+        self.adapter.write_ndjson(df, path, storage_options=storage_options)
+
+    def sink_ipc(
+        self,
+        df: BackendFrameT,
+        path: str,
+        *,
+        compression: str = "uncompressed",
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.adapter.write_ipc(df, path, compression=compression, storage_options=storage_options)
+
+    def sink_database(
+        self,
+        df: BackendFrameT,
+        *,
+        table_name: str,
+        connection: object,
+        if_table_exists: str = "fail",
+        engine: str | None = None,
+    ) -> None:
+        self.adapter.write_database(
+            df,
+            table_name=table_name,
+            connection=connection,
+            if_table_exists=if_table_exists,
+            engine=engine,
+        )
+
+    def sink_excel(self, df: BackendFrameT, path: str, *, worksheet: str = "Sheet1") -> None:
+        self.adapter.write_excel(df, path, worksheet=worksheet)
+
+    def sink_delta(
+        self,
+        df: BackendFrameT,
+        target: str,
+        *,
+        mode: str = "error",
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        self.adapter.write_delta(df, target, mode=mode, storage_options=storage_options)
+
+    def sink_avro(
+        self,
+        df: BackendFrameT,
+        path: str,
+        *,
+        compression: str = "uncompressed",
+        name: str = "",
+    ) -> None:
+        self.adapter.write_avro(df, path, compression=compression, name=name)
+
+
+@dataclass(frozen=True, slots=True)
+class _DefaultAdapterAsyncReader(Generic[BackendFrameT]):
+    """Default async reader wrapper around sync `AdapterReader`."""
+
+    reader: AdapterReader[BackendFrameT]
+
+    async def scan_parquet(
+        self,
+        path: str,
+        *,
+        hive_partitioning: bool | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> BackendFrameT:
+        return await asyncio.to_thread(
+            self.reader.scan_parquet,
+            path,
+            hive_partitioning=hive_partitioning,
+            storage_options=storage_options,
+        )
+
+    async def scan_parquet_dataset(
+        self,
+        path_or_glob: str,
+        *,
+        storage_options: StorageOptions | None = None,
+    ) -> BackendFrameT:
+        return await asyncio.to_thread(
+            self.reader.scan_parquet_dataset,
+            path_or_glob,
+            storage_options=storage_options,
+        )
+
+    async def scan_csv(
+        self, path: str, *, storage_options: StorageOptions | None = None
+    ) -> BackendFrameT:
+        return await asyncio.to_thread(self.reader.scan_csv, path, storage_options=storage_options)
+
+    async def scan_ndjson(
+        self, path: str, *, storage_options: StorageOptions | None = None
+    ) -> BackendFrameT:
+        return await asyncio.to_thread(
+            self.reader.scan_ndjson, path, storage_options=storage_options
+        )
+
+    async def scan_ipc(
+        self,
+        path: str,
+        *,
+        hive_partitioning: bool | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> BackendFrameT:
+        return await asyncio.to_thread(
+            self.reader.scan_ipc,
+            path,
+            hive_partitioning=hive_partitioning,
+            storage_options=storage_options,
+        )
+
+    async def scan_delta(
+        self,
+        source: str,
+        *,
+        version: int | str | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> BackendFrameT:
+        return await asyncio.to_thread(
+            self.reader.scan_delta,
+            source,
+            version=version,
+            storage_options=storage_options,
+        )
+
+    async def read_delta(
+        self,
+        source: str,
+        *,
+        version: int | str | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> BackendFrameT:
+        return await asyncio.to_thread(
+            self.reader.read_delta,
+            source,
+            version=version,
+            storage_options=storage_options,
+        )
+
+    async def read_excel(self, path: str, *, sheet_name: str | None = None) -> BackendFrameT:
+        return await asyncio.to_thread(self.reader.read_excel, path, sheet_name=sheet_name)
+
+    async def read_avro(self, path: str) -> BackendFrameT:
+        return await asyncio.to_thread(self.reader.read_avro, path)
+
+    async def read_database(self, query: str, *, connection: object) -> BackendFrameT:
+        return await asyncio.to_thread(self.reader.read_database, query, connection=connection)
+
+    async def read_database_uri(
+        self,
+        query: str,
+        *,
+        uri: str,
+        engine: Literal["connectorx", "adbc"] | None = None,
+    ) -> BackendFrameT:
+        return await asyncio.to_thread(self.reader.read_database_uri, query, uri=uri, engine=engine)
+
+
+@dataclass(frozen=True, slots=True)
+class _DefaultAdapterAsyncWriter(Generic[BackendFrameT]):
+    """Default async writer wrapper around sync `AdapterWriter`."""
+
+    writer: AdapterWriter[BackendFrameT]
+
+    async def sink_parquet(
+        self,
+        df: BackendFrameT,
+        path: str,
+        *,
+        compression: str = "zstd",
+        row_group_size: int | None = None,
+        partition_by: tuple[str, ...] | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        await asyncio.to_thread(
+            self.writer.sink_parquet,
+            df,
+            path,
+            compression=compression,
+            row_group_size=row_group_size,
+            partition_by=partition_by,
+            storage_options=storage_options,
+        )
+
+    async def sink_csv(
+        self,
+        df: BackendFrameT,
+        path: str,
+        *,
+        separator: str = ",",
+        include_header: bool = True,
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        await asyncio.to_thread(
+            self.writer.sink_csv,
+            df,
+            path,
+            separator=separator,
+            include_header=include_header,
+            storage_options=storage_options,
+        )
+
+    async def sink_ndjson(
+        self, df: BackendFrameT, path: str, *, storage_options: StorageOptions | None = None
+    ) -> None:
+        await asyncio.to_thread(self.writer.sink_ndjson, df, path, storage_options=storage_options)
+
+    async def sink_ipc(
+        self,
+        df: BackendFrameT,
+        path: str,
+        *,
+        compression: str = "uncompressed",
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        await asyncio.to_thread(
+            self.writer.sink_ipc, df, path, compression=compression, storage_options=storage_options
+        )
+
+    async def sink_database(
+        self,
+        df: BackendFrameT,
+        *,
+        table_name: str,
+        connection: object,
+        if_table_exists: str = "fail",
+        engine: str | None = None,
+    ) -> None:
+        await asyncio.to_thread(
+            self.writer.sink_database,
+            df,
+            table_name=table_name,
+            connection=connection,
+            if_table_exists=if_table_exists,
+            engine=engine,
+        )
+
+    async def sink_excel(self, df: BackendFrameT, path: str, *, worksheet: str = "Sheet1") -> None:
+        await asyncio.to_thread(self.writer.sink_excel, df, path, worksheet=worksheet)
+
+    async def sink_delta(
+        self,
+        df: BackendFrameT,
+        target: str,
+        *,
+        mode: str = "error",
+        storage_options: StorageOptions | None = None,
+    ) -> None:
+        await asyncio.to_thread(
+            self.writer.sink_delta, df, target, mode=mode, storage_options=storage_options
+        )
+
+    async def sink_avro(
+        self,
+        df: BackendFrameT,
+        path: str,
+        *,
+        compression: str = "uncompressed",
+        name: str = "",
+    ) -> None:
+        await asyncio.to_thread(self.writer.sink_avro, df, path, compression=compression, name=name)
+
+
 class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     """Backend execution base class.
 
@@ -75,6 +389,30 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
     """
 
     name: str
+
+    @property
+    def reader(self) -> AdapterReader[BackendFrameT]:
+        """Adapter-owned IO reader.\n\n        Default returns `self` for adapters that implement the reader surface.\n"""
+
+        return cast(AdapterReader[BackendFrameT], self)
+
+    @property
+    def writer(self) -> AdapterWriter[BackendFrameT]:
+        """Adapter-owned IO writer.\n\n        Default wraps legacy adapter `write_*` methods as `sink_*`.\n"""
+
+        return cast(AdapterWriter[BackendFrameT], _DefaultAdapterWriter(self))
+
+    @property
+    def areader(self) -> AdapterAsyncReader[BackendFrameT]:
+        """Async adapter-owned IO reader.\n\n        Default wraps `reader` via `asyncio.to_thread`.\n"""
+
+        return cast(AdapterAsyncReader[BackendFrameT], _DefaultAdapterAsyncReader(self.reader))
+
+    @property
+    def awriter(self) -> AdapterAsyncWriter[BackendFrameT]:
+        """Async adapter-owned IO writer.\n\n        Default wraps `writer` via `asyncio.to_thread`.\n"""
+
+        return cast(AdapterAsyncWriter[BackendFrameT], _DefaultAdapterAsyncWriter(self.writer))
 
     @property
     def capabilities(self) -> AdapterCapabilities:

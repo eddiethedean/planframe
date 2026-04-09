@@ -41,7 +41,7 @@ If you need advanced construction, use `Frame.source(...)` with a backend frame 
 
 PlanFrame is always lazy:
 
-- Chaining methods (like `.select(...)`) does **not** run pandas operations.
+- Chaining methods (like `df[["a", "b"]]` or `.assign(...)`) does **not** run pandas operations.
 - `collect_backend()` evaluates the full plan by calling adapter methods on demand (and returns a backend-native DataFrame).
 - `collect()` evaluates the full plan and returns `list[pydantic.BaseModel]` rows (PlanFrame’s cross-backend materialization contract).
 
@@ -80,7 +80,7 @@ class S(PandasFrame):
 
 
 pf = S({"g": [1, 1, 2], "x": [10, 20, 7]})
-out = pf.group_by("g").agg(n=("count", "x"), sx=agg_sum(col("x")))
+out = pf.groupby("g").agg(n=("count", "x"), sx=agg_sum(col("x")))
 df = out.collect_backend()
 ```
 
@@ -95,6 +95,6 @@ df = out.collect_backend()
 
 ## I/O and optional dependencies
 
-- **CSV**: `write_csv(...)` works with the built-in pandas writer.
-- **Parquet**: `write_parquet(...)` requires an extra engine. Install `planframe-pandas[parquet]` (uses `pyarrow`).
+- **CSV**: `to_csv(...)` (alias for `sink_csv(...)`) works with the built-in pandas writer.
+- **Parquet**: `to_parquet(...)` (alias for `sink_parquet(...)`) requires an extra engine. Install `planframe-pandas[parquet]` (uses `pyarrow`).
 

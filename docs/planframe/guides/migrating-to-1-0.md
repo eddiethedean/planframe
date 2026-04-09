@@ -28,6 +28,15 @@ In v1.0.0, PlanFrame’s three typed interfaces intentionally share the same row
 
 If you need the backend-native object (e.g. `polars.DataFrame` / `pandas.DataFrame`) use **`collect_backend()` / `acollect_backend()`**.
 
+### Row streaming APIs (additive)
+
+v1.0.0 adds **row streaming** helpers so you can iterate rows without forcing a `list[...]` at the call site:
+
+- **`stream_dicts()` / `astream_dicts()`**: yields `dict[str, object]` rows
+- **`stream(name=...)` / `astream(name=...)`**: yields schema-derived `pydantic.BaseModel` rows
+
+If the backend adapter implements `AdapterRowStreamer`, PlanFrame can stream without building intermediate `list[dict]`. Otherwise, these methods fall back to `to_dicts()` / `ato_dicts()` under the hood (still convenient, but not memory-optimal).
+
 ### Column creation
 
 - **Removed**: `Frame.with_column(name, expr)`
@@ -83,5 +92,6 @@ PlanFrame remains **always lazy**. Even for naturally eager backends (like panda
 - Changelog: `CHANGELOG.md`
 - pandas-like API guide: `planframe/guides/pandas-like-api.md`
 - PySpark-like API guide: `planframe/guides/pyspark-like-api.md`
+- Streaming rows guide: `planframe/guides/streaming-rows.md`
 - Creating an adapter: `planframe/guides/creating-an-adapter.md`
 

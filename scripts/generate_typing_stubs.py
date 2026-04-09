@@ -51,7 +51,7 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
 
     a("from __future__ import annotations")
     a("")
-    a("from collections.abc import Mapping, Sequence")
+    a("from collections.abc import AsyncIterator, Iterator, Mapping, Sequence")
     a("from typing import Any, Generic, Literal, NoReturn, TypeVar, overload")
     a("")
     a("from typing_extensions import LiteralString, Self")
@@ -604,6 +604,18 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     )
     a(
         "    async def ato_dict(self, *, options: ExecutionOptions | None = ...) -> dict[str, list[object]]: ..."
+    )
+    a(
+        "    def stream_dicts(self, *, options: ExecutionOptions | None = ...) -> Iterator[dict[str, object]]: ..."
+    )
+    a(
+        "    async def astream_dicts(self, *, options: ExecutionOptions | None = ...) -> AsyncIterator[dict[str, object]]: ..."
+    )
+    a(
+        "    def stream(self, *, name: str = ..., options: ExecutionOptions | None = ...) -> Iterator[Any]: ..."
+    )
+    a(
+        "    async def astream(self, *, name: str = ..., options: ExecutionOptions | None = ...) -> AsyncIterator[Any]: ..."
     )
     a("    def write_parquet(")
     a("        self,")

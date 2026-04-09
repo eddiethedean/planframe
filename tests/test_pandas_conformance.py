@@ -33,10 +33,9 @@ def test_pandas_construction_and_collect_backend_returns_dataframe() -> None:
 def test_pandas_select_with_column_filter_sort() -> None:
     pf = User({"id": [2, 1, 3], "name": ["b", "a", "c"], "age": [20, 10, 30]})
     out = (
-        pf.select("id", "age")
-        .with_columns(age2=add(col("age"), lit(1)))
-        .filter(ne(col("id"), lit(2)))
-        .sort("id")
+        pf[["id", "age"]]
+        .assign(age2=add(col("age"), lit(1)))[ne(col("id"), lit(2))]
+        .sort_values("id")
     )
     df = out.collect_backend()
     assert df["id"].to_list() == [1, 3]
@@ -51,7 +50,7 @@ def test_pandas_join_inner() -> None:
         x: int
 
     right = Right({"id": [2, 3], "x": [200, 300]})
-    out = left.join(right, on=("id",), how="inner")
+    out = left.merge(right, on="id", how="inner")
     df = out.collect_backend()
     assert df.to_dict(orient="list") == {"id": [2], "name": ["b"], "age": [20], "x": [200]}
 
@@ -62,7 +61,7 @@ def test_pandas_group_by_agg_tuple_and_aggexpr() -> None:
         x: int
 
     pf = S({"g": [1, 1, 2], "x": [10, 20, 7]})
-    out = pf.group_by("g").agg(n=("count", "x"), sx=agg_sum(col("x"))).sort("g")
+    out = pf.groupby("g").agg(n=("count", "x"), sx=agg_sum(col("x"))).sort_values("g")
     df = out.collect_backend()
     assert df.columns.tolist() == ["g", "n", "sx"]
     assert df["g"].to_list() == [1, 2]
@@ -85,28 +84,27 @@ def test_pandas_melt_pivot_explode_unnest(tmp_path: Any) -> None:
         ]
     )
 
-    melted = pf.unpivot(index=("id",), on=("a", "b"), variable_name="k", value_name="v")
+    melted = pf.melt(id_vars=("id",), value_vars=("a", "b"), var_name="k", value_name="v")
     piv = melted.pivot(index=("id",), columns="k", values="v", on_columns=("a", "b"), agg="first")
-    df = piv.sort("id").collect_backend()
+    df = piv.sort_values("id").collect_backend()
     assert df.columns.tolist() == ["id", "a", "b"]
     assert df.to_dict(orient="list") == {"id": [1, 2], "a": [10, 11], "b": [20, 21]}
 
-    # unpivot alias
-    unp = pf.unpivot(index=("id",), on=("a", "b"), variable_name="k", value_name="v")
-    df_unp = unp.sort("id").collect_backend()
+    unp = pf.melt(id_vars=("id",), value_vars=("a", "b"), var_name="k", value_name="v")
+    df_unp = unp.sort_values("id").collect_backend()
     assert set(df_unp.columns.tolist()) == {"id", "k", "v"}
 
-    exploded = pf.explode("parts").select("id", "parts").sort("id")
+    exploded = pf.explode("parts")[["id", "parts"]].sort_values("id")
     df2 = exploded.collect_backend()
     assert df2.to_dict(orient="list") == {"id": [1, 1, 2], "parts": [1, 2, 3]}
 
-    unnested = pf.unnest("meta").select("id", "x", "y").sort("id")
+    unnested = pf.unnest("meta")[["id", "x", "y"]].sort_values("id")
     df3 = unnested.collect_backend()
     assert df3.to_dict(orient="list") == {"id": [1, 2], "x": [1, 2], "y": ["a", "b"]}
 
     # IO: csv should work
     out_path = tmp_path / "out.csv"
-    pf.select("id", "a").sink_csv(str(out_path))
+    pf[["id", "a"]].to_csv(str(out_path))
     assert out_path.exists()
 
 
@@ -144,7 +142,7 @@ def test_pandas_drop_nulls_threshold_matches_polars() -> None:
         b: int | None
 
     data = {"a": [1, None, None], "b": [None, 2, None]}
-    p = RowP(data).drop_nulls(subset=("a", "b"), threshold=1).collect_backend()
+    p = RowP(data).dropna(subset=("a", "b"), thresh=1).collect_backend()
     polars_out = RowL(data).drop_nulls(subset=("a", "b"), threshold=1).collect_backend()
     assert_frame_equal(
         p.reset_index(drop=True),
@@ -152,7 +150,7 @@ def test_pandas_drop_nulls_threshold_matches_polars() -> None:
         check_dtype=False,
     )
 
-    p_all = RowP(data).drop_nulls(subset=("a", "b"), how="all", threshold=1).collect_backend()
+    p_all = RowP(data).dropna(subset=("a", "b"), how="all", thresh=1).collect_backend()
     polars_all = RowL(data).drop_nulls(subset=("a", "b"), how="all", threshold=1).collect_backend()
     assert_frame_equal(
         p_all.reset_index(drop=True),

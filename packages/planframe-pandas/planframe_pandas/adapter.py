@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
@@ -34,6 +35,108 @@ class _JoinKey:
 
 class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
     name = "pandas"
+
+    # ---- AdapterReader surface (used by PandasFrame classmethods) ----
+    def scan_parquet(
+        self,
+        path: str,
+        *,
+        hive_partitioning: bool | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> pd.DataFrame:
+        # pandas is eager; this is a convenience loader, not a lazy scan.
+        _ = hive_partitioning
+        try:
+            return pd.read_parquet(path, storage_options=storage_options)  # type: ignore[call-arg]
+        except ImportError as e:
+            raise PlanFrameBackendError(
+                "Parquet support requires installing planframe-pandas[parquet]"
+            ) from e
+
+    def scan_parquet_dataset(
+        self, path_or_glob: str, *, storage_options: StorageOptions | None = None
+    ) -> pd.DataFrame:
+        _ = path_or_glob, storage_options
+        raise PlanFrameBackendError(
+            "pandas adapter does not implement scan_parquet_dataset; "
+            "use scan_parquet on a single file or implement dataset loading externally."
+        )
+
+    def scan_csv(self, path: str, *, storage_options: StorageOptions | None = None) -> pd.DataFrame:
+        return pd.read_csv(path, storage_options=storage_options)  # type: ignore[call-arg]
+
+    def scan_ndjson(
+        self, path: str, *, storage_options: StorageOptions | None = None
+    ) -> pd.DataFrame:
+        return pd.read_json(path, lines=True, storage_options=storage_options)  # type: ignore[call-arg]
+
+    def scan_ipc(
+        self,
+        path: str,
+        *,
+        hive_partitioning: bool | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> pd.DataFrame:
+        _ = path, hive_partitioning, storage_options
+        raise PlanFrameBackendError("pandas adapter does not implement scan_ipc")
+
+    def scan_delta(
+        self,
+        source: str,
+        *,
+        version: int | str | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> pd.DataFrame:
+        _ = source, version, storage_options
+        raise PlanFrameBackendError("pandas adapter does not implement scan_delta")
+
+    def read_delta(
+        self,
+        source: str,
+        *,
+        version: int | str | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> pd.DataFrame:
+        _ = source, version, storage_options
+        raise PlanFrameBackendError("pandas adapter does not implement read_delta")
+
+    def read_excel(self, path: str, *, sheet_name: str | None = None) -> pd.DataFrame:
+        # pandas uses openpyxl for xlsx by default.
+        try:
+            df = pd.read_excel(path, sheet_name=sheet_name)  # type: ignore[call-arg]
+        except ImportError as e:
+            raise PlanFrameBackendError(
+                "Excel support requires installing planframe-pandas[excel]"
+            ) from e
+        if isinstance(df, dict):
+            raise PlanFrameBackendError(
+                "pandas read_excel returned multiple sheets; pass sheet_name= to select one"
+            )
+        return df
+
+    def read_avro(self, path: str) -> pd.DataFrame:
+        _ = path
+        raise PlanFrameBackendError("pandas adapter does not implement read_avro")
+
+    def read_database(self, query: str, *, connection: object) -> pd.DataFrame:
+        return pd.read_sql_query(query, con=connection)  # type: ignore[arg-type]
+
+    def read_database_uri(
+        self,
+        query: str,
+        *,
+        uri: str,
+        engine: Literal["connectorx", "adbc"] | None = None,
+    ) -> pd.DataFrame:
+        _ = query, uri
+        if engine is not None:
+            raise PlanFrameBackendError(
+                "pandas adapter does not support engine= for read_database_uri"
+            )
+        raise PlanFrameBackendError(
+            "pandas adapter does not implement read_database_uri. "
+            "Use read_database(query, connection=...) with a DBAPI/SQLAlchemy connection."
+        )
 
     @property
     def capabilities(self) -> AdapterCapabilities:
@@ -596,6 +699,20 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
     ) -> dict[str, list[object]]:
         _ = options
         return cast(dict[str, list[object]], df.to_dict(orient="list"))
+
+    def stream_dicts(
+        self, df: pd.DataFrame, *, options: ExecutionOptions | None = None
+    ) -> Iterator[dict[str, object]]:
+        _ = options
+        cols = list(df.columns)
+        for row in df.itertuples(index=False, name=None):
+            yield dict(zip(cols, row, strict=False))
+
+    async def astream_dicts(
+        self, df: pd.DataFrame, *, options: ExecutionOptions | None = None
+    ) -> AsyncIterator[dict[str, object]]:
+        for row in self.stream_dicts(df, options=options):
+            yield row
 
     def write_parquet(
         self,

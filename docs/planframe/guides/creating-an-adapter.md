@@ -8,7 +8,7 @@ PlanFrame’s core (`planframe`) is backend-agnostic. It builds a typed plan, th
 
 - **compile expressions** (`compile_expr`)
 - **execute plan nodes** (`select`, `filter`, `join`, …)
-- **materialize outputs** (`collect`, `to_dicts`, `to_dict`, `write_*`)
+- **materialize outputs** (`collect`, `to_dicts`, `to_dict`, `sink_*`/`write_*`)
 
 The adapter API is the abstract base class:
 
@@ -46,7 +46,9 @@ dict={'id': [1, 2], 'age': [10, 20]}
 - **Frame type**: pick the backend’s “frame” type (e.g. a lazy plan type if it has one)
 - **Expression type**: pick the backend’s expression type (or use a small wrapper object)
 - **Always-lazy**: return lazy objects from transforms; only execute inside `collect`/`to_dicts`/writes
-- **I/O**: implement `write_*` (or raise a clear error if not supported)
+- **I/O**: implement `write_*` (used by PlanFrame’s `sink_*`/`write_*`) or override `BaseAdapter.writer` with a custom writer implementation
+- **Async I/O (optional)**: override `BaseAdapter.areader` / `BaseAdapter.awriter` for true async IO (defaults wrap sync IO in `asyncio.to_thread`)
+- **Row streaming (optional)**: implement `AdapterRowStreamer` to support `Frame.stream_dicts()` / `Frame.astream_dicts()` without materializing all rows at once
 
 ## Execution boundaries and `ExecutionOptions`
 
@@ -67,6 +69,34 @@ Materialization and row export happen only at execution boundaries. On `BaseAdap
 **Contract:** adapters should **accept** `options` on these signatures so the public API stays stable. Forward only the hints your engine understands into the backend’s `collect()` / export APIs; ignore the rest. If you do not support any hints yet, it is fine to `options` unused (as many shipped adapters do today), but keep the parameter.
 
 `Frame.collect_backend`, `Frame.to_dicts`, `Frame.to_dict`, and the async counterparts accept the same `ExecutionOptions` and pass them through to the adapter.
+
+## Optional: row streaming + true async IO
+
+If your engine can stream rows (cursor-based DB reads, chunked readers, etc.), implement `AdapterRowStreamer` on your adapter:
+
+```python
+from collections.abc import AsyncIterator, Iterator
+
+from planframe.backend.io import AdapterRowStreamer
+from planframe.execution_options import ExecutionOptions
+
+
+class MyAdapter(..., AdapterRowStreamer[MyBackendFrame]):
+    def stream_dicts(
+        self, df: MyBackendFrame, *, options: ExecutionOptions | None = None
+    ) -> Iterator[dict[str, object]]:
+        # Yield rows without building a full list
+        for row in df.iter_rows():
+            yield row
+
+    async def astream_dicts(
+        self, df: MyBackendFrame, *, options: ExecutionOptions | None = None
+    ) -> AsyncIterator[dict[str, object]]:
+        async for row in df.aiter_rows():
+            yield row
+```
+
+If your IO layer is truly async (native async HTTP/S3/DB drivers), override `BaseAdapter.areader` / `BaseAdapter.awriter`. If you don’t, PlanFrame’s defaults wrap the sync reader/writer via `asyncio.to_thread`.
 
 ### Example: accept and forward hints
 

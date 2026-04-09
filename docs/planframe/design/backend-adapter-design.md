@@ -42,6 +42,9 @@ The adapter owns:
 - backend expression compilation
 - runtime collection/materialization
 - backend dtype mapping
+- backend IO entrypoints (via `BaseAdapter.reader` / `BaseAdapter.writer`)
+- async IO entrypoints (optional) via `BaseAdapter.areader` / `BaseAdapter.awriter`
+- row streaming (optional) via `AdapterRowStreamer` (`Frame.stream_dicts` / `Frame.astream_dicts`)
 
 ---
 

@@ -102,10 +102,11 @@ class PolarsFrame(
         hive_partitioning: bool | None = None,
         storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
-        kwargs: dict[str, Any] = {"storage_options": storage_options}
-        if hive_partitioning is not None:
-            kwargs["hive_partitioning"] = hive_partitioning
-        lf = pl.scan_parquet(path, **kwargs)
+        lf = cls._adapter_singleton.reader.scan_parquet(
+            path,
+            hive_partitioning=hive_partitioning,
+            storage_options=storage_options,
+        )
         return cls.source(lf, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -116,12 +117,10 @@ class PolarsFrame(
         schema: type[SchemaT],
         storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
-        return cls.scan_parquet(
-            path_or_glob,
-            schema=schema,
-            hive_partitioning=True,
-            storage_options=storage_options,
+        lf = cls._adapter_singleton.reader.scan_parquet_dataset(
+            path_or_glob, storage_options=storage_options
         )
+        return cls.source(lf, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
     def scan_csv(
@@ -131,7 +130,7 @@ class PolarsFrame(
         schema: type[SchemaT],
         storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
-        lf = pl.scan_csv(path, storage_options=storage_options)
+        lf = cls._adapter_singleton.reader.scan_csv(path, storage_options=storage_options)
         return cls.source(lf, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -142,7 +141,7 @@ class PolarsFrame(
         schema: type[SchemaT],
         storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
-        lf = pl.scan_ndjson(path, storage_options=storage_options)
+        lf = cls._adapter_singleton.reader.scan_ndjson(path, storage_options=storage_options)
         return cls.source(lf, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -154,10 +153,11 @@ class PolarsFrame(
         hive_partitioning: bool | None = None,
         storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
-        kwargs: dict[str, Any] = {"storage_options": storage_options}
-        if hive_partitioning is not None:
-            kwargs["hive_partitioning"] = hive_partitioning
-        lf = pl.scan_ipc(path, **kwargs)
+        lf = cls._adapter_singleton.reader.scan_ipc(
+            path,
+            hive_partitioning=hive_partitioning,
+            storage_options=storage_options,
+        )
         return cls.source(lf, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -169,10 +169,11 @@ class PolarsFrame(
         version: int | str | None = None,
         storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
-        kwargs: dict[str, Any] = {"storage_options": storage_options}
-        if version is not None:
-            kwargs["version"] = version
-        lf = pl.scan_delta(source, **kwargs)
+        lf = cls._adapter_singleton.reader.scan_delta(
+            source,
+            version=version,
+            storage_options=storage_options,
+        )
         return cls.source(lf, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -184,10 +185,11 @@ class PolarsFrame(
         version: int | str | None = None,
         storage_options: StorageOptions | None = None,
     ) -> PolarsFrame[SchemaT]:
-        kwargs: dict[str, Any] = {"storage_options": storage_options}
-        if version is not None:
-            kwargs["version"] = version
-        df = pl.read_delta(source, **kwargs)
+        df = cls._adapter_singleton.reader.read_delta(
+            source,
+            version=version,
+            storage_options=storage_options,
+        )
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -198,22 +200,19 @@ class PolarsFrame(
         schema: type[SchemaT],
         sheet_name: str | None = None,
     ) -> PolarsFrame[SchemaT]:
-        kwargs: dict[str, Any] = {}
-        if sheet_name is not None:
-            kwargs["sheet_name"] = sheet_name
-        df = pl.read_excel(path, **kwargs)
+        df = cls._adapter_singleton.reader.read_excel(path, sheet_name=sheet_name)
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
     def read_avro(cls, path: str, *, schema: type[SchemaT]) -> PolarsFrame[SchemaT]:
-        df = pl.read_avro(path)
+        df = cls._adapter_singleton.reader.read_avro(path)
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
     def read_database(
         cls, query: str, *, connection: object, schema: type[SchemaT]
     ) -> PolarsFrame[SchemaT]:
-        df = pl.read_database(query=query, connection=connection)
+        df = cls._adapter_singleton.reader.read_database(query, connection=connection)
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)
 
     @classmethod
@@ -225,8 +224,5 @@ class PolarsFrame(
         engine: Literal["connectorx", "adbc"] | None = None,
         schema: type[SchemaT],
     ) -> PolarsFrame[SchemaT]:
-        kwargs: dict[str, Any] = {}
-        if engine is not None:
-            kwargs["engine"] = engine
-        df = pl.read_database_uri(query=query, uri=uri, **kwargs)
+        df = cls._adapter_singleton.reader.read_database_uri(query, uri=uri, engine=engine)
         return cls.source(df, adapter=cls._adapter_singleton, schema=schema)

@@ -25,6 +25,7 @@ The docs are organized into two clear tracks:
 Key pages:
 
 - **Creating an adapter**: `https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/`
+- **Streaming rows**: `https://planframe.readthedocs.io/en/latest/planframe/guides/streaming-rows/`
 - **PySpark-like API (`planframe.spark`)**: `https://planframe.readthedocs.io/en/latest/planframe/guides/pyspark-like-api/`
 - **Pandas-like API (`planframe.pandas`)**: `https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/`
 - **Using planframe-polars**: `https://planframe.readthedocs.io/en/latest/planframe_polars/guides/using-planframe-polars/`

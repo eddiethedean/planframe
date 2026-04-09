@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal, NoReturn, TypeVar
 
 import pandas as pd
 
@@ -28,6 +28,14 @@ class PandasFrame(PandasLikeFrame[Any, PandasBackendFrame, object]):
         storage_options: StorageOptions | None = ...,
     ) -> PandasFrameT: ...
     @classmethod
+    def read_parquet(
+        cls: type[PandasFrameT],
+        path: str,
+        *,
+        schema: type[SchemaT],
+        storage_options: StorageOptions | None = ...,
+    ) -> PandasFrameT: ...
+    @classmethod
     def scan_parquet_dataset(
         cls: type[PandasFrameT],
         path_or_glob: str,
@@ -44,7 +52,23 @@ class PandasFrame(PandasLikeFrame[Any, PandasBackendFrame, object]):
         storage_options: StorageOptions | None = ...,
     ) -> PandasFrameT: ...
     @classmethod
+    def read_csv(
+        cls: type[PandasFrameT],
+        path: str,
+        *,
+        schema: type[SchemaT],
+        storage_options: StorageOptions | None = ...,
+    ) -> PandasFrameT: ...
+    @classmethod
     def scan_ndjson(
+        cls: type[PandasFrameT],
+        path: str,
+        *,
+        schema: type[SchemaT],
+        storage_options: StorageOptions | None = ...,
+    ) -> PandasFrameT: ...
+    @classmethod
+    def read_json(
         cls: type[PandasFrameT],
         path: str,
         *,
@@ -110,3 +134,34 @@ class PandasFrame(PandasLikeFrame[Any, PandasBackendFrame, object]):
         engine: Literal["connectorx", "adbc"] | None = ...,
         schema: type[SchemaT],
     ) -> PandasFrameT: ...
+    def to_csv(
+        self,
+        path: str,
+        *,
+        sep: str = ...,
+        header: bool = ...,
+        storage_options: StorageOptions | None = ...,
+    ) -> None: ...
+    def to_parquet(
+        self,
+        path: str,
+        *,
+        compression: str = ...,
+        row_group_size: int | None = ...,
+        partition_cols: tuple[str, ...] | None = ...,
+        storage_options: StorageOptions | None = ...,
+    ) -> None: ...
+
+    # Core/Polars-style verbs are blocked on the pandas backend package.
+    def select(self, *_: object, **__: object) -> NoReturn: ...
+    def with_columns(self, *_: object, **__: object) -> NoReturn: ...
+    def with_row_index(self, *_: object, **__: object) -> NoReturn: ...
+    def drop_nulls(self, *_: object, **__: object) -> NoReturn: ...
+    def drop_nulls_all(self, *_: object, **__: object) -> NoReturn: ...
+    def unpivot(self, *_: object, **__: object) -> NoReturn: ...
+    def vstack(self, *_: object, **__: object) -> NoReturn: ...
+    def hstack(self, *_: object, **__: object) -> NoReturn: ...
+    def sort(self, *_: object, **__: object) -> NoReturn: ...
+    def join(self, *_: object, **__: object) -> NoReturn: ...
+    def unique(self, *_: object, **__: object) -> NoReturn: ...
+    def duplicated(self, *_: object, **__: object) -> NoReturn: ...

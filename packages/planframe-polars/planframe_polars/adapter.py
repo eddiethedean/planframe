@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import AsyncIterator, Iterator
 from typing import Any, Literal, cast
 
 import polars as pl
@@ -26,10 +27,104 @@ PolarsBackendFrame = pl.DataFrame | pl.LazyFrame
 
 # Polars adds join kwargs over time; only forward hints the installed version supports.
 _LAZYFRAME_JOIN_PARAM_NAMES = frozenset(inspect.signature(pl.LazyFrame.join).parameters)
+_LAZYFRAME_COLLECT_PARAM_NAMES = frozenset(inspect.signature(pl.LazyFrame.collect).parameters)
 
 
 class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     name = "polars"
+
+    # ---- AdapterReader surface (used by PolarsFrame classmethods) ----
+    def scan_parquet(
+        self,
+        path: str,
+        *,
+        hive_partitioning: bool | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> PolarsBackendFrame:
+        kwargs: dict[str, Any] = {"storage_options": storage_options}
+        if hive_partitioning is not None:
+            kwargs["hive_partitioning"] = hive_partitioning
+        return pl.scan_parquet(path, **kwargs)
+
+    def scan_parquet_dataset(
+        self, path_or_glob: str, *, storage_options: StorageOptions | None = None
+    ) -> PolarsBackendFrame:
+        # Polars uses `scan_parquet(..., hive_partitioning=True)` for datasets.
+        return self.scan_parquet(
+            path_or_glob,
+            hive_partitioning=True,
+            storage_options=storage_options,
+        )
+
+    def scan_csv(
+        self, path: str, *, storage_options: StorageOptions | None = None
+    ) -> PolarsBackendFrame:
+        return pl.scan_csv(path, storage_options=storage_options)
+
+    def scan_ndjson(
+        self, path: str, *, storage_options: StorageOptions | None = None
+    ) -> PolarsBackendFrame:
+        return pl.scan_ndjson(path, storage_options=storage_options)
+
+    def scan_ipc(
+        self,
+        path: str,
+        *,
+        hive_partitioning: bool | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> PolarsBackendFrame:
+        kwargs: dict[str, Any] = {"storage_options": storage_options}
+        if hive_partitioning is not None:
+            kwargs["hive_partitioning"] = hive_partitioning
+        return pl.scan_ipc(path, **kwargs)
+
+    def scan_delta(
+        self,
+        source: str,
+        *,
+        version: int | str | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> PolarsBackendFrame:
+        kwargs: dict[str, Any] = {"storage_options": storage_options}
+        if version is not None:
+            kwargs["version"] = version
+        return pl.scan_delta(source, **kwargs)
+
+    def read_delta(
+        self,
+        source: str,
+        *,
+        version: int | str | None = None,
+        storage_options: StorageOptions | None = None,
+    ) -> PolarsBackendFrame:
+        kwargs: dict[str, Any] = {"storage_options": storage_options}
+        if version is not None:
+            kwargs["version"] = version
+        return pl.read_delta(source, **kwargs)
+
+    def read_excel(self, path: str, *, sheet_name: str | None = None) -> PolarsBackendFrame:
+        kwargs: dict[str, Any] = {}
+        if sheet_name is not None:
+            kwargs["sheet_name"] = sheet_name
+        return pl.read_excel(path, **kwargs)
+
+    def read_avro(self, path: str) -> PolarsBackendFrame:
+        return pl.read_avro(path)
+
+    def read_database(self, query: str, *, connection: object) -> PolarsBackendFrame:
+        return pl.read_database(query=query, connection=connection)
+
+    def read_database_uri(
+        self,
+        query: str,
+        *,
+        uri: str,
+        engine: Literal["connectorx", "adbc"] | None = None,
+    ) -> PolarsBackendFrame:
+        kwargs: dict[str, Any] = {}
+        if engine is not None:
+            kwargs["engine"] = engine
+        return pl.read_database_uri(query=query, uri=uri, **kwargs)
 
     @property
     def capabilities(self) -> AdapterCapabilities:
@@ -790,3 +885,26 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
     ) -> dict[str, list[object]]:
         _ = options
         return self._collect_df(df).to_dict(as_series=False)  # type: ignore[return-value]
+
+    def stream_dicts(
+        self, df: PolarsBackendFrame, *, options: ExecutionOptions | None = None
+    ) -> Iterator[dict[str, object]]:
+        kwargs: dict[str, Any] = {}
+        if options is not None:
+            streaming = options.engine_streaming
+            if streaming is None:
+                streaming = options.streaming
+            if streaming is not None and "streaming" in _LAZYFRAME_COLLECT_PARAM_NAMES:
+                kwargs["streaming"] = streaming
+
+        out = df.collect(**kwargs) if isinstance(df, pl.LazyFrame) else df
+        if not isinstance(out, pl.DataFrame):
+            raise TypeError("Expected Polars collect() to return a DataFrame")
+        for row in out.iter_rows(named=True):
+            yield cast(dict[str, object], row)
+
+    async def astream_dicts(
+        self, df: PolarsBackendFrame, *, options: ExecutionOptions | None = None
+    ) -> AsyncIterator[dict[str, object]]:
+        for row in self.stream_dicts(df, options=options):
+            yield row

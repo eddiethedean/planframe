@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Iterator
 from typing import Any, Generic, Literal, Protocol, TypeVar
 
 from planframe.backend.errors import PlanFrameExecutionError
+from planframe.backend.io import AdapterRowStreamer
 from planframe.execution_options import ExecutionOptions
 from planframe.plan.nodes import PlanNode
 from planframe.schema.ir import Schema
@@ -88,6 +90,30 @@ class _HasFrameIODeps(Protocol[BackendFrameT, BackendExprT]):
         compression: Literal["uncompressed", "snappy", "deflate"],
         name: str,
     ) -> None: ...
+
+    def to_dicts(
+        self,
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> list[dict[str, object]]: ...
+
+    async def ato_dicts(
+        self,
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> list[dict[str, object]]: ...
+
+    def stream_dicts(
+        self,
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> Iterator[dict[str, object]]: ...
+
+    def astream_dicts(
+        self,
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> AsyncIterator[dict[str, object]]: ...
 
 
 class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
@@ -178,6 +204,55 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             return self._adapter.to_dict(planned, options=options)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(f"Backend to_dict failed for {self._adapter.name}") from e
+
+    def stream_dicts(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> Iterator[dict[str, object]]:
+        adapter = self._adapter
+        if isinstance(adapter, AdapterRowStreamer):
+            planned = self._eval(self._plan)
+            yield from adapter.stream_dicts(planned, options=options)
+            return
+        yield from self.to_dicts(options=options)
+
+    def astream_dicts(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> AsyncIterator[dict[str, object]]:
+        adapter = self._adapter
+        if isinstance(adapter, AdapterRowStreamer):
+            planned = self._eval(self._plan)
+            return adapter.astream_dicts(planned, options=options)
+
+        async def _fallback() -> AsyncIterator[dict[str, object]]:
+            for row in await self.ato_dicts(options=options):
+                yield row
+
+        return _fallback()
+
+    def stream(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        name: str = "Row",
+        options: ExecutionOptions | None = None,
+    ) -> Iterator[Any]:
+        Model = materialize_model(name=name, schema=self._schema, kind="pydantic")
+        for r in self.stream_dicts(options=options):
+            yield Model(**r)
+
+    async def astream(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        name: str = "Row",
+        options: ExecutionOptions | None = None,
+    ) -> AsyncIterator[Any]:
+        Model = materialize_model(name=name, schema=self._schema, kind="pydantic")
+
+        async for r in self.astream_dicts(options=options):
+            yield Model(**r)
 
     async def ato_dicts(
         self: _HasFrameIODeps[BackendFrameT, BackendExprT],
@@ -303,7 +378,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> None:
         try:
             planned = self._eval(self._plan)
-            self._adapter.write_parquet(
+            self._adapter.writer.sink_parquet(
                 planned,
                 path,
                 compression=compression,
@@ -326,7 +401,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> None:
         try:
             planned = self._eval(self._plan)
-            self._adapter.write_csv(
+            self._adapter.writer.sink_csv(
                 planned,
                 path,
                 separator=separator,
@@ -346,7 +421,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> None:
         try:
             planned = self._eval(self._plan)
-            self._adapter.write_ndjson(planned, path, storage_options=storage_options)
+            self._adapter.writer.sink_ndjson(planned, path, storage_options=storage_options)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend sink_ndjson failed for {self._adapter.name}"
@@ -361,7 +436,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> None:
         try:
             planned = self._eval(self._plan)
-            self._adapter.write_ipc(
+            self._adapter.writer.sink_ipc(
                 planned, path, compression=compression, storage_options=storage_options
             )
         except Exception as e:  # noqa: BLE001
@@ -379,7 +454,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> None:
         try:
             planned = self._eval(self._plan)
-            self._adapter.write_database(
+            self._adapter.writer.sink_database(
                 planned,
                 table_name=table_name,
                 connection=connection,
@@ -396,7 +471,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> None:
         try:
             planned = self._eval(self._plan)
-            self._adapter.write_excel(planned, path, worksheet=worksheet)
+            self._adapter.writer.sink_excel(planned, path, worksheet=worksheet)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend sink_excel failed for {self._adapter.name}"
@@ -411,7 +486,9 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> None:
         try:
             planned = self._eval(self._plan)
-            self._adapter.write_delta(planned, target, mode=mode, storage_options=storage_options)
+            self._adapter.writer.sink_delta(
+                planned, target, mode=mode, storage_options=storage_options
+            )
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend sink_delta failed for {self._adapter.name}"
@@ -426,7 +503,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> None:
         try:
             planned = self._eval(self._plan)
-            self._adapter.write_avro(planned, path, compression=compression, name=name)
+            self._adapter.writer.sink_avro(planned, path, compression=compression, name=name)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend sink_avro failed for {self._adapter.name}"

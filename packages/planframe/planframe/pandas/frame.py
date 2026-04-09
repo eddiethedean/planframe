@@ -14,6 +14,7 @@ from typing_extensions import LiteralString, Self
 
 from planframe.expr.api import Expr, col, eq, ge, gt, le, lit, lt, ne
 from planframe.frame import Frame
+from planframe.groupby import GroupedFrame
 from planframe.plan.join_options import JoinOptions
 
 from .series import Series, series_from_key
@@ -136,7 +137,8 @@ class PandasLikeFrame(
 
         out: Frame[Any, BackendFrameT, BackendExprT] = self
         for name, value in columns.items():
-            out = out.with_columns(exprs={cast(LiteralString, name): _expr(value)})
+            # Bypass any backend-bound overrides (e.g. PandasFrame blocking core verbs).
+            out = Frame.with_columns(out, exprs={cast(LiteralString, name): _expr(value)})
         return cast(PandasLikeFrame[Any, Any, Any], out)
 
     def sort_values(
@@ -161,6 +163,22 @@ class PandasLikeFrame(
             PandasLikeFrame[Any, Any, Any],
             super().sort(*keys, descending=descending, nulls_last=nulls_last),
         )
+
+    def groupby(
+        self,
+        by: str | Sequence[str],
+        *,
+        sort: bool = False,
+        dropna: bool = True,
+    ) -> object:
+        """Pandas-like `groupby`, lowered to core `group_by`.\n\n        Note: PlanFrame does not implement pandas index semantics; this returns a PlanFrame\n        grouped object with `.agg(...)`.\n"""
+
+        _ = sort, dropna
+        keys = (by,) if isinstance(by, str) else tuple(by)
+        if not keys:
+            raise ValueError("groupby requires non-empty by=")
+        grouped: GroupedFrame[Any, BackendFrameT, BackendExprT] = super().group_by(*keys)
+        return _PandasGroupBy(owner=self, grouped=grouped)
 
     @overload
     def drop(self, *columns: str, strict: bool = True) -> PandasLikeFrame[Any, Any, Any]: ...
@@ -240,6 +258,32 @@ class PandasLikeFrame(
         return cast(
             PandasLikeFrame[Any, Any, Any],
             super().drop_nulls(subset=sub or None, how=how, threshold=thresh),
+        )
+
+    def melt(
+        self,
+        *,
+        id_vars: Sequence[str] | str,
+        value_vars: Sequence[str] | str,
+        var_name: str = "variable",
+        value_name: str = "value",
+    ) -> PandasLikeFrame[Any, Any, Any]:
+        """Pandas-like `melt`, lowered to core `unpivot`."""
+
+        ids = (id_vars,) if isinstance(id_vars, str) else tuple(id_vars)
+        vals = (value_vars,) if isinstance(value_vars, str) else tuple(value_vars)
+        if not ids:
+            raise ValueError("melt requires non-empty id_vars=")
+        if not vals:
+            raise ValueError("melt requires non-empty value_vars=")
+        return cast(
+            PandasLikeFrame[Any, Any, Any],
+            super().unpivot(
+                index=ids,
+                on=vals,
+                variable_name=var_name,
+                value_name=value_name,
+            ),
         )
 
     @overload
@@ -442,3 +486,30 @@ class PandasLikeFrame(
 
 
 __all__ = ["PandasLikeFrame", "Series"]
+
+
+class _PandasGroupBy(Generic[SchemaT, BackendFrameT, BackendExprT]):
+    __slots__ = ("_owner", "_grouped")
+
+    def __init__(
+        self,
+        *,
+        owner: PandasLikeFrame[SchemaT, BackendFrameT, BackendExprT],
+        grouped: GroupedFrame[Any, BackendFrameT, BackendExprT],
+    ) -> None:
+        self._owner = owner
+        self._grouped = grouped
+
+    def agg(self, **named_aggs: object) -> PandasLikeFrame[Any, Any, Any]:
+        out = self._grouped.agg(**cast(Any, named_aggs))
+        # Re-wrap the core `Frame` result into the same runtime type as the owner so
+        # pandas-style chaining (e.g. `.sort_values`) continues to work.
+        return cast(
+            PandasLikeFrame[Any, Any, Any],
+            type(self._owner)(
+                _data=out._data,  # type: ignore[attr-defined]
+                _adapter=out._adapter,  # type: ignore[attr-defined]
+                _plan=out._plan,  # type: ignore[attr-defined]
+                _schema=out._schema,  # type: ignore[attr-defined]
+            ),
+        )
