@@ -23,9 +23,9 @@ class User(PandasFrame):
     age: int
 
 
-def test_pandas_construction_and_collect_returns_dataframe() -> None:
+def test_pandas_construction_and_collect_backend_returns_dataframe() -> None:
     pf = User({"id": [1], "name": ["a"], "age": [10]})
-    df = pf.collect()
+    df = pf.collect_backend()
     assert isinstance(df, pd.DataFrame)
     assert df.to_dict(orient="list") == {"id": [1], "name": ["a"], "age": [10]}
 
@@ -38,7 +38,7 @@ def test_pandas_select_with_column_filter_sort() -> None:
         .filter(ne(col("id"), lit(2)))
         .sort("id")
     )
-    df = out.collect()
+    df = out.collect_backend()
     assert df["id"].to_list() == [1, 3]
     assert df["age2"].to_list() == [11, 31]
 
@@ -52,7 +52,7 @@ def test_pandas_join_inner() -> None:
 
     right = Right({"id": [2, 3], "x": [200, 300]})
     out = left.join(right, on=("id",), how="inner")
-    df = out.collect()
+    df = out.collect_backend()
     assert df.to_dict(orient="list") == {"id": [2], "name": ["b"], "age": [20], "x": [200]}
 
 
@@ -63,7 +63,7 @@ def test_pandas_group_by_agg_tuple_and_aggexpr() -> None:
 
     pf = S({"g": [1, 1, 2], "x": [10, 20, 7]})
     out = pf.group_by("g").agg(n=("count", "x"), sx=agg_sum(col("x"))).sort("g")
-    df = out.collect()
+    df = out.collect_backend()
     assert df.columns.tolist() == ["g", "n", "sx"]
     assert df["g"].to_list() == [1, 2]
     assert df["n"].to_list() == [2, 1]
@@ -87,21 +87,21 @@ def test_pandas_melt_pivot_explode_unnest(tmp_path: Any) -> None:
 
     melted = pf.unpivot(index=("id",), on=("a", "b"), variable_name="k", value_name="v")
     piv = melted.pivot(index=("id",), columns="k", values="v", on_columns=("a", "b"), agg="first")
-    df = piv.sort("id").collect()
+    df = piv.sort("id").collect_backend()
     assert df.columns.tolist() == ["id", "a", "b"]
     assert df.to_dict(orient="list") == {"id": [1, 2], "a": [10, 11], "b": [20, 21]}
 
     # unpivot alias
     unp = pf.unpivot(index=("id",), on=("a", "b"), variable_name="k", value_name="v")
-    df_unp = unp.sort("id").collect()
+    df_unp = unp.sort("id").collect_backend()
     assert set(df_unp.columns.tolist()) == {"id", "k", "v"}
 
     exploded = pf.explode("parts").select("id", "parts").sort("id")
-    df2 = exploded.collect()
+    df2 = exploded.collect_backend()
     assert df2.to_dict(orient="list") == {"id": [1, 1, 2], "parts": [1, 2, 3]}
 
     unnested = pf.unnest("meta").select("id", "x", "y").sort("id")
-    df3 = unnested.collect()
+    df3 = unnested.collect_backend()
     assert df3.to_dict(orient="list") == {"id": [1, 2], "x": [1, 2], "y": ["a", "b"]}
 
     # IO: csv should work
@@ -113,10 +113,10 @@ def test_pandas_melt_pivot_explode_unnest(tmp_path: Any) -> None:
 def test_pandas_clip_subset_and_all_numeric() -> None:
     pf = User({"id": [1, 2], "age": [-1, 10]})
 
-    df_subset = pf.clip(lower=0, upper=6, subset=("age",)).collect()
+    df_subset = pf.clip(lower=0, upper=6, subset=("age",)).collect_backend()
     assert df_subset.to_dict(orient="list") == {"id": [1, 2], "age": [0, 6]}
 
-    df_all = pf.clip(lower=0).collect()
+    df_all = pf.clip(lower=0).collect_backend()
     assert df_all.to_dict(orient="list") == {"id": [1, 2], "age": [0, 10]}
 
 
@@ -144,16 +144,16 @@ def test_pandas_drop_nulls_threshold_matches_polars() -> None:
         b: int | None
 
     data = {"a": [1, None, None], "b": [None, 2, None]}
-    p = RowP(data).drop_nulls(subset=("a", "b"), threshold=1).collect()
-    polars_out = RowL(data).drop_nulls(subset=("a", "b"), threshold=1).collect()
+    p = RowP(data).drop_nulls(subset=("a", "b"), threshold=1).collect_backend()
+    polars_out = RowL(data).drop_nulls(subset=("a", "b"), threshold=1).collect_backend()
     assert_frame_equal(
         p.reset_index(drop=True),
         polars_out.to_pandas().reset_index(drop=True),
         check_dtype=False,
     )
 
-    p_all = RowP(data).drop_nulls(subset=("a", "b"), how="all", threshold=1).collect()
-    polars_all = RowL(data).drop_nulls(subset=("a", "b"), how="all", threshold=1).collect()
+    p_all = RowP(data).drop_nulls(subset=("a", "b"), how="all", threshold=1).collect_backend()
+    polars_all = RowL(data).drop_nulls(subset=("a", "b"), how="all", threshold=1).collect_backend()
     assert_frame_equal(
         p_all.reset_index(drop=True),
         polars_all.to_pandas().reset_index(drop=True),
@@ -173,8 +173,8 @@ def test_pandas_fill_null_strategy_respects_subset_matches_polars() -> None:
         b: float | None
 
     data = {"a": [None, None, 1.0], "b": [100.0, None, None]}
-    p_out = RowP(data).fill_null(None, "a", strategy="forward").collect()
-    l_out = RowL(data).fill_null(None, "a", strategy="forward").collect()
+    p_out = RowP(data).fill_null(None, "a", strategy="forward").collect_backend()
+    l_out = RowL(data).fill_null(None, "a", strategy="forward").collect_backend()
 
     def _floats(series: Any) -> list[float | None]:
         return [

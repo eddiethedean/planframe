@@ -796,7 +796,7 @@ def test_always_lazy_no_adapter_calls_until_collect() -> None:
 
     assert adapter.calls == []
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 1, "years": 2, "age_plus_one": "computed"}]
 
     # Ensure evaluation actually invoked the adapter at the boundary.
@@ -825,7 +825,7 @@ def test_always_lazy_with_new_ops() -> None:
     )
 
     assert adapter.calls == []
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"duplicated": False}, {"duplicated": False}]
 
 
@@ -834,7 +834,7 @@ def test_fill_null_strategy_forward_fill() -> None:
     data = [{"id": 1, "age": None}, {"id": 2, "age": 10}, {"id": 3, "age": None}]
     pf = Frame.source(data, adapter=adapter, schema=UserDC)
 
-    out = pf.fill_null(None, "age", strategy="forward").collect()
+    out = pf.fill_null(None, "age", strategy="forward").collect_backend()
     assert out == [{"id": 1, "age": None}, {"id": 2, "age": 10}, {"id": 3, "age": 10}]
 
 
@@ -845,7 +845,7 @@ def test_fill_null_subset_and_many_are_lazy() -> None:
 
     out = pf.fill_null_subset(0, "age").fill_null_many({"age": 1})
     assert adapter.calls == []
-    _ = out.collect()
+    _ = out.collect_backend()
     assert [c[0] for c in adapter.calls] == ["fill_null", "fill_null", "collect"]
 
 
@@ -887,7 +887,7 @@ def test_select_mixed_str_and_expr_single_project_node() -> None:
     assert out.schema().names() == ("id", "doubled")
     assert isinstance(out.plan(), Project)
     assert adapter.calls == []
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 1, "doubled": "computed"}]
     assert [c[0] for c in adapter.calls[:-1]] == ["compile_expr", "project"]
 
@@ -907,7 +907,7 @@ def test_rename_strict_false_ignores_unknown_columns() -> None:
     assert out.schema().names() == ("pk", "age")
     assert adapter.calls == []
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"pk": 1, "age": 2}]
     assert adapter.calls == [
         ("rename", ({"id": "pk", "ghost": "y"}, False)),
@@ -921,7 +921,7 @@ def test_rename_strict_false_only_renames_existing_keys() -> None:
 
     out = pf.rename(age="years", missing="x", strict=False)
     assert out.schema().names() == ("id", "years")
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 1, "years": 2}]
     assert adapter.calls[0] == (
         "rename",
@@ -937,7 +937,7 @@ def test_drop_strict_false_ignores_unknown_columns() -> None:
     assert out.schema().names() == ("id", "age")
     assert adapter.calls == []
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 1, "age": 2}]
     assert adapter.calls == [
         ("drop", (("only_if_present",), False)),
@@ -951,7 +951,7 @@ def test_drop_strict_false_drops_present_and_ignores_missing() -> None:
 
     out = pf.drop("age", "ghost", strict=False)
     assert out.schema().names() == ("id",)
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 1}]
     assert adapter.calls[0] == ("drop", (("age", "ghost"), False))
 
@@ -972,7 +972,7 @@ def test_sort_accepts_per_key_descending_and_nulls_last() -> None:
         schema=UserDC,
     )
     out = pf.sort("id", "age", descending=[False, True], nulls_last=[True, True])
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [
         {"id": 1, "age": 30},
         {"id": 1, "age": 10},
@@ -1003,11 +1003,11 @@ def test_sort_accepts_expression_keys() -> None:
         schema=UserDC,
     )
     out = pf.sort(add(col("id"), col("age")))
-    collected = out.collect()
+    collected = out.collect_backend()
     assert [r["id"] for r in collected] == [2, 1, 3]
 
     out2 = pf.sort("id", add(col("age"), lit(0)), descending=[True, False])
-    collected2 = out2.collect()
+    collected2 = out2.collect_backend()
     assert collected2[0]["id"] == 3
 
 
@@ -1078,7 +1078,7 @@ def test_join_is_always_lazy_and_schema_merge_rules() -> None:
     assert adapter.calls == []
     assert out.schema().names() == ("id", "age", "name", "name_right")
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 1, "age": 10, "name": "a", "name_right": "x"}]
     assert [c[0] for c in adapter.calls] == [
         "join",
@@ -1110,7 +1110,7 @@ def test_join_asymmetric_keys_inner() -> None:
     assert adapter.calls == []
     assert out.schema().names() == ("user_id", "x", "y")
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"user_id": 1, "x": 10, "y": 100}]
     assert adapter.calls[0][1][0] == (CompiledJoinKey(column="user_id", expr=None),)
     assert adapter.calls[0][1][1] == (CompiledJoinKey(column="id", expr=None),)
@@ -1136,7 +1136,7 @@ def test_group_by_expression_key_spy() -> None:
         schema=Row,
     )
     out = pf.group_by(lower(col("g"))).agg(n=("count", "v"), total=("sum", "v"))
-    collected = out.collect()
+    collected = out.collect_backend()
     assert len(collected) == 2
     by_g0 = {r["__pf_g0"]: r for r in collected}
     assert by_g0["a"]["n"] == 2
@@ -1186,7 +1186,7 @@ def test_group_by_agg_expr_sum_ratio_spy() -> None:
         )
         .sort("id")
     )
-    rows = out.collect()
+    rows = out.collect_backend()
     assert rows[0]["rpc"] == 20
     assert rows[0]["total_rev"] == 40
     assert rows[1]["rpc"] == 20
@@ -1230,7 +1230,7 @@ def test_join_expression_keys_inner() -> None:
         right_on=(lower(col("email_norm")),),
         how="inner",
     )
-    collected = out.collect()
+    collected = out.collect_backend()
     assert len(collected) == 2
     assert {r["id"] for r in collected} == {1, 2}
 
@@ -1252,7 +1252,7 @@ def test_join_cross_is_lazy_and_cartesian_in_spy() -> None:
     assert adapter.calls == []
     assert out.schema().names() == ("a", "b")
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"a": 1, "b": 10}, {"a": 2, "b": 10}]
 
 
@@ -1272,7 +1272,7 @@ def test_row_ops_are_always_lazy() -> None:
     out = pf.head(2).slice(1, 1).tail(1).limit(1)
     assert adapter.calls == []
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 2, "age": 3}]
     assert [c[0] for c in adapter.calls] == ["head", "slice", "tail", "head", "collect"]
 
@@ -1294,7 +1294,7 @@ def test_pattern_select_drop_compile_to_select_drop_and_are_lazy() -> None:
     assert adapter.calls == []
     assert out.schema().names() == ("x_a",)
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"x_a": 10}]
     assert [c[0] for c in adapter.calls] == ["select", "drop", "collect"]
 
@@ -1314,7 +1314,7 @@ def test_concat_vertical_is_lazy_and_validates_schema() -> None:
     assert adapter.calls == []
     assert out.schema().names() == ("id", "age")
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 1, "age": 10}, {"id": 2, "age": 20}]
     assert [c[0] for c in adapter.calls] == ["concat_vertical", "collect"]
 
@@ -1362,7 +1362,7 @@ def test_pivot_is_always_lazy() -> None:
     out = pf.pivot(index=("id",), on="k", values="v", on_columns=("a", "b"))
     assert adapter.calls == []
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 1, "a": 10, "b": 20}]
     assert [c[0] for c in adapter.calls] == ["pivot", "collect"]
 
@@ -1389,7 +1389,7 @@ def test_call_order_for_mixed_ops_including_pivot_and_concat() -> None:
 
     out = left.vstack(right).pivot(index=("id",), on="k", values="v", on_columns=("a", "b")).head(1)
     assert adapter.calls == []
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 1, "a": 10, "b": 20}]
     assert [c[0] for c in adapter.calls] == ["concat_vertical", "pivot", "head", "collect"]
 
@@ -1417,7 +1417,7 @@ def test_new_transforms_are_lazy() -> None:
         .drop_nulls_all("a", "b")
     )
     assert adapter.calls == []
-    _ = out.collect()
+    _ = out.collect_backend()
 
 
 def test_pivot_longer_and_pivot_wider_are_lazy() -> None:
@@ -1438,7 +1438,7 @@ def test_pivot_longer_and_pivot_wider_are_lazy() -> None:
         aggregate_function="first",
     )
     assert adapter.calls == []
-    _ = out.collect()
+    _ = out.collect_backend()
     assert [c[0] for c in adapter.calls] == ["melt", "pivot", "collect"]
 
 
@@ -1450,7 +1450,7 @@ def test_with_row_count_is_lazy_and_respects_offset() -> None:
     out = pf.select("id").with_row_index(name="rn", offset=10)
     assert adapter.calls == []
 
-    rows = out.collect()
+    rows = out.collect_backend()
     assert rows == [{"id": 1, "rn": 10}, {"id": 2, "rn": 11}, {"id": 3, "rn": 12}]
     assert [c[0] for c in adapter.calls] == ["select", "with_row_count", "collect"]
 
@@ -1462,7 +1462,7 @@ def test_cast_many_and_cast_subset_are_lazy() -> None:
 
     out = pf.cast_many({"age": float}).cast_subset("age", dtype=int)
     assert adapter.calls == []
-    _ = out.collect()
+    _ = out.collect_backend()
     assert [c[0] for c in adapter.calls] == ["cast", "cast", "collect"]
 
 
@@ -1478,7 +1478,7 @@ def test_rename_case_helpers_are_lazy_and_detect_collisions() -> None:
 
     out = pf.rename_upper(strict=True)
     assert adapter.calls == []
-    rows = out.collect()
+    rows = out.collect_backend()
     assert rows == [{"FOO": 1, "BAR": 2}]
     assert [c[0] for c in adapter.calls] == ["rename", "collect"]
 
@@ -1504,7 +1504,7 @@ def test_clip_is_lazy_and_clips_selected_columns() -> None:
     out = pf.clip(lower=0, upper=6, subset=("x",))
     assert adapter.calls == []
 
-    _ = out.collect()
+    _ = out.collect_backend()
     # SpyAdapter.with_column doesn't evaluate expressions; it just records calls.
     assert [c[0] for c in adapter.calls] == ["compile_expr", "with_column", "collect"]
 
@@ -1525,7 +1525,7 @@ def test_select_schema_is_lazy_and_strict_semantics() -> None:
 
     out = pf.select_schema(prefix("i"))
     assert adapter.calls == []
-    rows = out.collect()
+    rows = out.collect_backend()
     assert rows == [{"id": 1}]
 
     assert adapter.calls and adapter.calls[0][0] == "select"
@@ -1536,7 +1536,7 @@ def test_select_schema_is_lazy_and_strict_semantics() -> None:
 
     # strict=False allows empty selection
     empty = pf.select_schema(prefix("nope"), strict=False)
-    assert empty.collect() == [{}]
+    assert empty.collect_backend() == [{}]
 
 
 def test_unnest_plan_node_carries_fields() -> None:
@@ -1548,7 +1548,7 @@ def test_unnest_plan_node_carries_fields() -> None:
         s: _SStructABStrict
 
     pf = Frame.source([{"id": 1, "s": {"a": 1, "b": 2}}], adapter=adapter, schema=S)
-    out = pf.unnest("s").collect()
+    out = pf.unnest("s").collect_backend()
     assert out == [{"id": 1, "a": 1, "b": 2}]
     assert ("unnest", (("s", ("a", "b")),)) in adapter.calls
 
@@ -1565,7 +1565,7 @@ def test_posexplode_is_lazy_and_adds_pos_and_value_columns() -> None:
     out = pf.posexplode("xs")
     assert adapter.calls == []
 
-    rows = out.collect()
+    rows = out.collect_backend()
     assert rows == [{"id": 1, "pos": 0, "xs": 10}, {"id": 1, "pos": 1, "xs": 20}]
     assert [c[0] for c in adapter.calls] == ["posexplode", "collect"]
 
@@ -1582,7 +1582,7 @@ def test_group_by_dynamic_is_lazy() -> None:
     pf = Frame.source([{"ts": 1, "g": "a", "x": 10}], adapter=adapter, schema=S)
     out = pf.group_by_dynamic("ts", every="1h", by=("g",)).agg(n=("count", "x"))
     assert adapter.calls == []
-    _ = out.collect()
+    _ = out.collect_backend()
     assert [c[0] for c in adapter.calls] == ["group_by_dynamic_agg", "collect"]
 
 
@@ -1597,7 +1597,7 @@ def test_rolling_agg_is_lazy() -> None:
     pf = Frame.source([{"ts": 1, "x": 10}], adapter=adapter, schema=S)
     out = pf.rolling_agg(on="ts", column="x", window_size=2, op="mean", out_name="x_roll")
     assert adapter.calls == []
-    _ = out.collect()
+    _ = out.collect_backend()
     assert [c[0] for c in adapter.calls] == ["rolling_agg", "collect"]
 
 
@@ -1628,7 +1628,7 @@ def test_backend_compile_expr_type_guard() -> None:
     # Force a non-Expr into the plan by bypassing typing (runtime misuse).
     with pytest.raises(PlanFrameBackendError):
         # type: ignore[arg-type]
-        pf.with_columns(x="not_an_expr").collect()
+        pf.with_columns(x="not_an_expr").collect_backend()
 
 
 def test_over_rejects_empty_order_by_tuple() -> None:
@@ -1679,6 +1679,6 @@ def test_sample_is_lazy_until_collect() -> None:
 
     out = pf.sample(1, seed=1, shuffle=True).select("id")
     assert adapter.calls == []
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected == [{"id": 1}]
     assert [c[0] for c in adapter.calls] == ["sample", "select", "collect"]

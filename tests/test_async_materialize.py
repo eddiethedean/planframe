@@ -30,7 +30,8 @@ def test_acollect_default_adapter_matches_collect() -> None:
         pf = Frame.source(data, adapter=adapter, schema=UserDC)
         out = await pf.select("id").acollect()
         sync_out = pf.select("id").collect()
-        assert out == sync_out == [{"id": 1}]
+        assert len(out) == 1 and len(sync_out) == 1
+        assert out[0].id == 1 and sync_out[0].id == 1
         assert "acollect" not in [c[0] for c in adapter.calls]
 
     asyncio.run(run())
@@ -43,10 +44,11 @@ def test_acollect_async_adapter_path() -> None:
 
     async def run() -> None:
         out = await pf.select("id", "age").filter(eq(col("id"), lit(1))).acollect()
-        assert out == [{"id": 1, "age": 2}]
+        assert len(out) == 1
+        assert out[0].id == 1 and out[0].age == 2
         names = [c[0] for c in adapter.calls]
         assert "acollect" in names
-        assert names[-1] == "collect"
+        assert names[-1] == "to_dicts"
 
     asyncio.run(run())
 
@@ -77,13 +79,13 @@ def test_ato_dict_matches_to_dict() -> None:
     asyncio.run(run())
 
 
-def test_acollect_kind_dataclass() -> None:
+def test_acollect_builds_pydantic_models() -> None:
     adapter = SpyAdapter()
     data = [{"id": 1, "age": 2}]
     pf = Frame.source(data, adapter=adapter, schema=UserDC)
 
     async def run() -> None:
-        rows = await pf.acollect(kind="dataclass", name="UserRow")
+        rows = await pf.acollect(name="UserRow")
         assert len(rows) == 1
         row = rows[0]
         assert type(row).__name__ == "UserRow"
@@ -104,7 +106,8 @@ def test_acollect_native_async_skips_to_thread(monkeypatch: pytest.MonkeyPatch) 
     pf = Frame.source(data, adapter=adapter, schema=UserDC)
 
     async def run() -> None:
-        out = await pf.acollect()
-        assert out == data
+        out = await pf.acollect(name="UserRow")
+        assert len(out) == 1
+        assert out[0].id == 1 and out[0].age == 2
 
     asyncio.run(run())

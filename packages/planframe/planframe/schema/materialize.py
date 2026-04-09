@@ -9,6 +9,14 @@ from pydantic import BaseModel, create_model
 from planframe.schema.ir import Schema
 
 
+def _schema_cache_key(schema: Schema) -> tuple[tuple[str, str], ...]:
+    # Schema.dtypes may not be hashable; use repr() for a stable key.
+    return tuple((f.name, repr(f.dtype)) for f in schema.fields)
+
+
+_MODEL_CACHE: dict[tuple[str, str, tuple[tuple[str, str], ...]], type[Any]] = {}
+
+
 def materialize_dataclass(name: str, schema: Schema) -> type[Any]:
     namespace: dict[str, Any] = {"__annotations__": {}}
     for f in schema.fields:
@@ -27,6 +35,14 @@ def materialize_pydantic(name: str, schema: Schema) -> type[BaseModel]:
 def materialize_model(
     name: str, schema: Schema, *, kind: Literal["dataclass", "pydantic"]
 ) -> type[Any]:
+    cache_key = (kind, name, _schema_cache_key(schema))
+    cached = _MODEL_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
     if kind == "dataclass":
-        return materialize_dataclass(name, schema)
-    return materialize_pydantic(name, schema)
+        out = materialize_dataclass(name, schema)
+    else:
+        out = materialize_pydantic(name, schema)
+    _MODEL_CACHE[cache_key] = out
+    return out

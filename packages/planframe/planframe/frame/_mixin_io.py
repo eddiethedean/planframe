@@ -25,6 +25,12 @@ class _HasFrameIODeps(Protocol[BackendFrameT, BackendExprT]):
 
     def _eval(self, node: object) -> BackendFrameT: ...
 
+    def collect_backend(self, *, options: ExecutionOptions | None = None) -> BackendFrameT: ...
+
+    async def acollect_backend(
+        self, *, options: ExecutionOptions | None = None
+    ) -> BackendFrameT: ...
+
     # Methods from `FrameIOMixin` itself. Declared so that helpers on this mixin can
     # call each other (e.g. `write_*` delegating to `sink_*`) without confusing type checkers.
     def sink_parquet(
@@ -89,57 +95,64 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     __slots__ = ()
 
-    def collect(
+    def collect_backend(
         self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         *,
-        kind: Literal["dataclass", "pydantic"] | None = None,
-        name: str = "Row",
         options: ExecutionOptions | None = None,
-    ) -> BackendFrameT | list[Any]:
+    ) -> BackendFrameT:
+        """Materialize and return the backend-native frame object."""
+
         try:
             planned = self._eval(self._plan)
-            out = self._adapter.collect(planned, options=options)
+            return self._adapter.collect(planned, options=options)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(f"Backend collect failed for {self._adapter.name}") from e
 
-        if kind is None:
-            return out
-
-        # Build row models from the derived schema.
-        Model = materialize_model(name=name, schema=self._schema, kind=kind)
-        try:
-            rows = self._adapter.to_dicts(out, options=options)
-            return [Model(**r) for r in rows]
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend collect(kind={kind!r}) failed for {self._adapter.name}"
-            ) from e
-
-    async def acollect(
+    async def acollect_backend(
         self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         *,
-        kind: Literal["dataclass", "pydantic"] | None = None,
-        name: str = "Row",
         options: ExecutionOptions | None = None,
-    ) -> BackendFrameT | list[Any]:
+    ) -> BackendFrameT:
+        """Async materialization returning the backend-native frame object."""
+
         try:
             planned = self._eval(self._plan)
-            out = await self._adapter.acollect(planned, options=options)
+            return await self._adapter.acollect(planned, options=options)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
                 f"Backend acollect failed for {self._adapter.name}"
             ) from e
 
-        if kind is None:
-            return out
+    def collect(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        name: str = "Row",
+        options: ExecutionOptions | None = None,
+    ) -> list[Any]:
+        out = self.collect_backend(options=options)
 
-        Model = materialize_model(name=name, schema=self._schema, kind=kind)
+        Model = materialize_model(name=name, schema=self._schema, kind="pydantic")
+        try:
+            rows = self._adapter.to_dicts(out, options=options)
+            return [Model(**r) for r in rows]
+        except Exception as e:  # noqa: BLE001
+            raise PlanFrameExecutionError(f"Backend collect failed for {self._adapter.name}") from e
+
+    async def acollect(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        name: str = "Row",
+        options: ExecutionOptions | None = None,
+    ) -> list[Any]:
+        out = await self.acollect_backend(options=options)
+
+        Model = materialize_model(name=name, schema=self._schema, kind="pydantic")
         try:
             rows = self._adapter.to_dicts(out, options=options)
             return [Model(**r) for r in rows]
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
-                f"Backend acollect(kind={kind!r}) failed for {self._adapter.name}"
+                f"Backend acollect failed for {self._adapter.name}"
             ) from e
 
     def to_dicts(

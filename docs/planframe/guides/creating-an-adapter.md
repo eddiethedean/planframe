@@ -36,7 +36,7 @@ Expected output:
 
 ```text
 schema=('id', 'age')
-collect=[{'id': 1, 'age': 10}, {'id': 2, 'age': 20}]
+collect=[UserRow(id=1, age=10), UserRow(id=2, age=20)]
 dicts=[{'id': 1, 'age': 10}, {'id': 2, 'age': 20}]
 dict={'id': [1, 2], 'age': [10, 20]}
 ```
@@ -66,7 +66,7 @@ Materialization and row export happen only at execution boundaries. On `BaseAdap
 
 **Contract:** adapters should **accept** `options` on these signatures so the public API stays stable. Forward only the hints your engine understands into the backend’s `collect()` / export APIs; ignore the rest. If you do not support any hints yet, it is fine to `options` unused (as many shipped adapters do today), but keep the parameter.
 
-`Frame.collect`, `Frame.to_dicts`, `Frame.to_dict`, and the async counterparts accept the same `ExecutionOptions` and pass them through to the adapter.
+`Frame.collect_backend`, `Frame.to_dicts`, `Frame.to_dict`, and the async counterparts accept the same `ExecutionOptions` and pass them through to the adapter.
 
 ### Example: accept and forward hints
 

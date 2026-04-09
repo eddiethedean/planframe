@@ -20,12 +20,12 @@ def main() -> None:
         .drop("age")
     )
 
-    df = out.collect()
+    df = out.collect_backend()
     print(f"columns={df.columns}")
     print(f"to_dict={out.to_dict()}")
     print(f"rows={out.to_dicts()}")
 
-    models = out.collect(kind="dataclass", name="Row")
+    models = out.collect(name="Row")
     print(
         f"row_models={[(m.__class__.__name__, m.id, m.full_name, m.age_plus_one) for m in models]}"
     )

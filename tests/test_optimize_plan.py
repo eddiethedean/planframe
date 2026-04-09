@@ -19,7 +19,7 @@ def test_optimize_fuses_select_chain() -> None:
     names_after = [type(n).__name__ for n in iter_plan_nodes(root=opt.plan())]
     assert names_after.count("Select") == 1
 
-    assert out.collect() == opt.collect()
+    assert out.collect_backend() == opt.collect_backend()
 
 
 def test_optimize_prunes_drop_empty_columns() -> None:
@@ -34,11 +34,11 @@ def test_optimize_prunes_drop_empty_columns() -> None:
     assert isinstance(opt.plan(), Source)
 
     adapter.calls.clear()
-    out_res = out.collect()
+    out_res = out.collect_backend()
     calls_unopt = [c[0] for c in adapter.calls]
 
     adapter.calls.clear()
-    opt_res = opt.collect()
+    opt_res = opt.collect_backend()
     calls_opt = [c[0] for c in adapter.calls]
 
     assert out_res == opt_res

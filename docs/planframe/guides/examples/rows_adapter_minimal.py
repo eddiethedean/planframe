@@ -252,6 +252,7 @@ def main() -> None:
     out = pf.select("id", "age")
     print(f"schema={out.schema().names()}")
     print(f"collect={out.collect()}")
+    print(f"collect_backend={out.collect_backend()}")
     print(f"dicts={out.to_dicts()}")
     print(f"dict={out.to_dict()}")
 

@@ -5,7 +5,7 @@ This guide covers the intended public usage pattern:
 - define a schema as a **`PolarsFrame` subclass**
 - construct frames from **Python-native data** (PlanFrame constructs Polars internally)
 - chain transforms (always lazy)
-- execute via boundaries (`collect`, `to_dicts`, `to_dict`, `collect(kind=...)`, or async: `acollect`, `ato_dicts`, `ato_dict`)
+- execute via boundaries (`collect`, `to_dicts`, `to_dict`, `collect_backend`, or async: `acollect`, `ato_dicts`, `ato_dict`, `acollect_backend`)
 
 Optional **`ExecutionOptions`** (`streaming`, `engine_streaming`) can be passed at materialization time on `collect` / `to_dicts` / `to_dict` and the async variants.
 

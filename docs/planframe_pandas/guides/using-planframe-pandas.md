@@ -5,7 +5,7 @@ This guide covers the intended public usage pattern:
 - define a schema as a **`PandasFrame` subclass**
 - construct frames from **Python-native data** (PlanFrame constructs pandas internally)
 - chain transforms (always lazy)
-- execute via boundaries (`collect`, `to_dicts`, `to_dict`, `collect(kind=...)`, or async: `acollect`, `ato_dicts`, `ato_dict`)
+- execute via boundaries (`collect`, `to_dicts`, `to_dict`, `collect_backend`, or async: `acollect`, `ato_dicts`, `ato_dict`, `acollect_backend`)
 
 Optional **`ExecutionOptions`** can be passed at those boundaries when you need streaming hints.
 
@@ -42,7 +42,8 @@ If you need advanced construction, use `Frame.source(...)` with a backend frame 
 PlanFrame is always lazy:
 
 - Chaining methods (like `.select(...)`) does **not** run pandas operations.
-- `collect()` evaluates the full plan by calling adapter methods on demand.
+- `collect_backend()` evaluates the full plan by calling adapter methods on demand (and returns a backend-native DataFrame).
+- `collect()` evaluates the full plan and returns `list[pydantic.BaseModel]` rows (PlanFrame’s cross-backend materialization contract).
 
 ## Row numbering and clamping
 
@@ -80,7 +81,7 @@ class S(PandasFrame):
 
 pf = S({"g": [1, 1, 2], "x": [10, 20, 7]})
 out = pf.group_by("g").agg(n=("count", "x"), sx=agg_sum(col("x")))
-df = out.collect()
+df = out.collect_backend()
 ```
 
 ## Reshape and nested data

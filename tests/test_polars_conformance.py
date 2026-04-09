@@ -81,21 +81,21 @@ class User(PolarsFrame):
 def test_drop_strict_false_ignores_unknown_polars_columns() -> None:
     pf = User({"id": [1], "name": ["a"], "age": [10]})
     out = pf.select("id", "name", "age").drop("not_a_column", strict=False)
-    df = out.collect()
+    df = out.collect_backend()
     assert df.columns == ["id", "name", "age"]
 
 
 def test_rename_strict_false_ignores_unknown_polars_columns() -> None:
     pf = User({"id": [1], "name": ["a"], "age": [10]})
     out = pf.select("id", "name", "age").rename(name="full_name", not_a_column="x", strict=False)
-    df = out.collect()
+    df = out.collect_backend()
     assert df.columns == ["id", "full_name", "age"]
 
 
 def test_select_mixed_str_and_expr_polars() -> None:
     pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
     out = pf.select("id", ("twice_age", mul(col("age"), lit(2))))
-    df = out.collect()
+    df = out.collect_backend()
     assert df.columns == ["id", "twice_age"]
     assert df["id"].to_list() == [1, 2]
     assert df["twice_age"].to_list() == [20, 40]
@@ -104,14 +104,14 @@ def test_select_mixed_str_and_expr_polars() -> None:
 def test_sort_expression_key_polars() -> None:
     pf = User({"id": [1, 2, 3], "name": ["a", "b", "c"], "age": [30, 10, 20]})
     out = pf.sort(add(col("id"), col("age")))
-    df = out.collect()
+    df = out.collect_backend()
     assert df["id"].to_list() == [2, 3, 1]
 
 
 def test_sort_mixed_column_and_expr_polars() -> None:
     pf = User({"id": [1, 2], "name": ["b", "a"], "age": [10, 20]})
     out = pf.sort("name", add(col("id"), col("age")))
-    df = out.collect()
+    df = out.collect_backend()
     assert df["id"].to_list() == [2, 1]
 
 
@@ -128,12 +128,12 @@ def test_select_drop_rename_with_column_filter_collect() -> None:
 
     assert out.schema().names() == ("id", "years", "years_plus_one")
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert isinstance(collected, pl.DataFrame)
     assert collected.columns == ["id", "years", "years_plus_one"]
     assert collected.height == 1
 
-    rows = out.collect(kind="dataclass", name="OutRow")
+    rows = out.collect(name="OutRow")
     assert len(rows) == 1
     assert rows[0].id == 1
     assert rows[0].years == 10
@@ -143,8 +143,8 @@ def test_optimize_preserves_results_polars() -> None:
     pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
     out = pf.select("id", "name", "age").select("id", "age").rename(age="years").drop()
 
-    unopt = out.collect()
-    opt = out.optimize(level=1).collect()
+    unopt = out.collect_backend()
+    opt = out.optimize(level=1).collect_backend()
 
     assert unopt.columns == opt.columns
     assert unopt.to_dicts() == opt.to_dicts()
@@ -153,11 +153,11 @@ def test_optimize_preserves_results_polars() -> None:
 def test_select_equivalence_with_column_polars() -> None:
     pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
 
-    a = pf.select("id", ("years_plus_one", add(col("age"), lit(1)))).collect()
+    a = pf.select("id", ("years_plus_one", add(col("age"), lit(1)))).collect_backend()
     b = (
         pf.with_columns(years_plus_one=add(col("age"), lit(1)))
         .select("id", "years_plus_one")
-        .collect()
+        .collect_backend()
     )
 
     assert a.columns == b.columns
@@ -181,10 +181,10 @@ def test_constructor_fills_missing_columns_from_schema_defaults() -> None:
         active: bool = True
 
     pf = UserWithDefaults([{"id": 1, "name": "a", "age": 10}, {"id": 2, "name": "b", "age": 20}])
-    assert pf.select("active").collect()["active"].to_list() == [True, True]
+    assert pf.select("active").collect_backend()["active"].to_list() == [True, True]
 
     pf2 = UserWithDefaults({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
-    assert pf2.select("active").collect()["active"].to_list() == [True, True]
+    assert pf2.select("active").collect_backend()["active"].to_list() == [True, True]
 
 
 def test_schema_convenience_ops_affect_column_order_and_names() -> None:
@@ -199,7 +199,7 @@ def test_schema_convenience_ops_affect_column_order_and_names() -> None:
 
     assert out.schema().names() == ("age", "x_id")
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected.columns == ["age", "x_id"]
 
 
@@ -212,7 +212,7 @@ def test_extended_expressions_compile_and_filter() -> None:
         .with_columns(age_times_two=mul(col("age"), lit(2)))
     )
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected.columns == ["id", "age", "age_times_two"]
     assert collected["id"].to_list() == [2]
 
@@ -235,7 +235,7 @@ def test_more_expressions_abs_round_floor_ceil_coalesce_if_else_xor() -> None:
     out = out.with_columns(flag=xor(eq(col("id"), lit(1)), eq(col("id"), lit(2))))
     out = out.with_columns(picked=if_else(eq(col("id"), lit(1)), lit("one"), lit("other")))
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected.columns == ["id", "x", "a", "b", "ax", "rx", "fx", "cx", "c", "flag", "picked"]
 
 
@@ -272,7 +272,7 @@ def test_string_datetime_math_window_expressions() -> None:
         x_max_by_id=over(col("x"), partition_by=("id",)),
     )
 
-    df = out.collect()
+    df = out.collect_backend()
     assert "x_max_by_id" in df.columns
 
 
@@ -289,7 +289,7 @@ def test_string_ops_nulls_and_literal_replace() -> None:
         r=replace(col("s"), ".", "_", literal=True),
         ln=length(col("s")),
     )
-    df = out.collect()
+    df = out.collect_backend()
     assert df.columns == ["s", "c1", "c2", "r", "ln"]
 
 
@@ -309,7 +309,7 @@ def test_strip_split_sqrt_is_finite_exprs() -> None:
         .with_columns(parts=split(strip(col("s")), ","))
         .with_columns(r=sqrt(col("x")))
         .with_columns(ok=is_finite(col("y")))
-        .collect()
+        .collect_backend()
     )
     assert df.columns == ["s", "x", "y", "s2", "parts", "r", "ok"]
 
@@ -327,7 +327,7 @@ def test_window_over_partition_by_multiple_keys() -> None:
     df = (
         pf.with_columns(x_over=over(col("x"), partition_by=("g1", "g2"), order_by=("x",)))
         .sort("x")
-        .collect()
+        .collect_backend()
     )
     assert df["x_over"].to_list() == [1, 2, 3, 4]
 
@@ -336,12 +336,12 @@ def test_sort_unique_duplicated() -> None:
     pf = User({"id": [2, 1, 1], "name": ["b", "a", "a"], "age": [20, 10, 10]})
 
     sorted_pf = pf.sort("id")
-    assert sorted_pf.collect()["id"].to_list() == [1, 1, 2]
+    assert sorted_pf.collect_backend()["id"].to_list() == [1, 1, 2]
 
-    uniq = pf.unique("id", keep="first").sort("id").collect()
+    uniq = pf.unique("id", keep="first").sort("id").collect_backend()
     assert uniq["id"].to_list() == [1, 2]
 
-    dups = pf.duplicated("id").collect()
+    dups = pf.duplicated("id").collect_backend()
     assert dups.columns == ["duplicated"]
     assert dups["duplicated"].dtype == pl.Boolean
 
@@ -350,7 +350,7 @@ def test_group_by_agg() -> None:
     pf = User({"id": [1, 1, 2], "name": ["a", "b", "c"], "age": [10, 20, 30]})
 
     out = pf.group_by("id").agg(total_age=("sum", "age"), n=("count", "name")).sort("id")
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected.columns == ["id", "total_age", "n"]
     assert collected["n"].to_list() == [2, 1]
 
@@ -362,7 +362,7 @@ def test_group_by_expression_key_polars() -> None:
         .agg(n=("count", "age"), total=("sum", "age"))
         .sort("__pf_g0")
     )
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected.columns == ["__pf_g0", "n", "total"]
     assert collected["__pf_g0"].to_list() == ["a", "b"]
     assert collected["n"].to_list() == [2, 1]
@@ -374,19 +374,21 @@ def test_group_by_agg_expression_polars() -> None:
 
     pf = User({"id": [1, 1, 2], "age": [10, 20, 15], "name": ["a", "b", "c"]})
     out = pf.group_by("id").agg(s=agg_sum(truediv(col("age"), col("id")))).sort("id")
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected["s"].to_list() == [30.0, 7.5]
 
 
 def test_sort_descending() -> None:
     pf = User({"id": [2, 1, 3], "name": ["b", "a", "c"], "age": [20, 10, 30]})
-    out = pf.sort("id", descending=True).collect()
+    out = pf.sort("id", descending=True).collect_backend()
     assert out["id"].to_list() == [3, 2, 1]
 
 
 def test_sort_per_key_descending_and_nulls_last() -> None:
     pf = User({"id": [1, 1, 2, 2], "name": ["b", "a", "d", "c"], "age": [1, 2, 3, 4]})
-    out = pf.sort("id", "name", descending=[False, True], nulls_last=[True, False]).collect()
+    out = pf.sort(
+        "id", "name", descending=[False, True], nulls_last=[True, False]
+    ).collect_backend()
     assert [(r["id"], r["name"]) for r in out.to_dicts()] == [
         (1, "b"),
         (1, "a"),
@@ -397,14 +399,14 @@ def test_sort_per_key_descending_and_nulls_last() -> None:
 
 def test_unique_no_subset_keeps_one_row_per_full_row() -> None:
     pf = User({"id": [1, 1, 1], "name": ["a", "a", "b"], "age": [10, 10, 10]})
-    out = pf.unique().collect()
+    out = pf.unique().collect_backend()
     # rows are (1,a,10) and (1,b,10)
     assert out.height == 2
 
 
 def test_duplicated_keep_false_marks_all_duplicates() -> None:
     pf = User({"id": [1, 1, 2, 3, 3], "name": ["a", "b", "c", "d", "e"], "age": [10, 20, 30, 1, 2]})
-    out = pf.duplicated("id", keep=False).collect()
+    out = pf.duplicated("id", keep=False).collect_backend()
     assert out["duplicated"].to_list() == [True, True, False, True, True]
 
 
@@ -420,20 +422,20 @@ def test_drop_nulls_fill_null_and_melt() -> None:
 
     filled = pf.fill_null(0, "a")
     out = filled.drop_nulls(subset=("a",))
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected["a"].to_list() == [0, 5]
 
     # strategy-based fill (forward fill)
     ff = S({"id": [1, 2, 3], "a": [None, 5, None], "b": [10, 20, 30]})
-    ff_out = ff.fill_null(None, "a", strategy="forward").collect()
+    ff_out = ff.fill_null(None, "a", strategy="forward").collect_backend()
     assert ff_out["a"].to_list() == [None, 5, 5]
 
     # expression fill value
-    expr_fill = pf.fill_null(add(col("b"), lit(1)), "a").collect()
+    expr_fill = pf.fill_null(add(col("b"), lit(1)), "a").collect_backend()
     assert expr_fill["a"].to_list() == [11, 5]
 
     melted = pf.unpivot(index=("id",), on=("a", "b"), variable_name="k", value_name="v")
-    m = melted.collect()
+    m = melted.collect_backend()
     assert m.columns == ["id", "k", "v"]
 
 
@@ -445,11 +447,11 @@ def test_drop_nulls_all_columns_and_fill_null_all_columns() -> None:
         a: int | None
 
     pf = S2(data)
-    filled = pf.fill_null(0).collect()
+    filled = pf.fill_null(0).collect_backend()
     assert filled["id"].to_list() == [1, 0]
     assert filled["a"].to_list() == [0, 5]
 
-    dropped = pf.drop_nulls().collect()
+    dropped = pf.drop_nulls().collect_backend()
     # Only row with no nulls remains; both rows have a null, so empty.
     assert dropped.height == 0
 
@@ -486,7 +488,7 @@ def test_join_inner_key_drop_and_collision_suffixing() -> None:
     out = left.join(right, on=("id",), suffix="_right")
     assert out.schema().names() == ("id", "name", "age", "name_right", "city")
 
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected.columns == ["id", "name", "age", "name_right", "city"]
     assert collected.height == 2
 
@@ -512,7 +514,9 @@ def test_join_left_on_right_on_polars() -> None:
 
     left_pf = LF({"user_id": [1, 2], "x": [10, 20]})
     right_pf = RF({"id": [1, 3], "y": [100, 300]})
-    out = left_pf.join(right_pf, left_on=("user_id",), right_on=("id",), how="inner").collect()
+    out = left_pf.join(
+        right_pf, left_on=("user_id",), right_on=("id",), how="inner"
+    ).collect_backend()
     assert out.to_dict(as_series=False) == {"user_id": [1], "x": [10], "y": [100]}
 
 
@@ -542,7 +546,7 @@ def test_join_expression_keys_polars() -> None:
         left_on=(lower(col("email")),),
         right_on=(lower(col("email_norm")),),
         how="inner",
-    ).collect()
+    ).collect_backend()
     assert out.height == 2
     assert set(out["id"].to_list()) == {1, 2}
 
@@ -551,17 +555,17 @@ def test_row_ops_head_tail_slice_limit() -> None:
     pf = User({"id": [1, 2, 3, 4], "name": ["a", "b", "c", "d"], "age": [10, 20, 30, 40]})
 
     out = pf.head(3).slice(1, 2).tail(1).limit(1)
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected["id"].to_list() == [3]
 
 
 def test_clip_subset_and_all_numeric_polars() -> None:
     pf = User({"id": [1, 2], "name": ["a", "b"], "age": [-1, 10]})
 
-    df_subset = pf.clip(lower=0, upper=6, subset=("age",)).sort("id").collect()
+    df_subset = pf.clip(lower=0, upper=6, subset=("age",)).sort("id").collect_backend()
     assert df_subset.to_dict(as_series=False) == {"id": [1, 2], "name": ["a", "b"], "age": [0, 6]}
 
-    df_all = pf.clip(lower=0).sort("id").collect()
+    df_all = pf.clip(lower=0).sort("id").collect_backend()
     assert df_all.to_dict(as_series=False) == {"id": [1, 2], "name": ["a", "b"], "age": [0, 10]}
 
 
@@ -572,8 +576,8 @@ def test_row_ops_slice_length_none_and_offset_past_end() -> None:
         id: int
 
     pf = S(data)
-    assert pf.slice(1, None).collect()["id"].to_list() == [2, 3]
-    assert pf.slice(999, None).collect().height == 0
+    assert pf.slice(1, None).collect_backend()["id"].to_list() == [2, 3]
+    assert pf.slice(999, None).collect_backend().height == 0
 
 
 def test_row_ops_head_tail_zero() -> None:
@@ -583,8 +587,8 @@ def test_row_ops_head_tail_zero() -> None:
         id: int
 
     pf = S(data)
-    assert pf.head(0).collect().height == 0
-    assert pf.tail(0).collect().height == 0
+    assert pf.head(0).collect_backend().height == 0
+    assert pf.tail(0).collect_backend().height == 0
 
 
 def test_pattern_select_and_drop() -> None:
@@ -600,11 +604,11 @@ def test_pattern_select_and_drop() -> None:
 
     out = pf.select_prefix("x_")
     assert out.schema().names() == ("x_a", "x_b")
-    assert out.collect().columns == ["x_a", "x_b"]
+    assert out.collect_backend().columns == ["x_a", "x_b"]
 
     out2 = pf.drop_regex("^x_")
     assert out2.schema().names() == ("id", "y")
-    assert out2.collect().columns == ["id", "y"]
+    assert out2.collect_backend().columns == ["id", "y"]
 
 
 def test_pattern_ops_select_regex_no_matches_returns_empty_schema() -> None:
@@ -617,7 +621,7 @@ def test_pattern_ops_select_regex_no_matches_returns_empty_schema() -> None:
     pf = S(data)
     out = pf.select_regex("^does_not_exist$")
     assert out.schema().names() == ()
-    assert out.collect().columns == []
+    assert out.collect_backend().columns == []
 
 
 def test_vstack() -> None:
@@ -625,14 +629,14 @@ def test_vstack() -> None:
     pf2 = User({"id": [2], "name": ["b"], "age": [20]})
 
     out = pf1.vstack(pf2).sort("id")
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected["id"].to_list() == [1, 2]
 
 
 def test_vstack_preserves_order_without_sort() -> None:
     pf1 = User({"id": [2], "name": ["b"], "age": [20]})
     pf2 = User({"id": [1], "name": ["a"], "age": [10]})
-    collected = pf1.vstack(pf2).collect()
+    collected = pf1.vstack(pf2).collect_backend()
     assert collected["id"].to_list() == [2, 1]
 
 
@@ -646,7 +650,7 @@ def test_pivot_with_lazyframe_requires_on_columns_and_is_deterministic() -> None
 
     pf = S(data)
     out = pf.pivot(index=("id",), on="k", values="v", on_columns=("a", "b"), agg="first")
-    collected = out.collect()
+    collected = out.collect_backend()
     assert collected.columns == ["id", "a", "b"]
     assert collected["a"].to_list() == [10]
     assert collected["b"].to_list() == [20]
@@ -661,7 +665,7 @@ def test_pivot_handles_missing_on_columns_as_nulls() -> None:
         v: int
 
     pf = S(data)
-    collected = pf.pivot(index=("id",), on="k", values="v", on_columns=("a", "b")).collect()
+    collected = pf.pivot(index=("id",), on="k", values="v", on_columns=("a", "b")).collect_backend()
     assert collected.columns == ["id", "a", "b"]
     assert collected["a"].to_list() == [10]
     assert collected["b"].to_list() == [None]
@@ -687,7 +691,9 @@ def test_io_write_parquet_and_scan_parquet(tmp_path: Any) -> None:
     pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
 
     pf.select("id", "age").sink_parquet(str(path))
-    out = PolarsFrame.scan_parquet(str(path), schema=UserSchema).select("id", "age").collect()
+    out = (
+        PolarsFrame.scan_parquet(str(path), schema=UserSchema).select("id", "age").collect_backend()
+    )
     assert out["id"].to_list() == [1, 2]
 
 
@@ -701,7 +707,7 @@ def test_io_write_csv_and_scan_csv(tmp_path: Any) -> None:
     pf = S({"id": [1, 2], "age": [10, 20]})
     pf.sink_csv(str(path))
 
-    out = PolarsFrame.scan_csv(str(path), schema=S).sort("id").collect()
+    out = PolarsFrame.scan_csv(str(path), schema=S).sort("id").collect_backend()
     assert out["age"].to_list() == [10, 20]
 
 
@@ -715,7 +721,7 @@ def test_io_write_ndjson_and_scan_ndjson(tmp_path: Any) -> None:
     pf = S({"id": [1, 2], "age": [10, 20]})
     pf.sink_ndjson(str(path))
 
-    out = PolarsFrame.scan_ndjson(str(path), schema=S).sort("id").collect()
+    out = PolarsFrame.scan_ndjson(str(path), schema=S).sort("id").collect_backend()
     assert out["age"].to_list() == [10, 20]
 
 
@@ -729,7 +735,7 @@ def test_io_write_ipc_and_scan_ipc(tmp_path: Any) -> None:
     pf = S({"id": [1, 2], "age": [10, 20]})
     pf.sink_ipc(str(path))
 
-    out = PolarsFrame.scan_ipc(str(path), schema=S).sort("id").collect()
+    out = PolarsFrame.scan_ipc(str(path), schema=S).sort("id").collect_backend()
     assert out["age"].to_list() == [10, 20]
 
 
@@ -757,7 +763,7 @@ def test_io_read_database_sqlite_dbapi(tmp_path: Any) -> None:
 
     out = PolarsFrame.read_database(
         "SELECT id, age FROM t ORDER BY id", connection=conn, schema=S
-    ).collect()
+    ).collect_backend()
     assert out["age"].to_list() == [10, 20]
 
 
@@ -776,7 +782,7 @@ def test_io_parquet_dataset_partitioned_write_and_scan(tmp_path: Any) -> None:
     out = (
         PolarsFrame.scan_parquet_dataset(str(base / "**" / "*.parquet"), schema=S)
         .sort("id")
-        .collect()
+        .collect_backend()
     )
     assert out["age"].to_list() == [10, 20, 30]
 
@@ -797,7 +803,11 @@ def test_io_excel_roundtrip_if_available(tmp_path: Any) -> None:
         age: int
 
     S(data, lazy=False).sink_excel(str(path), worksheet="Sheet1")
-    out = PolarsFrame.read_excel(str(path), schema=S, sheet_name="Sheet1").sort("id").collect()
+    out = (
+        PolarsFrame.read_excel(str(path), schema=S, sheet_name="Sheet1")
+        .sort("id")
+        .collect_backend()
+    )
     assert out["age"].to_list() == [10, 20]
 
 
@@ -810,7 +820,7 @@ def test_io_avro_roundtrip_if_available(tmp_path: Any) -> None:
         age: int
 
     S(data, lazy=False).sink_avro(str(path), compression="uncompressed")
-    out = PolarsFrame.read_avro(str(path), schema=S).sort("id").collect()
+    out = PolarsFrame.read_avro(str(path), schema=S).sort("id").collect_backend()
     assert out["age"].to_list() == [10, 20]
 
 
@@ -828,7 +838,7 @@ def test_io_delta_roundtrip_if_available(tmp_path: Any) -> None:
         age: int
 
     S(data, lazy=False).sink_delta(str(path), mode="overwrite")
-    out = PolarsFrame.scan_delta(str(path), schema=S).sort("id").collect()
+    out = PolarsFrame.scan_delta(str(path), schema=S).sort("id").collect_backend()
     assert out["age"].to_list() == [10, 20]
 
 
@@ -852,16 +862,16 @@ def test_concat_horizontal_union_distinct_explode_unnest_drop_nulls_all() -> Non
     out = left.hstack(right)
     assert out.schema().names() == ("id", "x", "id2")
 
-    u = left.union_distinct(left).sort("id").collect()
+    u = left.union_distinct(left).sort("id").collect_backend()
     assert u.height == 2
 
-    exploded = pf.explode("lst").select("id", "lst").collect()
+    exploded = pf.explode("lst").select("id", "lst").collect_backend()
     assert exploded.height >= 3
 
-    unnested = pf.unnest("s").select("id", "a", "b").collect()
+    unnested = pf.unnest("s").select("id", "a", "b").collect_backend()
     assert set(unnested.columns) == {"id", "a", "b"}
 
-    dropped = pf.unnest("s").drop_nulls_all("a", "b").collect()
+    dropped = pf.unnest("s").drop_nulls_all("a", "b").collect_backend()
     assert "a" in dropped.columns
 
 
@@ -921,7 +931,7 @@ def test_sort_nulls_last_and_unique_maintain_order() -> None:
         x: int
 
     pf = S(data)
-    sorted_df = pf.sort("id", nulls_last=True).collect()
+    sorted_df = pf.sort("id", nulls_last=True).collect_backend()
     assert sorted_df["id"].to_list() == [1, 2, None, None]
 
     data2 = {"id": [2, 1, 2, 1], "x": [10, 20, 11, 21]}
@@ -931,7 +941,7 @@ def test_sort_nulls_last_and_unique_maintain_order() -> None:
         x: int
 
     pf2 = S2(data2)
-    out = pf2.unique("id", keep="first", maintain_order=True).collect()
+    out = pf2.unique("id", keep="first", maintain_order=True).collect_backend()
     assert out["id"].to_list() == [2, 1]
 
 
@@ -942,8 +952,8 @@ def test_sample_n_is_deterministic_with_seed() -> None:
         id: int
 
     pf = S(data, lazy=False)
-    a = pf.sample(3, seed=123, shuffle=True).sort("id").collect()["id"].to_list()
-    b = pf.sample(3, seed=123, shuffle=True).sort("id").collect()["id"].to_list()
+    a = pf.sample(3, seed=123, shuffle=True).sort("id").collect_backend()["id"].to_list()
+    b = pf.sample(3, seed=123, shuffle=True).sort("id").collect_backend()["id"].to_list()
     assert a == b
 
 
@@ -954,8 +964,8 @@ def test_sample_frac_zero_and_one() -> None:
         id: int
 
     pf = S(data, lazy=False)
-    assert pf.sample(frac=0.0, seed=1, shuffle=True).collect().height == 0
-    assert pf.sample(frac=1.0, seed=1, shuffle=True).collect().height == 10
+    assert pf.sample(frac=0.0, seed=1, shuffle=True).collect_backend().height == 0
+    assert pf.sample(frac=1.0, seed=1, shuffle=True).collect_backend().height == 10
 
 
 def test_sample_on_lazy_source_raises_clear_error() -> None:
@@ -968,7 +978,7 @@ def test_sample_on_lazy_source_raises_clear_error() -> None:
 
     pf = S(data, lazy=True)
     with pytest.raises(PlanFrameExecutionError, match="Backend collect failed"):
-        pf.sample(3, seed=1, shuffle=True).collect()
+        pf.sample(3, seed=1, shuffle=True).collect_backend()
 
 
 def test_drop_duplicates_alias_and_keep_last() -> None:
@@ -979,7 +989,7 @@ def test_drop_duplicates_alias_and_keep_last() -> None:
         x: int
 
     pf = S(data)
-    out = pf.drop_duplicates("id", keep="last", maintain_order=True).collect()
+    out = pf.drop_duplicates("id", keep="last", maintain_order=True).collect_backend()
     assert out["id"].to_list() == [1, 2]
     assert out["x"].to_list() == [11, 21]
 
@@ -991,7 +1001,7 @@ def test_construction_via_generic_call_dict_of_lists() -> None:
         age: int
 
     pf = S({"id": [1], "name": ["a"], "age": [10]})
-    df = pf.select("id", "name").collect()
+    df = pf.select("id", "name").collect_backend()
     assert df.to_dict(as_series=False) == {"id": [1], "name": ["a"]}
 
 
@@ -1002,5 +1012,5 @@ def test_construction_via_model_subclass_list_of_dicts() -> None:
         age: int
 
     pf = User2([{"id": 1, "name": "a", "age": 10}])
-    df = pf.select("age").collect()
+    df = pf.select("age").collect_backend()
     assert df.to_dict(as_series=False) == {"age": [10]}

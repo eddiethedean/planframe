@@ -152,8 +152,8 @@ PlanFrame stays **synchronous for lazy chaining**: building a `Frame` only updat
 
 | API | Role |
 | --- | --- |
-| `Frame.collect()`, `Frame.to_dicts()`, `Frame.to_dict()` | Blocking; call from sync code or from `asyncio.to_thread`. |
-| `Frame.acollect()`, `Frame.ato_dicts()`, `Frame.ato_dict()` | Awaitable; use in async code. |
+| `Frame.collect_backend()`, `Frame.to_dicts()`, `Frame.to_dict()` | Blocking; call from sync code or from `asyncio.to_thread`. |
+| `Frame.acollect_backend()`, `Frame.ato_dicts()`, `Frame.ato_dict()` | Awaitable; use in async code. |
 
 `BaseAdapter` provides default `acollect` / `ato_dicts` / `ato_dict` that run the matching sync method in `asyncio.to_thread`, so existing adapters work without changes. Backends backed by asyncio-only clients should **override** `acollect` (and optionally `ato_dicts` / `ato_dict`) to await their native I/O instead of blocking a thread.
 

@@ -581,21 +581,17 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        suffix: str = ...,")
     a("        options: JoinOptions | None = ...,")
     a("    ) -> Frame[Any, BackendFrameT, BackendExprT]: ...")
-    a("    @overload")
-    a("    def collect(self, *, options: ExecutionOptions | None = ...) -> BackendFrameT: ...")
-    a("")
-    a("    @overload")
     a(
-        '    def collect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ..., options: ExecutionOptions | None = ...) -> list[Any]: ...'
+        "    def collect_backend(self, *, options: ExecutionOptions | None = ...) -> BackendFrameT: ..."
     )
-    a("    @overload")
     a(
-        "    async def acollect(self, *, options: ExecutionOptions | None = ...) -> BackendFrameT: ..."
+        "    async def acollect_backend(self, *, options: ExecutionOptions | None = ...) -> BackendFrameT: ..."
     )
-    a("")
-    a("    @overload")
     a(
-        '    async def acollect(self, *, kind: Literal["dataclass", "pydantic"], name: str = ..., options: ExecutionOptions | None = ...) -> list[Any]: ...'
+        "    def collect(self, *, name: str = ..., options: ExecutionOptions | None = ...) -> list[Any]: ..."
+    )
+    a(
+        "    async def acollect(self, *, name: str = ..., options: ExecutionOptions | None = ...) -> list[Any]: ..."
     )
     a(
         "    def to_dicts(self, *, options: ExecutionOptions | None = ...) -> list[dict[str, object]]: ..."

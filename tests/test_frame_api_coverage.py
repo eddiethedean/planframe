@@ -158,24 +158,19 @@ def test_frame_select_with_expr_lowers_to_project() -> None:
     assert "project" in calls
 
 
-def test_frame_collect_kind_builds_models() -> None:
+def test_frame_collect_builds_pydantic_models() -> None:
     adapter = SpyAdapter()
     pf = Frame.source([{"id": 1, "name": "a", "age": 2}], adapter=adapter, schema=S)
 
-    rows_dc = pf.select("id", "name").collect(kind="dataclass", name="Out")
-    assert isinstance(rows_dc, list)
-    assert rows_dc[0].__class__.__name__ == "Out"
-    assert rows_dc[0].id == 1
-
-    rows_pd = pf.select("id").collect(kind="pydantic", name="OutPD")
-    assert isinstance(rows_pd, list)
-    assert rows_pd[0].__class__.__name__ == "OutPD"
-    assert rows_pd[0].id == 1
+    rows = pf.select("id", "name").collect(name="Out")
+    assert isinstance(rows, list)
+    assert rows[0].__class__.__name__ == "Out"
+    assert rows[0].id == 1
 
 
 def test_frame_error_wrapping_for_collect_to_dicts_and_write() -> None:
     class BoomAdapter(SpyAdapter):
-        def collect(self, planned: object) -> object:  # type: ignore[override]
+        def collect(self, planned: object, *, options: object | None = None) -> object:  # type: ignore[override]
             raise RuntimeError("boom")
 
     pf = Frame.source([{"id": 1, "name": "a", "age": 2}], adapter=BoomAdapter(), schema=S)
@@ -211,8 +206,8 @@ def test_frame_error_wrapping_for_collect_to_dicts_and_write() -> None:
             raise RuntimeError("boom")
 
     pf5 = Frame.source([{"id": 1, "name": "a", "age": 2}], adapter=BoomKindAdapter(), schema=S)
-    with pytest.raises(PlanFrameExecutionError, match="collect\\(kind="):
-        pf5.collect(kind="dataclass")
+    with pytest.raises(PlanFrameExecutionError, match="Backend collect failed"):
+        pf5.collect()
 
 
 def test_frame_async_paths_and_dict_helpers() -> None:
@@ -228,7 +223,7 @@ def test_frame_async_paths_and_dict_helpers() -> None:
     assert isinstance(asyncio.run(pf.acollect()), list)
 
     class BoomAcollectAdapter(SpyAdapter):
-        async def acollect(self, planned: object) -> object:  # type: ignore[override]
+        async def acollect(self, planned: object, *, options: object | None = None) -> object:  # type: ignore[override]
             raise RuntimeError("boom")
 
     pf2 = Frame.source([{"id": 1, "name": "a", "age": 2}], adapter=BoomAcollectAdapter(), schema=S)

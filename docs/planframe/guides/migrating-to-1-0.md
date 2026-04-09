@@ -18,6 +18,16 @@ This guide summarizes the main changes when upgrading to **PlanFrame v1.0.0** (w
 
 ## Breaking API changes (common fixes)
 
+### Materialization contract (documented divergence from parent libraries)
+
+In v1.0.0, PlanFrame’s three typed interfaces intentionally share the same row-export surface:
+
+- **`collect()` / `acollect()`**: returns **`list[pydantic.BaseModel]`** (row models derived from the current schema)
+- **`to_dict()` / `ato_dict()`**: returns **`dict[str, list[object]]`**
+- **`to_dicts()` / `ato_dicts()`**: returns **`list[dict[str, object]]`**
+
+If you need the backend-native object (e.g. `polars.DataFrame` / `pandas.DataFrame`) use **`collect_backend()` / `acollect_backend()`**.
+
 ### Column creation
 
 - **Removed**: `Frame.with_column(name, expr)`
@@ -66,7 +76,7 @@ Adapters now expose capability flags via `BaseAdapter.capabilities` to help fron
 
 ### “I expected eager pandas semantics”
 
-PlanFrame remains **always lazy**. Even for naturally eager backends (like pandas), PlanFrame builds a plan and defers execution to `collect()`.
+PlanFrame remains **always lazy**. Even for naturally eager backends (like pandas), PlanFrame builds a plan and defers execution to materialization boundaries like `collect()` / `collect_backend()` / `to_dicts()` / writes.
 
 ## Links
 
