@@ -39,3 +39,17 @@ PlanFrame is **always lazy** and executes through adapters; there is no Spark ex
 - Partition-level sorting: `sortWithinPartitions`
 - Set ops not implemented in core: `intersect`, `subtract`
 
+## Generated inventories (method-by-method)
+
+For an exhaustive, generated inventory:
+
+- `SparkFrame` surface: `planframe/design/_generated/interface-inventory-spark.md`
+- PySpark methods missing from PlanFrame spark skin (empty if PySpark isn’t installed): `planframe/design/_generated/spark-missing.md`
+
+## Missing / divergent areas (categorized)
+
+- **Partitioning & caching semantics** (unsupported): `cache`, `persist`, `unpersist`, `repartition`, `coalesce`, `sortWithinPartitions`
+- **String-based DSL** (typed restriction): `selectExpr` is only safe to support as a very small subset (column names + optional `AS` alias). Arbitrary SQL-like expressions remain unsupported.
+- **Set operations**: `intersect` / `subtract` can be provided as typed wrappers only if core has plan-level nodes with well-defined schema behavior; otherwise they should fail loudly.
+- **Spark session/catalog/stateful APIs**: expected to remain unsupported in core PlanFrame.
+

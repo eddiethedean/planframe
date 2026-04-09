@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any, Generic, Literal, NoReturn, TypeVar, cast
 
@@ -74,6 +75,29 @@ def _sort_keys(
         else:
             out.append(unwrap_expr(c))
     return tuple(out)
+
+
+_SELECT_EXPR_COL_RE = re.compile(
+    r"""^\s*
+    (?P<col>[A-Za-z_][A-Za-z0-9_]*)
+    (?:\s+(?i:AS)\s+(?P<alias>[A-Za-z_][A-Za-z0-9_]*))?
+    \s*$""",
+    re.VERBOSE,
+)
+
+
+def _parse_select_expr_item(item: str) -> str | tuple[str, Expr[Any]]:
+    m = _SELECT_EXPR_COL_RE.match(item)
+    if m is None:
+        raise ValueError(
+            "selectExpr only supports column references of the form "
+            "`col_name` or `col_name AS alias` (no expressions/functions)"
+        )
+    col_name = m.group("col")
+    alias = m.group("alias")
+    if alias is None:
+        return col_name
+    return (alias, Col(name=col_name))
 
 
 class SparkFrame(
@@ -149,7 +173,9 @@ class SparkFrame(
     ) -> SparkFrame[SchemaT, BackendFrameT, BackendExprT]:
         args = tuple(_norm_select_arg(c) for c in columns)
         named = {k: unwrap_expr(v) for k, v in named_exprs.items()}
-        return cast(SparkFrame[SchemaT, BackendFrameT, BackendExprT], super().select(*args, **named))
+        return cast(
+            SparkFrame[SchemaT, BackendFrameT, BackendExprT], super().select(*args, **named)
+        )
 
     def drop(
         self, *cols: str | Column[Any] | Expr[Any], strict: bool = True
@@ -439,9 +465,10 @@ class SparkFrame(
         raise NotImplementedError("unpersist() is not implemented for PlanFrame plans.")
 
     def selectExpr(self, *expr: str) -> SparkFrame[Any, Any, Any]:  # noqa: N802
-        raise NotImplementedError(
-            "selectExpr requires a SQL expression parser; use select() with Column/Expr instead."
-        )
+        if not expr:
+            raise ValueError("selectExpr requires at least one expression")
+        args = tuple(_parse_select_expr_item(e) for e in expr)
+        return cast(SparkFrame[Any, Any, Any], super().select(*args))
 
     def show(self, n: int = 20, truncate: bool = True, vertical: bool = False) -> None:  # noqa: ARG002
         rows = self.limit(n).to_dicts()

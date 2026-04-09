@@ -46,6 +46,15 @@ def test_sparkframe_select_column_wrapper() -> None:
     assert rows == [{"xx": 1, "y": 2}]
 
 
+def test_sparkframe_select_expr_typed_subset() -> None:
+    s = _UsersXY({"x": [1], "y": [2]})
+    out = s.selectExpr("x AS xx", "y")
+    assert out.to_dicts() == [{"xx": 1, "y": 2}]
+
+    with pytest.raises(ValueError, match="selectExpr only supports"):
+        s.selectExpr("x + 1")
+
+
 def test_sparkframe_union_by_name_reorders_other() -> None:
     a = _UsersXY({"x": [1], "y": [2]})
     b = _UsersYX({"x": [3], "y": [4]})

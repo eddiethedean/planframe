@@ -214,7 +214,9 @@ class PandasLikeFrame(
 
         provided = sum(x is not None for x in (items, like, regex))
         if provided != 1:
-            raise ValueError("filter requires row predicates or exactly one of: items=, like=, regex=")
+            raise ValueError(
+                "filter requires row predicates or exactly one of: items=, like=, regex="
+            )
         if items is not None:
             cols = tuple(items)
             if not cols:
