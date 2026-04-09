@@ -719,7 +719,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-arity", type=int, default=10)
     args = parser.parse_args(argv)
 
-    frame_pyi_path = REPO_ROOT / "packages" / "planframe" / "planframe" / "frame.pyi"
+    frame_pyi_path = REPO_ROOT / "packages" / "planframe" / "planframe" / "frame" / "__init__.pyi"
     frame_pyi = _ruff_format_pyi(frame_pyi_path, _render_frame_pyi(max_arity=args.max_arity))
     schema_types_pyi_path = (
         REPO_ROOT / "packages" / "planframe" / "planframe" / "typing" / "_schema_types.pyi"

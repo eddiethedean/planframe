@@ -1,24 +1,19 @@
+"""Lazy transforms: selection through pivot."""
+
 from __future__ import annotations
 
 import numbers
-import os
 import re
 from collections.abc import Mapping, Sequence
-from typing import Any, Generic, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
 
-from planframe.backend.adapter import (
-    BackendAdapter,
-    CompiledJoinKey,
-)
-from planframe.backend.errors import (
-    PlanFrameBackendError,
-    PlanFrameExecutionError,
-    PlanFrameSchemaError,
-)
+if TYPE_CHECKING:
+    from planframe.frame._class import Frame
+
+from planframe.backend.errors import PlanFrameBackendError, PlanFrameSchemaError
 from planframe.dynamic_groupby import DynamicGroupedFrame
-from planframe.execution import execute_plan
-from planframe.execution_options import ExecutionOptions
 from planframe.expr.api import Expr, clip, col, infer_dtype, lit
+from planframe.frame._utils import _coerce_sort_flags
 from planframe.groupby import GroupedFrame
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import (
@@ -38,7 +33,6 @@ from planframe.plan.nodes import (
     JoinKeyExpr,
     Melt,
     Pivot,
-    PlanNode,
     Posexplode,
     Project,
     ProjectExpr,
@@ -51,7 +45,6 @@ from planframe.plan.nodes import (
     Sort,
     SortColumnKey,
     SortExprKey,
-    Source,
     Tail,
     Unique,
     Unnest,
@@ -59,187 +52,20 @@ from planframe.plan.nodes import (
     WithColumn,
     WithRowCount,
 )
-from planframe.plan.optimize import optimize_plan
 from planframe.schema.ir import Field, Schema, collect_col_names_in_expr
-from planframe.schema.materialize import materialize_model
-from planframe.schema.source import schema_from_type
 from planframe.selector import ColumnSelector, _apply_strict
 from planframe.typing.frame_like import FrameLike
 from planframe.typing.scalars import Scalar
-from planframe.typing.storage import StorageOptions
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
 
 
-def _coerce_sort_flags(name: str, n: int, value: bool | Sequence[bool]) -> tuple[bool, ...]:
-    if isinstance(value, bool):
-        return (value,) * n
-    seq = tuple(value)
-    if len(seq) != n:
-        raise ValueError(
-            f"sort {name} must be a bool or a sequence of length {n} "
-            f"(number of sort keys), got length {len(seq)}"
-        )
-    for i, x in enumerate(seq):
-        if not isinstance(x, bool):
-            raise TypeError(
-                f"sort {name} must contain only bool values, got {type(x).__name__!r} at index {i}"
-            )
-    return seq
+class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
+    """Column operations, joins, reshaping, and windowed transforms."""
 
-
-class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
-    __slots__ = ("_data", "_adapter", "_plan", "_schema")
-
-    _data: BackendFrameT
-    _adapter: BackendAdapter[BackendFrameT, BackendExprT]
-    _plan: PlanNode
-    _schema: Schema
-
-    def __init__(
-        self,
-        _data: BackendFrameT,
-        _adapter: BackendAdapter[BackendFrameT, BackendExprT],
-        _plan: PlanNode,
-        _schema: Schema,
-    ) -> None:
-        self._data = _data
-        self._adapter = _adapter
-        self._plan = _plan
-        self._schema = _schema
-
-    def __repr__(self) -> str:
-        # Keep repr cheap: never execute, never compile expressions, and keep traversal bounded.
-        verbose = os.getenv("PLANFRAME_REPR_VERBOSE", "").lower() in {"1", "true", "yes", "on"}
-
-        cols = self._schema.names()
-        col_preview_limit = 12 if verbose else 6
-        if len(cols) <= col_preview_limit:
-            cols_preview = ", ".join(cols)
-        else:
-            head = ", ".join(cols[:col_preview_limit])
-            cols_preview = f"{head}, …(+{len(cols) - col_preview_limit})"
-
-        # Plan shape: follow the primary `prev` chain for a small number of nodes.
-        plan_limit = 20 if verbose else 6
-        kinds: list[str] = []
-        node: PlanNode | None = self._plan
-        schema_type_name: str | None = None
-        steps = 0
-        while isinstance(node, PlanNode) and steps < plan_limit:
-            kinds.append(type(node).__name__)
-            if isinstance(node, Source) and schema_type_name is None:
-                schema_type_name = getattr(node.schema_type, "__name__", None)
-            prev = getattr(node, "prev", None)
-            node = prev if isinstance(prev, PlanNode) else None
-            steps += 1
-
-        if node is not None:
-            kinds.append("…")
-
-        plan_preview = "->".join(kinds)
-        schema_tag = f"[{schema_type_name}]" if schema_type_name else ""
-        adapter_tag = f", adapter={self._adapter.name!r}" if verbose else ""
-        return f"Frame{schema_tag}(cols={len(cols)} [{cols_preview}], plan={plan_preview}{adapter_tag})"
-
-    @classmethod
-    def source(
-        cls,
-        data: BackendFrameT,
-        *,
-        adapter: BackendAdapter[BackendFrameT, BackendExprT],
-        schema: type[SchemaT],
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
-        schema_ir = schema_from_type(schema)
-        return cls(
-            _data=data,
-            _adapter=adapter,
-            _plan=Source(schema_type=schema, ir_version=1),
-            _schema=schema_ir,
-        )
-
-    def schema(self) -> Schema:
-        return self._schema
-
-    def plan(self) -> PlanNode:
-        return self._plan
-
-    def optimize(
-        self, *, level: Literal[0, 1, 2] = 1
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
-        """Return a new Frame with an optimized plan.
-
-        This is opt-in and performs only backend-independent, semantics-preserving rewrites.
-        """
-
-        if level == 0:
-            return self
-        plan2 = optimize_plan(self._plan, level=level)
-        if plan2 is self._plan:
-            return self
-        return Frame(_data=self._data, _adapter=self._adapter, _plan=plan2, _schema=self._schema)
-
-    def _compile(self, expr: object) -> BackendExprT:
-        try:
-            return self._adapter.compile_expr(expr, schema=self._schema)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameBackendError(
-                f"Failed to compile expression for backend {self._adapter.name}"
-            ) from e
-
-    def _compile_join_keys_tuple(
-        self, keys: tuple[JoinKeyColumn | JoinKeyExpr, ...]
-    ) -> tuple[CompiledJoinKey[BackendExprT], ...]:
-        out: list[CompiledJoinKey[BackendExprT]] = []
-        for k in keys:
-            if isinstance(k, JoinKeyColumn):
-                out.append(CompiledJoinKey(column=k.name, expr=None))
-            else:
-                out.append(CompiledJoinKey(column=None, expr=self._compile(k.expr)))
-        return tuple(out)
-
-    def _compile_named_aggs(
-        self, named_aggs: dict[str, tuple[str, str] | Expr[Any]]
-    ) -> dict[str, tuple[str, str] | BackendExprT]:
-        out: dict[str, tuple[str, str] | BackendExprT] = {}
-        for name, spec in named_aggs.items():
-            if (
-                isinstance(spec, tuple)
-                and len(spec) == 2
-                and isinstance(spec[0], str)
-                and isinstance(spec[1], str)
-            ):
-                out[name] = cast(tuple[str, str], spec)
-            else:
-                out[name] = self._compile(spec)
-        return out
-
-    def _normalize_join_keys(
-        self, items: tuple[str | Expr[Any], ...]
-    ) -> tuple[JoinKeyColumn | JoinKeyExpr, ...]:
-        out: list[JoinKeyColumn | JoinKeyExpr] = []
-        for x in items:
-            if isinstance(x, str):
-                out.append(JoinKeyColumn(name=x))
-            elif isinstance(x, Expr):
-                out.append(JoinKeyExpr(expr=x))
-            else:
-                raise TypeError(
-                    f"join keys must be column names (str) or Expr, got {type(x).__name__!r}"
-                )
-        return tuple(out)
-
-    def _eval(self, node: object) -> BackendFrameT:
-        if not isinstance(node, PlanNode):
-            raise PlanFrameBackendError(f"Unsupported plan node: {type(node)!r}")
-        return execute_plan(
-            adapter=self._adapter,
-            plan=node,
-            root_data=self._data,
-            schema=self._schema,
-        )
+    __slots__ = ()
 
     def select(
         self, *columns: str | tuple[str, Expr[Any]]
@@ -247,7 +73,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if not columns:
             cols: tuple[str, ...] = tuple()
             schema2 = self._schema.select(cols)
-            return Frame(
+            return type(self)(
                 _data=self._data,
                 _adapter=self._adapter,
                 _plan=Select(self._plan, cols),
@@ -256,7 +82,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if all(isinstance(c, str) for c in columns):
             cols = cast(tuple[str, ...], tuple(columns))
             schema2 = self._schema.select(cols)
-            return Frame(
+            return type(self)(
                 _data=self._data,
                 _adapter=self._adapter,
                 _plan=Select(self._plan, cols),
@@ -274,7 +100,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 )
         tup = tuple(items)
         schema3 = self._schema.project(tup)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Project(self._plan, tup),
@@ -284,7 +110,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def select_prefix(self, prefix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(n for n in self._schema.names() if n.startswith(prefix))
         schema2 = self._schema.select(cols)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Select(self._plan, cols),
@@ -294,7 +120,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def select_suffix(self, suffix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(n for n in self._schema.names() if n.endswith(suffix))
         schema2 = self._schema.select(cols)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Select(self._plan, cols),
@@ -305,7 +131,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         rx = re.compile(pattern)
         cols = tuple(n for n in self._schema.names() if rx.search(n))
         schema2 = self._schema.select(cols)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Select(self._plan, cols),
@@ -317,7 +143,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = _apply_strict(cols=selector.select(self._schema), strict=strict, selector=selector)
         schema2 = self._schema.select(cols)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Select(self._plan, cols),
@@ -327,7 +153,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def select_exclude(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(columns)
         schema2 = self._schema.select_exclude(cols)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Select(self._plan, schema2.names()),
@@ -336,7 +162,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def reorder_columns(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.reorder_columns(columns)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Select(self._plan, schema2.names()),
@@ -345,7 +171,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def select_first(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.select_first(columns)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Select(self._plan, schema2.names()),
@@ -354,7 +180,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def select_last(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.select_last(columns)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Select(self._plan, schema2.names()),
@@ -365,7 +191,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self, column: str, *, before: str | None = None, after: str | None = None
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.move(column, before=before, after=after)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Select(self._plan, schema2.names()),
@@ -377,7 +203,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         cols = tuple(columns)
         schema2 = self._schema.drop(cols, strict=strict)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Drop(self._plan, cols, strict=strict),
@@ -389,7 +215,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if not cols:
             return self
         schema2 = self._schema.drop(cols)
-        return Frame(
+        return type(self)(
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
@@ -398,7 +224,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if not cols:
             return self
         schema2 = self._schema.drop(cols)
-        return Frame(
+        return type(self)(
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
@@ -408,7 +234,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if not cols:
             return self
         schema2 = self._schema.drop(cols)
-        return Frame(
+        return type(self)(
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
@@ -418,7 +244,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if not mapping:
             return self
         schema2 = self._schema.rename(mapping, strict=strict)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Rename(self._plan, mapping, strict=strict),
@@ -431,7 +257,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         names = subset if subset else self._schema.names()
         mapping = {n: f"{prefix}{n}" for n in names}
         schema2 = self._schema.rename(mapping, strict=True)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Rename(self._plan, mapping, strict=True),
@@ -444,7 +270,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         names = subset if subset else self._schema.names()
         mapping = {n: f"{n}{suffix}" for n in names}
         schema2 = self._schema.rename(mapping, strict=True)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Rename(self._plan, mapping, strict=True),
@@ -457,7 +283,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         names = subset if subset else self._schema.names()
         mapping = {n: n.replace(old, new) for n in names}
         schema2 = self._schema.rename(mapping, strict=True)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Rename(self._plan, mapping, strict=True),
@@ -474,7 +300,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if not mapping:
             return self
         schema2 = self._schema.rename(mapping, strict=strict)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Rename(self._plan, mapping, strict=strict),
@@ -491,7 +317,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if not mapping:
             return self
         schema2 = self._schema.rename(mapping, strict=strict)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Rename(self._plan, mapping, strict=strict),
@@ -508,7 +334,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if not mapping:
             return self
         schema2 = self._schema.rename(mapping, strict=strict)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Rename(self._plan, mapping, strict=strict),
@@ -528,7 +354,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if not mapping:
             return self
         schema2 = self._schema.rename(mapping, strict=strict)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Rename(self._plan, mapping, strict=strict),
@@ -540,7 +366,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         dtype = infer_dtype(expr)
         schema2 = self._schema.with_column(name, dtype=dtype)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=WithColumn(self._plan, name=name, expr=expr),
@@ -549,7 +375,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def cast(self, name: str, dtype: object) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.cast(name, dtype=dtype)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Cast(self._plan, name=name, dtype=dtype),
@@ -602,7 +428,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if offset < 0:
             raise ValueError("with_row_count offset must be non-negative")
         schema2 = self._schema.with_row_count(name)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=WithRowCount(self._plan, name=name, offset=offset),
@@ -665,7 +491,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
         out: Frame[SchemaT, BackendFrameT, BackendExprT] = self
         for c in cols:
-            out = Frame(
+            out = type(self)(
                 _data=out._data,
                 _adapter=out._adapter,
                 _plan=WithColumn(
@@ -676,7 +502,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         return out
 
     def filter(self, predicate: Expr[bool]) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Filter(self._plan, predicate=predicate),
@@ -703,7 +529,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         key_tuple = tuple(sort_keys)
         des = _coerce_sort_flags("descending", len(key_tuple), descending)
         nls = _coerce_sort_flags("nulls_last", len(key_tuple), nulls_last)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Sort(self._plan, keys=key_tuple, descending=des, nulls_last=nls),
@@ -720,7 +546,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if sub is not None:
             self._schema.select(sub)  # validate
         schema2 = self._schema.unique()
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Unique(self._plan, subset=sub, keep=keep, maintain_order=maintain_order),
@@ -745,7 +571,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if sub is not None:
             self._schema.select(sub)  # validate
         schema2 = self._schema.duplicated(out_name=out_name)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Duplicated(self._plan, subset=sub, keep=keep, out_name=out_name),
@@ -769,7 +595,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             raise ValueError("sample frac must be non-negative")
         if frac is not None and frac > 1.0 and not with_replacement:
             raise ValueError("sample frac > 1.0 requires with_replacement=True")
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Sample(
@@ -864,7 +690,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if op in {"count"}:
             dtype = int
         schema2 = self._schema.with_column(out_name, dtype=dtype)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=RollingAgg(
@@ -894,7 +720,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if sub is not None:
             self._schema.select(sub)  # validate
         schema2 = self._schema.drop_nulls()
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=DropNulls(self._plan, subset=sub, how=how, threshold=threshold),
@@ -906,7 +732,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if sub is not None:
             self._schema.select(sub)  # validate
         schema2 = self._schema.drop_nulls_all()
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=DropNullsAll(self._plan, subset=sub),
@@ -925,7 +751,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         if sub is not None:
             self._schema.select(sub)  # validate
         schema2 = self._schema.fill_null()
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=FillNull(self._plan, value=value, subset=sub, strategy=strategy),
@@ -994,7 +820,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             variable_name=variable_name,
             value_name=value_name,
         )
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Melt(
@@ -1097,7 +923,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 raise ValueError("join keys must be non-empty for non-cross joins")
             schema2 = self._schema.join_merge(other._schema, left_on=lk, right_on=rk, suffix=suffix)
 
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Join(
@@ -1117,7 +943,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if length is not None and length < 0:
             raise ValueError("length must be non-negative or None")
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Slice(self._plan, offset=offset, length=length),
@@ -1130,7 +956,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def head(self, n: int) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if n < 0:
             raise ValueError("n must be non-negative")
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Head(self._plan, n=n),
@@ -1140,7 +966,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def tail(self, n: int) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         if n < 0:
             raise ValueError("n must be non-negative")
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Tail(self._plan, n=n),
@@ -1159,7 +985,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         for name in self._schema.names():
             if self._schema.get(name).dtype != other._schema.get(name).dtype:
                 raise PlanFrameSchemaError(f"concat_vertical dtype mismatch for column: {name}")
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=ConcatVertical(self._plan, other=cast(FrameLike, other)),
@@ -1179,7 +1005,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"concat_horizontal has overlapping columns: {sorted(overlap)}"
             )
         schema2 = Schema(fields=tuple([*self._schema.fields, *other._schema.fields]))
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=ConcatHorizontal(self._plan, other=cast(FrameLike, other)),
@@ -1195,7 +1021,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self, *columns: str, outer: bool = False
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2 = self._schema.explode(columns)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Explode(self._plan, columns=tuple(columns), outer=outer),
@@ -1205,7 +1031,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def unnest(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         schema2, items = self._schema.unnest(columns)
         node_items = tuple(UnnestItem(column=c, fields=f) for c, f in items)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Unnest(self._plan, items=node_items),
@@ -1222,7 +1048,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
         value_name = column if value is None else value
         schema2 = self._schema.posexplode(column, pos=pos, value=value_name)
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Posexplode(self._plan, column=column, pos=pos, value=value, outer=outer),
@@ -1282,7 +1108,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
                     for c in on_columns:
                         out_fields.append(Field(name=f"{v}{separator}{c}", dtype=object))
         schema2 = Schema(fields=tuple(out_fields))
-        return Frame(
+        return type(self)(
             _data=self._data,
             _adapter=self._adapter,
             _plan=Pivot(
@@ -1297,233 +1123,3 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
             ),
             _schema=schema2,
         )
-
-    def collect(
-        self,
-        *,
-        kind: Literal["dataclass", "pydantic"] | None = None,
-        name: str = "Row",
-        options: ExecutionOptions | None = None,
-    ) -> BackendFrameT | list[Any]:
-        try:
-            planned = self._eval(self._plan)
-            out = self._adapter.collect(planned, options=options)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend collect failed for {self._adapter.name}") from e
-
-        if kind is None:
-            return out
-
-        # Build row models from the derived schema.
-        Model = materialize_model(name=name, schema=self._schema, kind=kind)
-        try:
-            rows = self._adapter.to_dicts(out, options=options)
-            return [Model(**r) for r in rows]
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend collect(kind={kind!r}) failed for {self._adapter.name}"
-            ) from e
-
-    async def acollect(
-        self,
-        *,
-        kind: Literal["dataclass", "pydantic"] | None = None,
-        name: str = "Row",
-        options: ExecutionOptions | None = None,
-    ) -> BackendFrameT | list[Any]:
-        try:
-            planned = self._eval(self._plan)
-            out = await self._adapter.acollect(planned, options=options)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend acollect failed for {self._adapter.name}"
-            ) from e
-
-        if kind is None:
-            return out
-
-        Model = materialize_model(name=name, schema=self._schema, kind=kind)
-        try:
-            rows = self._adapter.to_dicts(out, options=options)
-            return [Model(**r) for r in rows]
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend acollect(kind={kind!r}) failed for {self._adapter.name}"
-            ) from e
-
-    def to_dicts(self, *, options: ExecutionOptions | None = None) -> list[dict[str, object]]:
-        try:
-            planned = self._eval(self._plan)
-            return self._adapter.to_dicts(planned, options=options)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend to_dicts failed for {self._adapter.name}"
-            ) from e
-
-    def to_dict(self, *, options: ExecutionOptions | None = None) -> dict[str, list[object]]:
-        try:
-            planned = self._eval(self._plan)
-            return self._adapter.to_dict(planned, options=options)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(f"Backend to_dict failed for {self._adapter.name}") from e
-
-    async def ato_dicts(
-        self, *, options: ExecutionOptions | None = None
-    ) -> list[dict[str, object]]:
-        try:
-            planned = self._eval(self._plan)
-            return await self._adapter.ato_dicts(planned, options=options)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend ato_dicts failed for {self._adapter.name}"
-            ) from e
-
-    async def ato_dict(self, *, options: ExecutionOptions | None = None) -> dict[str, list[object]]:
-        try:
-            planned = self._eval(self._plan)
-            return await self._adapter.ato_dict(planned, options=options)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend ato_dict failed for {self._adapter.name}"
-            ) from e
-
-    def write_parquet(
-        self,
-        path: str,
-        *,
-        compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = "zstd",
-        row_group_size: int | None = None,
-        partition_by: tuple[str, ...] | None = None,
-        storage_options: StorageOptions | None = None,
-    ) -> None:
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_parquet(
-                planned,
-                path,
-                compression=compression,
-                row_group_size=row_group_size,
-                partition_by=partition_by,
-                storage_options=storage_options,
-            )
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_parquet failed for {self._adapter.name}"
-            ) from e
-
-    def write_csv(
-        self,
-        path: str,
-        *,
-        separator: str = ",",
-        include_header: bool = True,
-        storage_options: StorageOptions | None = None,
-    ) -> None:
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_csv(
-                planned,
-                path,
-                separator=separator,
-                include_header=include_header,
-                storage_options=storage_options,
-            )
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_csv failed for {self._adapter.name}"
-            ) from e
-
-    def write_ndjson(self, path: str, *, storage_options: StorageOptions | None = None) -> None:
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_ndjson(planned, path, storage_options=storage_options)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_ndjson failed for {self._adapter.name}"
-            ) from e
-
-    def write_ipc(
-        self,
-        path: str,
-        *,
-        compression: Literal["uncompressed", "lz4", "zstd"] = "uncompressed",
-        storage_options: StorageOptions | None = None,
-    ) -> None:
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_ipc(
-                planned, path, compression=compression, storage_options=storage_options
-            )
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_ipc failed for {self._adapter.name}"
-            ) from e
-
-    def write_database(
-        self,
-        table_name: str,
-        *,
-        connection: object,
-        if_table_exists: Literal["fail", "replace", "append"] = "fail",
-        engine: str | None = None,
-    ) -> None:
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_database(
-                planned,
-                table_name=table_name,
-                connection=connection,
-                if_table_exists=if_table_exists,
-                engine=engine,
-            )
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_database failed for {self._adapter.name}"
-            ) from e
-
-    def write_excel(self, path: str, *, worksheet: str = "Sheet1") -> None:
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_excel(planned, path, worksheet=worksheet)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_excel failed for {self._adapter.name}"
-            ) from e
-
-    def write_delta(
-        self,
-        target: str,
-        *,
-        mode: Literal["error", "append", "overwrite", "ignore", "merge"] = "error",
-        storage_options: StorageOptions | None = None,
-    ) -> None:
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_delta(planned, target, mode=mode, storage_options=storage_options)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_delta failed for {self._adapter.name}"
-            ) from e
-
-    def write_avro(
-        self,
-        path: str,
-        *,
-        compression: Literal["uncompressed", "snappy", "deflate"] = "uncompressed",
-        name: str = "",
-    ) -> None:
-        try:
-            planned = self._eval(self._plan)
-            self._adapter.write_avro(planned, path, compression=compression, name=name)
-        except Exception as e:  # noqa: BLE001
-            raise PlanFrameExecutionError(
-                f"Backend write_avro failed for {self._adapter.name}"
-            ) from e
-
-    def materialize_model(
-        self,
-        name: str,
-        *,
-        kind: Literal["dataclass", "pydantic"] = "dataclass",
-    ) -> type[Any]:
-        return materialize_model(name=name, schema=self._schema, kind=kind)

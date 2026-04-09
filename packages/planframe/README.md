@@ -39,7 +39,7 @@ Materialization accepts optional **`ExecutionOptions`** on `collect` / `to_dicts
 For async stacks, `Frame.acollect()`, `Frame.ato_dicts()`, and `Frame.ato_dict()` await adapter hooks (`BaseAdapter.acollect` and friends); defaults run sync methods in a thread pool. See `https://planframe.readthedocs.io/en/latest/planframe/design/backend-adapter-design/`.
 
 ### Typing
-PlanFrame includes `py.typed` plus generated stubs (notably `planframe/frame.pyi`) to improve static typing in editors and Pyright.
+PlanFrame includes `py.typed` plus generated stubs (notably `planframe/frame/__init__.pyi`) to improve static typing in editors and Pyright.
 
 If you modify the `Frame` API, regenerate stubs from the repo root:
 
