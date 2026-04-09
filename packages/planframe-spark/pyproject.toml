@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "planframe-spark"
-version = "0.8.0"
+version = "1.0.0"
 description = "PySpark backend adapter for PlanFrame (plus optional Spark-shaped API re-exports)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,7 +18,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "planframe>=0.8.0,<0.9.0",
+  "planframe>=1.0.0,<2.0.0",
   "pyspark>=3.5",
 ]
 
