@@ -18,6 +18,7 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
+          paths: [packages/planframe]
           options:
             docstring_style: google
             show_source: false
@@ -35,6 +36,8 @@ nav:
       - Overview: planframe/index.md
       - Guides:
           - Creating an adapter: planframe/guides/creating-an-adapter.md
+          - PySpark-like API (SparkFrame): planframe/guides/pyspark-like-api.md
+          - Pandas-like API (PandasLikeFrame): planframe/guides/pandas-like-api.md
       - Reference:
           - API (light): planframe/reference/api.md
       - Design:

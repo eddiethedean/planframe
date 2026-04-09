@@ -13,8 +13,15 @@ Choose a path:
 - [PlanFrame (core)](planframe/index.md)
 - [planframe-polars](planframe_polars/index.md)
 - [planframe-pandas](planframe_pandas/index.md)
+- [PySpark-like API (`planframe.spark`)](planframe/guides/pyspark-like-api.md)
+- [Pandas-like API (`planframe.pandas`)](planframe/guides/pandas-like-api.md)
 
 ## What’s new (high-level)
+
+**v0.8.0**
+
+- **`planframe.pandas`**: pandas-like `PandasLikeFrame` / `Series` skin on the core package; **planframe-pandas**’s `PandasFrame` uses that skin.
+- **Spark skin** (`planframe.spark`): column sugar, `withColumns`, typed `groupBy().agg`, and plan-level `hint()` with a core `Hint` node and optional adapter hook.
 
 **v0.7.1**
 

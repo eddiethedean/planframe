@@ -16,11 +16,12 @@ from planframe.schema.ir import Schema
 from planframe.schema.source import schema_from_type
 
 if TYPE_CHECKING:
-    from planframe.frame._class import Frame
+    pass
 
 SchemaT = TypeVar("SchemaT")
 BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
+FrameT = TypeVar("FrameT", bound="FramePlanMixin[Any, Any, Any]")
 
 
 class FramePlanMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
@@ -77,12 +78,12 @@ class FramePlanMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     @classmethod
     def source(
-        cls,
+        cls: type[FrameT],
         data: BackendFrameT,
         *,
         adapter: BackendAdapter[BackendFrameT, BackendExprT],
         schema: type[SchemaT],
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> FrameT:
         schema_ir = schema_from_type(schema)
         return cls(
             _data=data,
@@ -97,9 +98,7 @@ class FramePlanMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def plan(self) -> PlanNode:
         return self._plan
 
-    def optimize(
-        self, *, level: Literal[0, 1, 2] = 1
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def optimize(self: FrameT, *, level: Literal[0, 1, 2] = 1) -> FrameT:
         """Return a new Frame with an optimized plan.
 
         This is opt-in and performs only backend-independent, semantics-preserving rewrites.

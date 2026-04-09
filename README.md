@@ -10,9 +10,9 @@ PlanFrame is a typed relational planning layer for Python DataFrames.
 **Principle**: PlanFrame is **always lazy**. Every transformation builds a typed plan and evolves schema metadata. **No backend work runs** until you call `collect()`.
 
 This repository is a mono-repo that currently ships:
-- **`planframe`**: core package (import as `planframe`)
+- **`planframe`**: core package (import as `planframe`; optional skins `planframe.spark` and `planframe.pandas` for PySpark-like and pandas-like ergonomics)
 - **`planframe-polars`**: Polars adapter (import as `planframe_polars`)
-- **`planframe-pandas`**: Pandas adapter (import as `planframe_pandas`)
+- **`planframe-pandas`**: Pandas adapter (import as `planframe_pandas`; `PandasFrame` is built on the pandas-like skin)
 
 ### Documentation (ReadTheDocs)
 
@@ -25,6 +25,8 @@ The docs are organized into two clear tracks:
 Key pages:
 
 - **Creating an adapter**: `https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/`
+- **PySpark-like API (`planframe.spark`)**: `https://planframe.readthedocs.io/en/latest/planframe/guides/pyspark-like-api/`
+- **Pandas-like API (`planframe.pandas`)**: `https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/`
 - **Using planframe-polars**: `https://planframe.readthedocs.io/en/latest/planframe_polars/guides/using-planframe-polars/`
 - **Using planframe-pandas**: `https://planframe.readthedocs.io/en/latest/planframe_pandas/guides/using-planframe-pandas/`
 
@@ -67,12 +69,19 @@ Output = out.materialize_model("Output", kind="dataclass")
 df = out.collect()
 ```
 
-### What’s new in v0.7.1
+### What’s new in v0.8.0
+
+- **`planframe.pandas`**: pandas-like `PandasLikeFrame` and `Series` (typed boolean indexing, column `filter`, `astype`, `eval`, `drop_duplicates`, and compatibility with core `Frame` methods).
+- **`planframe.spark`**: PySpark-style ergonomics—`df["col"]` / `df.col`, `withColumns`, `groupBy().agg(**...)`, and `hint()`—plus a **`Hint`** plan node and optional `BaseAdapter.hint()` for backends.
+- **planframe-pandas**: `PandasFrame` is layered on `PandasLikeFrame`, so the pandas adapter ships the pandas-flavored API by default.
+
+### What shipped in v0.7.1
 
 - **pandas**: `fill_null(..., strategy=...)` fills only the requested subset columns (parity with Polars).
 - **pandas**: `drop_nulls(..., threshold=...)` no longer triggers a pandas `how`/`thresh` conflict; behavior matches Polars for threshold-based dropping.
 - **schema**: unnest field names inferred from Pydantic v2 `BaseModel` types (`model_fields`).
 - **planframe-polars**: `JoinOptions.force_parallel` maps to Polars `force_parallel`; join hint precedence documented on `JoinOptions`.
+- **`planframe.spark`**: PySpark-like `SparkFrame`, `Column`, and `functions` on the core package (no Spark dependency); the old standalone `planframe-spark` package is retired.
 
 ### What shipped in v0.7.0
 
@@ -97,6 +106,7 @@ df = out.collect()
 - **Core concepts & design**: `https://planframe.readthedocs.io/en/latest/planframe/design/`
 - **Light API reference (core)**: `https://planframe.readthedocs.io/en/latest/planframe/reference/api/`
 - **Light API reference (polars)**: `https://planframe.readthedocs.io/en/latest/planframe_polars/reference/api/`
+- **Light API reference (pandas)**: `https://planframe.readthedocs.io/en/latest/planframe_pandas/reference/api/`
 
 ### Public API (stable imports)
 
@@ -104,10 +114,12 @@ Preferred imports:
 
 - `from planframe import Frame, Schema, JoinOptions, execute_plan`
 - `from planframe import expr` (then `expr.col`, `expr.lit`, `expr.add`, ...)
+- `from planframe import spark` / `from planframe import pandas` (lazy submodules: PySpark-like and pandas-like skins)
 
 Backend-specific frames (example):
 
 - `from planframe_polars import PolarsFrame`
+- `from planframe_pandas import PandasFrame`
 
 ### Execution model
 

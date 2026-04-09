@@ -434,6 +434,17 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
 
         return await asyncio.to_thread(self.to_dict, df, options=options)
 
+    def hint(
+        self, df: BackendFrameT, *, hints: tuple[str, ...], kv: dict[str, object]
+    ) -> BackendFrameT:
+        """Optional execution hint hook (Spark-inspired).
+
+        Default is a no-op. Backends that support such hints may override.
+        """
+
+        _ = hints, kv
+        return df
+
 
 # Backwards-compatible name for older imports.
 BackendAdapter = BaseAdapter

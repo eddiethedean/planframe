@@ -6,7 +6,7 @@ from typing import Any, ClassVar, Generic, Literal, TypeVar, cast
 import pandas as pd
 
 from planframe.backend.errors import PlanFrameBackendError
-from planframe.frame import Frame
+from planframe.pandas import PandasLikeFrame
 from planframe.typing.storage import StorageOptions
 from planframe_pandas.adapter import PandasAdapter, PandasBackendExpr, PandasBackendFrame
 
@@ -74,9 +74,11 @@ class _PandasFrameMeta(type):
         if kwargs:
             raise TypeError(f"Unexpected constructor kwargs: {sorted(kwargs)}")
         df = _to_pandas_df(data, schema=cast(type[Any], cls))
-        return PandasFrame.source(
+        # Type checkers can't always see `Frame`-style classmethods/attrs on metaclass `cls`.
+        cls_any = cast(Any, cls)
+        return cls_any.source(
             df,
-            adapter=PandasFrame._adapter_singleton,
+            adapter=cls_any._adapter_singleton,
             schema=cast(type[Any], cls),
         )
 
@@ -85,7 +87,7 @@ SchemaT = TypeVar("SchemaT")
 
 
 class PandasFrame(
-    Frame[SchemaT, PandasBackendFrame, PandasBackendExpr],
+    PandasLikeFrame[SchemaT, PandasBackendFrame, PandasBackendExpr],
     Generic[SchemaT],
     metaclass=_PandasFrameMeta,
 ):

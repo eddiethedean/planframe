@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
 if TYPE_CHECKING:
     from planframe.frame._class import Frame
 
+from typing_extensions import Self
+
 from planframe.backend.errors import PlanFrameBackendError, PlanFrameSchemaError
 from planframe.dynamic_groupby import DynamicGroupedFrame
 from planframe.expr.api import Expr, clip, col, infer_dtype, lit
@@ -33,6 +35,7 @@ from planframe.plan.nodes import (
     JoinKeyExpr,
     Melt,
     Pivot,
+    PlanNode,
     Posexplode,
     Project,
     ProjectExpr,
@@ -66,10 +69,21 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     """Column operations, joins, reshaping, and windowed transforms."""
 
     __slots__ = ()
+    # These are provided by `FramePlanMixin` at runtime; declare them so type checkers
+    # understand that ops mixins can access internals without depending on the concrete `Frame`.
+    _data: BackendFrameT
+    _adapter: Any
+    _plan: PlanNode
+    _schema: Schema
+    if TYPE_CHECKING:
+        # Provided by `FramePlanMixin` on the concrete `Frame` class. Declared here so
+        # type checkers accept `type(self)(...)` construction in these mixins.
+        def __init__(  # noqa: D401
+            self, _data: BackendFrameT, _adapter: Any, _plan: PlanNode, _schema: Schema
+        ) -> None: ...
+        def _normalize_join_keys(self, items: tuple[str | Expr[Any], ...]) -> tuple[Any, ...]: ...
 
-    def select(
-        self, *columns: str | tuple[str, Expr[Any]]
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def select(self, *columns: str | tuple[str, Expr[Any]]) -> Self:
         if not columns:
             cols: tuple[str, ...] = tuple()
             schema2 = self._schema.select(cols)
@@ -107,7 +121,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema3,
         )
 
-    def select_prefix(self, prefix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def select_prefix(self, prefix: str) -> Self:
         cols = tuple(n for n in self._schema.names() if n.startswith(prefix))
         schema2 = self._schema.select(cols)
         return type(self)(
@@ -117,7 +131,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_suffix(self, suffix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def select_suffix(self, suffix: str) -> Self:
         cols = tuple(n for n in self._schema.names() if n.endswith(suffix))
         schema2 = self._schema.select(cols)
         return type(self)(
@@ -127,7 +141,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_regex(self, pattern: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def select_regex(self, pattern: str) -> Self:
         rx = re.compile(pattern)
         cols = tuple(n for n in self._schema.names() if rx.search(n))
         schema2 = self._schema.select(cols)
@@ -138,9 +152,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_schema(
-        self, selector: ColumnSelector, *, strict: bool = True
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def select_schema(self, selector: ColumnSelector, *, strict: bool = True) -> Self:
         cols = _apply_strict(cols=selector.select(self._schema), strict=strict, selector=selector)
         schema2 = self._schema.select(cols)
         return type(self)(
@@ -150,7 +162,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_exclude(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def select_exclude(self, *columns: str) -> Self:
         cols = tuple(columns)
         schema2 = self._schema.select_exclude(cols)
         return type(self)(
@@ -160,7 +172,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def reorder_columns(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def reorder_columns(self, *columns: str) -> Self:
         schema2 = self._schema.reorder_columns(columns)
         return type(self)(
             _data=self._data,
@@ -169,7 +181,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_first(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def select_first(self, *columns: str) -> Self:
         schema2 = self._schema.select_first(columns)
         return type(self)(
             _data=self._data,
@@ -178,7 +190,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def select_last(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def select_last(self, *columns: str) -> Self:
         schema2 = self._schema.select_last(columns)
         return type(self)(
             _data=self._data,
@@ -187,9 +199,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def move(
-        self, column: str, *, before: str | None = None, after: str | None = None
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def move(self, column: str, *, before: str | None = None, after: str | None = None) -> Self:
         schema2 = self._schema.move(column, before=before, after=after)
         return type(self)(
             _data=self._data,
@@ -198,9 +208,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def drop(
-        self, *columns: str, strict: bool = True
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def drop(self, *columns: str, strict: bool = True) -> Self:
         cols = tuple(columns)
         schema2 = self._schema.drop(cols, strict=strict)
         return type(self)(
@@ -210,7 +218,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def drop_prefix(self, prefix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def drop_prefix(self, prefix: str) -> Self:
         cols = tuple(n for n in self._schema.names() if n.startswith(prefix))
         if not cols:
             return self
@@ -219,7 +227,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
-    def drop_suffix(self, suffix: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def drop_suffix(self, suffix: str) -> Self:
         cols = tuple(n for n in self._schema.names() if n.endswith(suffix))
         if not cols:
             return self
@@ -228,7 +236,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
-    def drop_regex(self, pattern: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def drop_regex(self, pattern: str) -> Self:
         rx = re.compile(pattern)
         cols = tuple(n for n in self._schema.names() if rx.search(n))
         if not cols:
@@ -238,9 +246,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
-    def rename(
-        self, *, strict: bool = True, **mapping: str
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def rename(self, *, strict: bool = True, **mapping: str) -> Self:
         if not mapping:
             return self
         schema2 = self._schema.rename(mapping, strict=strict)
@@ -251,9 +257,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def rename_prefix(
-        self, prefix: str, *subset: str
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def rename_prefix(self, prefix: str, *subset: str) -> Self:
         names = subset if subset else self._schema.names()
         mapping = {n: f"{prefix}{n}" for n in names}
         schema2 = self._schema.rename(mapping, strict=True)
@@ -264,9 +268,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def rename_suffix(
-        self, suffix: str, *subset: str
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def rename_suffix(self, suffix: str, *subset: str) -> Self:
         names = subset if subset else self._schema.names()
         mapping = {n: f"{n}{suffix}" for n in names}
         schema2 = self._schema.rename(mapping, strict=True)
@@ -277,9 +279,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def rename_replace(
-        self, old: str, new: str, *subset: str
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def rename_replace(self, old: str, new: str, *subset: str) -> Self:
         names = subset if subset else self._schema.names()
         mapping = {n: n.replace(old, new) for n in names}
         schema2 = self._schema.rename(mapping, strict=True)
@@ -290,9 +290,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def rename_upper(
-        self, *subset: str, strict: bool = True
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def rename_upper(self, *subset: str, strict: bool = True) -> Self:
         names = subset if subset else self._schema.names()
         if not strict:
             names = tuple(n for n in names if n in self._schema.field_map())
@@ -307,9 +305,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def rename_lower(
-        self, *subset: str, strict: bool = True
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def rename_lower(self, *subset: str, strict: bool = True) -> Self:
         names = subset if subset else self._schema.names()
         if not strict:
             names = tuple(n for n in names if n in self._schema.field_map())
@@ -324,9 +320,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def rename_title(
-        self, *subset: str, strict: bool = True
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def rename_title(self, *subset: str, strict: bool = True) -> Self:
         names = subset if subset else self._schema.names()
         if not strict:
             names = tuple(n for n in names if n in self._schema.field_map())
@@ -346,7 +340,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         chars: str | None = None,
         strict: bool = True,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         names = subset if subset else self._schema.names()
         if not strict:
             names = tuple(n for n in names if n in self._schema.field_map())
@@ -361,9 +355,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def with_column(
-        self, name: str, expr: Expr[Any]
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def with_column(self, name: str, expr: Expr[Any]) -> Self:
         dtype = infer_dtype(expr)
         schema2 = self._schema.with_column(name, dtype=dtype)
         return type(self)(
@@ -373,7 +365,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def cast(self, name: str, dtype: object) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def cast(self, name: str, dtype: object) -> Self:
         schema2 = self._schema.cast(name, dtype=dtype)
         return type(self)(
             _data=self._data,
@@ -387,11 +379,11 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         mapping: Mapping[str, object],
         *,
         strict: bool = True,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         if not mapping:
             raise ValueError("cast_many requires non-empty mapping")
 
-        out: Frame[SchemaT, BackendFrameT, BackendExprT] = self
+        out: Self = self
         for name, dtype in mapping.items():
             if strict:
                 out._schema.get(name)
@@ -406,13 +398,13 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *columns: str,
         dtype: object,
         strict: bool = True,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         if not columns:
             raise ValueError("cast_subset requires at least one column")
         if len(set(columns)) != len(columns):
             raise ValueError("cast_subset columns must be unique")
 
-        out: Frame[SchemaT, BackendFrameT, BackendExprT] = self
+        out: Self = self
         for name in columns:
             if strict:
                 out._schema.get(name)
@@ -422,9 +414,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                     out = out.cast(name, dtype)
         return out
 
-    def with_row_count(
-        self, *, name: str = "row_nr", offset: int = 0
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def with_row_count(self, *, name: str = "row_nr", offset: int = 0) -> Self:
         if offset < 0:
             raise ValueError("with_row_count offset must be non-negative")
         schema2 = self._schema.with_row_count(name)
@@ -441,7 +431,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         lower: Expr[object] | Scalar | None = None,
         upper: Expr[object] | Scalar | None = None,
         subset: Sequence[str] | None = None,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         if lower is None and upper is None:
             raise ValueError("clip requires at least one of lower= or upper=")
 
@@ -489,7 +479,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                         f"clip requires numeric columns; got {c!r} with dtype {dt!r}"
                     )
 
-        out: Frame[SchemaT, BackendFrameT, BackendExprT] = self
+        out: Self = self
         for c in cols:
             out = type(self)(
                 _data=out._data,
@@ -501,7 +491,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             )
         return out
 
-    def filter(self, predicate: Expr[bool]) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def filter(self, predicate: Expr[bool]) -> Self:
         return type(self)(
             _data=self._data,
             _adapter=self._adapter,
@@ -514,7 +504,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *keys: str | Expr[Any],
         descending: bool | Sequence[bool] = False,
         nulls_last: bool | Sequence[bool] = False,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         sort_keys: list[SortColumnKey | SortExprKey] = []
         for k in keys:
             if isinstance(k, str):
@@ -541,7 +531,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         keep: Literal["first", "last"] = "first",
         maintain_order: bool = False,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         sub = tuple(subset) if subset else None
         if sub is not None:
             self._schema.select(sub)  # validate
@@ -558,7 +548,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         keep: Literal["first", "last"] = "first",
         maintain_order: bool = False,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         return self.unique(*subset, keep=keep, maintain_order=maintain_order)
 
     def duplicated(
@@ -566,7 +556,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         keep: Literal["first", "last"] | bool = "first",
         out_name: str = "duplicated",
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         sub = tuple(subset) if subset else None
         if sub is not None:
             self._schema.select(sub)  # validate
@@ -586,7 +576,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         with_replacement: bool = False,
         shuffle: bool = False,
         seed: int | None = None,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         if (n is None) == (frac is None):
             raise ValueError("sample requires exactly one of n= or frac=")
         if n is not None and n < 0:
@@ -671,7 +661,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         out_name: str,
         by: Sequence[str] | None = None,
         min_periods: int = 1,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         self._schema.get(on)
         self._schema.get(column)
         by_tup = tuple(by) if by is not None else None
@@ -711,7 +701,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         how: Literal["any", "all"] = "any",
         threshold: int | None = None,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         sub = tuple(subset) if subset else None
         if how not in ("any", "all"):
             raise ValueError("drop_nulls how must be 'any' or 'all'")
@@ -727,7 +717,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def drop_nulls_all(self, *subset: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def drop_nulls_all(self, *subset: str) -> Self:
         sub = tuple(subset) if subset else None
         if sub is not None:
             self._schema.select(sub)  # validate
@@ -744,7 +734,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         value: Scalar | Expr[Any] | None = None,
         *subset: str,
         strategy: str | None = None,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         sub = tuple(subset) if subset else None
         if (value is None) == (strategy is None):
             raise ValueError("fill_null requires exactly one of value= or strategy=")
@@ -763,7 +753,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         value: Scalar | Expr[Any] | None = None,
         *columns: str,
         strategy: str | None = None,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         if not columns:
             raise ValueError("fill_null_subset requires at least one column")
         return self.fill_null(value, *columns, strategy=strategy)
@@ -773,11 +763,11 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         mapping: Mapping[str, Scalar | Expr[Any]],
         *,
         strict: bool = True,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         if not mapping:
             raise ValueError("fill_null_many requires non-empty mapping")
 
-        out: Frame[SchemaT, BackendFrameT, BackendExprT] = self
+        out: Self = self
         for name, value in mapping.items():
             if strict:
                 out._schema.get(name)
@@ -794,7 +784,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         value_vars: Sequence[str] | None = None,
         variable_name: str = "variable",
         value_name: str = "value",
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         names = self._schema.names()
         if id_vars is None and value_vars is None:
             id_tup: tuple[str, ...] = ()
@@ -840,7 +830,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         on: Sequence[str] | None = None,
         variable_name: str = "variable",
         value_name: str = "value",
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         return self.melt(
             id_vars=tuple(index) if index is not None else None,
             value_vars=tuple(on) if on is not None else None,
@@ -855,7 +845,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         value_vars: Sequence[str] | None = None,
         names_to: str = "variable",
         values_to: str = "value",
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         return self.melt(
             id_vars=id_vars,
             value_vars=value_vars,
@@ -875,7 +865,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         on_columns: Sequence[str] | None = None,
         sort_columns: bool = False,
         separator: str = "_",
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         return self.pivot(
             index=index,
             columns=names_from,
@@ -896,7 +886,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         how: Literal["inner", "left", "right", "full", "semi", "anti", "cross"] = "inner",
         suffix: str = "_right",
         options: JoinOptions | None = None,
-    ) -> Frame[Any, BackendFrameT, BackendExprT]:
+    ) -> Any:
         if other._adapter.name != self._adapter.name:
             raise PlanFrameBackendError("Cannot join frames from different backends")
         if how == "cross":
@@ -938,9 +928,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def slice(
-        self, offset: int, length: int | None = None
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def slice(self, offset: int, length: int | None = None) -> Self:
         if length is not None and length < 0:
             raise ValueError("length must be non-negative or None")
         return type(self)(
@@ -950,10 +938,10 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
-    def limit(self, n: int) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def limit(self, n: int) -> Self:
         return self.head(n)
 
-    def head(self, n: int) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def head(self, n: int) -> Self:
         if n < 0:
             raise ValueError("n must be non-negative")
         return type(self)(
@@ -963,7 +951,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
-    def tail(self, n: int) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def tail(self, n: int) -> Self:
         if n < 0:
             raise ValueError("n must be non-negative")
         return type(self)(
@@ -973,9 +961,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
-    def concat_vertical(
-        self, other: Frame[SchemaT, BackendFrameT, BackendExprT]
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def concat_vertical(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
         if other._adapter.name != self._adapter.name:
             raise PlanFrameBackendError("Cannot concat frames from different backends")
         if self._schema.names() != other._schema.names():
@@ -992,9 +978,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
-    def concat_horizontal(
-        self, other: Frame[SchemaT, BackendFrameT, BackendExprT]
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def concat_horizontal(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
         if other._adapter.name != self._adapter.name:
             raise PlanFrameBackendError("Cannot concat frames from different backends")
         left_names = set(self._schema.names())
@@ -1012,14 +996,10 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def union_distinct(
-        self, other: Frame[SchemaT, BackendFrameT, BackendExprT]
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def union_distinct(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
         return self.concat_vertical(other).unique()
 
-    def explode(
-        self, *columns: str, outer: bool = False
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def explode(self, *columns: str, outer: bool = False) -> Self:
         schema2 = self._schema.explode(columns)
         return type(self)(
             _data=self._data,
@@ -1028,7 +1008,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def unnest(self, *columns: str) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    def unnest(self, *columns: str) -> Self:
         schema2, items = self._schema.unnest(columns)
         node_items = tuple(UnnestItem(column=c, fields=f) for c, f in items)
         return type(self)(
@@ -1045,7 +1025,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         pos: str = "pos",
         value: str | None = None,
         outer: bool = False,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         value_name = column if value is None else value
         schema2 = self._schema.posexplode(column, pos=pos, value=value_name)
         return type(self)(
@@ -1068,7 +1048,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         on_columns: tuple[str, ...] | None = None,
         separator: str = "_",
         sort_columns: bool = False,
-    ) -> Frame[SchemaT, BackendFrameT, BackendExprT]:
+    ) -> Self:
         if columns is None and on is None:
             raise ValueError("pivot requires columns= (preferred) or on=")
         if columns is not None and on is not None:

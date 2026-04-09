@@ -16,3 +16,7 @@ Yes. `Frame` exposes `acollect`, `ato_dicts`, and `ato_dict`, which await the ad
 
 Yes. `planframe.selector.ColumnSelector` is a `@runtime_checkable` protocol, so `isinstance(obj, ColumnSelector)` works for built-in selector types and for structural matches (objects with a compatible `select(self, schema)` method).
 
+## Is there a PySpark-like or pandas-like API?
+
+Yes. The core package ships optional, typed **skins**—`planframe.spark` (PySpark-style `SparkFrame`, `Column`, `functions`) and `planframe.pandas` (pandas-style `PandasLikeFrame`, `Series`). They are mixins on `Frame` and do not add Spark or extra runtime deps. The **planframe-pandas** adapter’s `PandasFrame` uses `PandasLikeFrame` by default. See the [PySpark-like API](../planframe/guides/pyspark-like-api.md) and [pandas-like API](../planframe/guides/pandas-like-api.md) guides.
+

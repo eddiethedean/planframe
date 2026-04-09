@@ -42,6 +42,13 @@ PlanFrame is always lazy:
 - Chaining methods (like `.select(...)`) does **not** run Polars operations.
 - `collect()` evaluates the full plan. If the source is a `polars.LazyFrame`, this naturally compiles into a single lazy query before collecting.
 
+### Optional API skins (core)
+
+The core package includes typed **mixins** you can combine with `PolarsFrame` if you want a different surface API (same lazy plan underneath):
+
+- **`planframe.spark.SparkFrame`**: PySpark-like column access, `withColumns`, `groupBy().agg(...)`, `hint()`, … — see [PySpark-like API](https://planframe.readthedocs.io/en/latest/planframe/guides/pyspark-like-api/).
+- **`planframe.pandas.PandasLikeFrame`**: pandas-like naming — see [pandas-like API](https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/) (the pandas adapter’s `PandasFrame` uses this mixin by default).
+
 ### Notes (Polars-specific)
 
 - **Pivot**: `LazyFrame.pivot(...)` requires `on_columns` to be provided up-front (Polars must know the output schema prior to `collect()`). PlanFrame enforces this at execution time.

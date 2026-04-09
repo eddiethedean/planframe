@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 from planframe.backend.adapter import BackendAdapter
 from planframe.backend.errors import PlanFrameBackendError
@@ -24,6 +24,7 @@ from planframe.plan.nodes import (
     Filter,
     GroupBy,
     Head,
+    Hint,
     Join,
     Melt,
     Pivot,
@@ -59,7 +60,11 @@ class _ExecState(Generic[BackendFrameT, BackendExprT]):
     def evaluate(self, node: object) -> BackendFrameT:
         if not isinstance(node, PlanNode):
             raise PlanFrameBackendError(f"Unsupported plan node: {type(node)!r}")
-        handler = _NODE_HANDLERS.get(type(node))
+        handler_any = _NODE_HANDLERS.get(type(node))
+        handler = cast(
+            Callable[[_ExecState[BackendFrameT, BackendExprT], PlanNode], BackendFrameT],
+            handler_any,
+        )
         if handler is None:
             raise PlanFrameBackendError(f"Unsupported plan node: {type(node)!r}")
         return handler(self, node)
@@ -120,6 +125,11 @@ def _handle_with_row_count(
 def _handle_filter(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode) -> BackendFrameT:
     assert isinstance(node, Filter)
     return state.adapter.filter(state.evaluate(node.prev), state.ctx.compile_expr(node.predicate))
+
+
+def _handle_hint(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode) -> BackendFrameT:
+    assert isinstance(node, Hint)
+    return state.adapter.hint(state.evaluate(node.prev), hints=node.hints, kv=node.kv)
 
 
 def _handle_sort(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode) -> BackendFrameT:
@@ -369,7 +379,7 @@ def _handle_sample(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNod
     )
 
 
-_NODE_HANDLERS: dict[type[PlanNode], Callable[[_ExecState[Any, Any], PlanNode], BackendFrameT]] = {
+_NODE_HANDLERS: dict[type[PlanNode], Callable[[_ExecState[Any, Any], PlanNode], Any]] = {
     Source: _handle_source,
     Select: _handle_select,
     Project: _handle_project,
@@ -379,6 +389,7 @@ _NODE_HANDLERS: dict[type[PlanNode], Callable[[_ExecState[Any, Any], PlanNode], 
     Cast: _handle_cast,
     WithRowCount: _handle_with_row_count,
     Filter: _handle_filter,
+    Hint: _handle_hint,
     Sort: _handle_sort,
     Unique: _handle_unique,
     Duplicated: _handle_duplicated,

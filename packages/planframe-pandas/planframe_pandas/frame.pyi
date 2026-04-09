@@ -5,107 +5,108 @@ from typing import Any, Literal, TypeVar
 
 import pandas as pd
 
-from planframe.frame import Frame
+from planframe.pandas import PandasLikeFrame
 from planframe.typing.storage import StorageOptions
 
 SchemaT = TypeVar("SchemaT")
+PandasFrameT = TypeVar("PandasFrameT", bound="PandasFrame")
 
 PandasBackendFrame = pd.DataFrame
 
-class PandasFrame(Frame[Any, PandasBackendFrame, object]):
-    def __new__(
-        cls,
+class PandasFrame(PandasLikeFrame[Any, PandasBackendFrame, object]):
+    def __init__(
+        self: PandasFrameT,
         data: Mapping[str, Sequence[object]] | Sequence[Mapping[str, object]],
-    ) -> PandasFrame: ...
+    ) -> None: ...
     @classmethod
     def scan_parquet(
-        cls,
+        cls: type[PandasFrameT],
         path: str,
         *,
         schema: type[SchemaT],
         hive_partitioning: bool | None = ...,
         storage_options: StorageOptions | None = ...,
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...
     @classmethod
     def scan_parquet_dataset(
-        cls,
+        cls: type[PandasFrameT],
         path_or_glob: str,
         *,
         schema: type[SchemaT],
         storage_options: StorageOptions | None = ...,
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...
     @classmethod
     def scan_csv(
-        cls,
+        cls: type[PandasFrameT],
         path: str,
         *,
         schema: type[SchemaT],
         storage_options: StorageOptions | None = ...,
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...
     @classmethod
     def scan_ndjson(
-        cls,
+        cls: type[PandasFrameT],
         path: str,
         *,
         schema: type[SchemaT],
         storage_options: StorageOptions | None = ...,
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...
     @classmethod
     def scan_ipc(
-        cls,
+        cls: type[PandasFrameT],
         path: str,
         *,
         schema: type[SchemaT],
         hive_partitioning: bool | None = ...,
         storage_options: StorageOptions | None = ...,
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...
     @classmethod
     def scan_delta(
-        cls,
+        cls: type[PandasFrameT],
         source: str,
         *,
         schema: type[SchemaT],
         version: int | str | None = ...,
         storage_options: StorageOptions | None = ...,
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...
     @classmethod
     def read_delta(
-        cls,
+        cls: type[PandasFrameT],
         source: str,
         *,
         schema: type[SchemaT],
         version: int | str | None = ...,
         storage_options: StorageOptions | None = ...,
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...
     @classmethod
     def read_excel(
-        cls,
+        cls: type[PandasFrameT],
         path: str,
         *,
         schema: type[SchemaT],
         sheet_name: str | None = ...,
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...
     @classmethod
     def read_avro(
-        cls,
+        cls: type[PandasFrameT],
         path: str,
         *,
         schema: type[SchemaT],
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...
     @classmethod
     def read_database(
-        cls,
+        cls: type[PandasFrameT],
         query: str,
         *,
         connection: object,
         schema: type[SchemaT],
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...
     @classmethod
     def read_database_uri(
-        cls,
+        cls: type[PandasFrameT],
         query: str,
         *,
         uri: str,
         engine: Literal["connectorx", "adbc"] | None = ...,
         schema: type[SchemaT],
-    ) -> PandasFrame: ...
+    ) -> PandasFrameT: ...

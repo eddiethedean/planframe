@@ -9,6 +9,10 @@ This guide covers the intended public usage pattern:
 
 Optional **`ExecutionOptions`** can be passed at those boundaries when you need streaming hints.
 
+## Pandas-like helpers (`PandasLikeFrame`)
+
+`PandasFrame` subclasses **`planframe.pandas.PandasLikeFrame`**, so you can use pandas-style patterns that still compile to PlanFrame’s lazy IR—e.g. boolean indexing `df[mask]`, column selection via `filter(items=...)` / `like=` / `regex=`, `astype`, `eval` (alias for `assign`), `drop_duplicates`, and pandas-flavored `drop` / `rename` overloads. See the core guide: [Pandas-like API (`planframe.pandas`)](../../planframe/guides/pandas-like-api.md).
+
 ## Quickstart
 
 Run:

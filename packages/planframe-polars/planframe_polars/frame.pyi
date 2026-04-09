@@ -9,96 +9,97 @@ from planframe.frame import Frame
 from planframe.typing.storage import StorageOptions
 
 SchemaT = TypeVar("SchemaT")
+PolarsFrameT = TypeVar("PolarsFrameT", bound="PolarsFrame")
 
 PolarsBackendFrame = pl.DataFrame | pl.LazyFrame
 
 class PolarsFrame(Frame[Any, PolarsBackendFrame, pl.Expr]):
-    def __new__(
-        cls,
+    def __init__(
+        self: PolarsFrameT,
         data: Mapping[str, Sequence[object]] | Sequence[Mapping[str, object]],
         *,
         lazy: bool = ...,
-    ) -> PolarsFrame: ...
+    ) -> None: ...
     @classmethod
     def scan_parquet(
-        cls,
+        cls: type[PolarsFrameT],
         path: str,
         *,
         schema: type[SchemaT],
         hive_partitioning: bool | None = ...,
         storage_options: StorageOptions | None = ...,
-    ) -> PolarsFrame: ...
+    ) -> PolarsFrameT: ...
     @classmethod
     def scan_parquet_dataset(
-        cls,
+        cls: type[PolarsFrameT],
         path_or_glob: str,
         *,
         schema: type[SchemaT],
         storage_options: StorageOptions | None = ...,
-    ) -> PolarsFrame: ...
+    ) -> PolarsFrameT: ...
     @classmethod
     def scan_csv(
-        cls,
+        cls: type[PolarsFrameT],
         path: str,
         *,
         schema: type[SchemaT],
         storage_options: StorageOptions | None = ...,
-    ) -> PolarsFrame: ...
+    ) -> PolarsFrameT: ...
     @classmethod
     def scan_ndjson(
-        cls,
+        cls: type[PolarsFrameT],
         path: str,
         *,
         schema: type[SchemaT],
         storage_options: StorageOptions | None = ...,
-    ) -> PolarsFrame: ...
+    ) -> PolarsFrameT: ...
     @classmethod
     def scan_ipc(
-        cls,
+        cls: type[PolarsFrameT],
         path: str,
         *,
         schema: type[SchemaT],
         hive_partitioning: bool | None = ...,
         storage_options: StorageOptions | None = ...,
-    ) -> PolarsFrame: ...
+    ) -> PolarsFrameT: ...
     @classmethod
     def scan_delta(
-        cls,
+        cls: type[PolarsFrameT],
         source: str,
         *,
         schema: type[SchemaT],
         version: int | str | None = ...,
         storage_options: StorageOptions | None = ...,
-    ) -> PolarsFrame: ...
+    ) -> PolarsFrameT: ...
     @classmethod
     def read_delta(
-        cls,
+        cls: type[PolarsFrameT],
         source: str,
         *,
         schema: type[SchemaT],
         version: int | str | None = ...,
         storage_options: StorageOptions | None = ...,
-    ) -> PolarsFrame: ...
+    ) -> PolarsFrameT: ...
     @classmethod
     def read_excel(
-        cls,
+        cls: type[PolarsFrameT],
         path: str,
         *,
         schema: type[SchemaT],
         sheet_name: str | None = ...,
-    ) -> PolarsFrame: ...
+    ) -> PolarsFrameT: ...
     @classmethod
-    def read_avro(cls, path: str, *, schema: type[SchemaT]) -> PolarsFrame: ...
+    def read_avro(cls: type[PolarsFrameT], path: str, *, schema: type[SchemaT]) -> PolarsFrameT: ...
     @classmethod
     def read_database(
-        cls, query: str, *, connection: object, schema: type[SchemaT]
-    ) -> PolarsFrame: ...
+        cls: type[PolarsFrameT], query: str, *, connection: object, schema: type[SchemaT]
+    ) -> PolarsFrameT: ...
     @classmethod
     def read_database_uri(
-        cls,
+        cls: type[PolarsFrameT],
         query: str,
         *,
         uri: str,
         engine: Literal["connectorx", "adbc"] | None = ...,
         schema: type[SchemaT],
-    ) -> PolarsFrame: ...
+    ) -> PolarsFrameT: ...

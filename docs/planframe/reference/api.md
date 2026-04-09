@@ -2,6 +2,18 @@
 
 This is a light API reference intended for quick discovery. For the full surface area, see the generated reference for each module.
 
+## Optional API skins
+
+Typed mixins (import from `planframe.spark` / `planframe.pandas`, or `from planframe import spark` / `pandas`) layer familiar naming on `Frame` without adding backend dependencies. Guides: [PySpark-like API](../guides/pyspark-like-api.md), [pandas-like API](../guides/pandas-like-api.md).
+
+## `planframe.spark.frame.SparkFrame`
+
+::: planframe.spark.frame.SparkFrame
+
+## `planframe.pandas.frame.PandasLikeFrame`
+
+::: planframe.pandas.frame.PandasLikeFrame
+
 ## `planframe.frame.Frame`
 
 ::: planframe.frame.Frame

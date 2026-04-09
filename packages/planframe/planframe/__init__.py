@@ -20,9 +20,13 @@ from planframe.selector import ColumnSelector
 
 
 def __getattr__(name: str) -> Any:
-    # Lazily expose `planframe.expr` to avoid import-time cycles.
+    # Lazily expose `planframe.expr` / `planframe.spark` / `planframe.pandas` to avoid import-time cycles.
     if name == "expr":
         return importlib.import_module("planframe.expr")
+    if name == "spark":
+        return importlib.import_module("planframe.spark")
+    if name == "pandas":
+        return importlib.import_module("planframe.pandas")
     raise AttributeError(name)
 
 
@@ -36,4 +40,6 @@ __all__ = [
     "execute_plan",
     "ExecutionOptions",
     "expr",
+    "spark",
+    "pandas",
 ]

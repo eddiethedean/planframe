@@ -177,7 +177,10 @@ def test_pandas_fill_null_strategy_respects_subset_matches_polars() -> None:
     l_out = RowL(data).fill_null(None, "a", strategy="forward").collect()
 
     def _floats(series: Any) -> list[float | None]:
-        return [None if (x is None or (isinstance(x, float) and pd.isna(x))) else float(x) for x in series]  # type: ignore[arg-type]
+        return [
+            None if (x is None or (isinstance(x, float) and pd.isna(x))) else float(x)
+            for x in series
+        ]  # type: ignore[arg-type]
 
     assert _floats(p_out["a"]) == _floats(l_out["a"])
     assert _floats(p_out["b"]) == _floats(l_out["b"])

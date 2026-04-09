@@ -76,9 +76,11 @@ class _PolarsFrameMeta(type):
         if kwargs:
             raise TypeError(f"Unexpected constructor kwargs: {sorted(kwargs)}")
         df = _to_polars_backend_frame(data, schema=cls, lazy=lazy)
-        return PolarsFrame.source(
+        # Type checkers can't always see `Frame`-style classmethods/attrs on metaclass `cls`.
+        cls_any = cast(Any, cls)
+        return cls_any.source(
             df,
-            adapter=PolarsFrame._adapter_singleton,
+            adapter=cls_any._adapter_singleton,
             schema=cast(type[SchemaT], cls),
         )
 

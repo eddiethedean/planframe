@@ -13,6 +13,7 @@ Documentation (ReadTheDocs):
 
 ### Notes
 
+- **`PandasFrame`** subclasses core **`planframe.pandas.PandasLikeFrame`**, so you get pandas-flavored helpers (`assign`, `sort_values`, boolean indexing, column `filter`, `astype`, `eval`, `drop_duplicates`, …) on top of the shared `Frame` plan. See the [pandas-like API](https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/) guide.
 - PlanFrame is **always lazy**: chaining does not touch backend data; execution happens at `collect()` boundaries.
 
 ### Common transforms

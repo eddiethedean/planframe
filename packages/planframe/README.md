@@ -11,12 +11,15 @@ Documentation (ReadTheDocs):
 - Core (adapter authors): `https://planframe.readthedocs.io/en/latest/planframe/`
 - Design docs: `https://planframe.readthedocs.io/en/latest/planframe/design/`
 - Light API reference: `https://planframe.readthedocs.io/en/latest/planframe/reference/api/`
+- Optional API skins: [PySpark-like (`planframe.spark`)](https://planframe.readthedocs.io/en/latest/planframe/guides/pyspark-like-api/), [pandas-like (`planframe.pandas`)](https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/)
 
 ### What you get
 - `planframe.Frame`: immutable, schema-aware transformation plan (**always lazy**)
 - `planframe.expr`: typed expression IR (`col`, `lit`, arithmetic/compare/boolean ops, `coalesce`, `if_else`, etc.), plus **aggregation wrappers** for use inside `group_by(...).agg(...)`: `agg_sum`, `agg_mean`, `agg_min`, `agg_max`, `agg_count`, `agg_n_unique` (these build `AggExpr` nodes)
 - `planframe.groupby.GroupedFrame`: produced by `Frame.group_by`; **`group_by`** accepts column names and/or expressions (expression keys show up as `__pf_g0`, `__pf_g1`, … in the result schema). **`agg`** accepts `(op, column)` tuples and/or `AggExpr` values—not arbitrary bare expressions
 - `planframe.schema`: schema reflection (dataclass + Pydantic) and materialization
+- `planframe.spark`: optional PySpark-like `SparkFrame` / `Column` / `functions` (import `from planframe.spark import SparkFrame`, or `from planframe import spark`)
+- `planframe.pandas`: optional pandas-like `PandasLikeFrame` / `Series` (import `from planframe.pandas import PandasLikeFrame`, or `from planframe import pandas`); mix with any `Frame` subclass for familiar naming without new backend dependencies
 
 ### Common transforms
 

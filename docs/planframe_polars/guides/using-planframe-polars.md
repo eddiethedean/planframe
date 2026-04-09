@@ -9,6 +9,10 @@ This guide covers the intended public usage pattern:
 
 Optional **`ExecutionOptions`** (`streaming`, `engine_streaming`) can be passed at materialization time on `collect` / `to_dicts` / `to_dict` and the async variants.
 
+## Optional PySpark- or pandas-style APIs
+
+The core package provides typed mixins—**`planframe.spark.SparkFrame`** and **`planframe.pandas.PandasLikeFrame`**—that you can combine with `PolarsFrame` if you want column sugar (`df["x"]`, `withColumns`, `groupBy().agg`, `hint`, …) or pandas naming on the same plan. See [PySpark-like API (`planframe.spark`)](../../planframe/guides/pyspark-like-api.md) and [Pandas-like API (`planframe.pandas`)](../../planframe/guides/pandas-like-api.md).
+
 ## Quickstart
 
 Run:

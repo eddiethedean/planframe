@@ -2,7 +2,30 @@
 
 All notable changes to this project are documented here. Versions follow the workspace packages (`planframe`, `planframe-polars`, `planframe-pandas`), which are released together at the same version.
 
+## 0.8.0
+
+### Added
+
+- **`planframe.pandas`**: pandas-like `PandasLikeFrame` and `Series` on the core package (boolean indexing, column `filter`, `astype`, `eval`/`assign`, `drop_duplicates`, and overloads that stay compatible with core `Frame` APIs).
+- **Spark skin**: `SparkFrame` column access (`df["x"]`, `df.x`), `withColumns`, `GroupedData.agg(**named_aggs)`, and `hint()`; **`Hint`** plan node and optional `BaseAdapter.hint()` hook (no-op unless implemented).
+
+### Changed
+
+- **planframe-pandas**: `PandasFrame` is built on `PandasLikeFrame`, so the pandas backend exposes the pandas-flavored skin by default.
+
+### Documentation
+
+- Guides: [PySpark-like API](https://planframe.readthedocs.io/en/latest/planframe/guides/pyspark-like-api/) and [pandas-like API](https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/).
+
 ## 0.7.1
+
+### Added
+
+- **`planframe.spark`**: PySpark-like `SparkFrame`, `Column`, and `functions` submodule on the core `planframe` package (no Apache Spark dependency).
+
+### Changed
+
+- The PySpark-like API is no longer shipped as **`planframe-spark`** on PyPI; use `from planframe.spark import SparkFrame` (and `functions` / `Column`) instead.
 
 ### Documentation
 
@@ -11,6 +34,7 @@ All notable changes to this project are documented here. Versions follow the wor
 
 ### Fixed
 
+- **planframe-polars** / **planframe-pandas**: subclass constructors like `User(data)` now return `User` instances (`cls.source` / `cls._adapter_singleton`), enabling mixins such as `SparkFrame`.
 - **pandas**: `fill_null(..., strategy=...)` applies forward/backward fill only to the selected subset columns (matches Polars).
 - **pandas**: `drop_nulls(..., threshold=...)` no longer passes both `how` and `thresh` to pandas (avoids `TypeError`; threshold semantics align with Polars).
 - **schema**: `Schema` unnest field inference supports Pydantic v2 models via `model_fields`.

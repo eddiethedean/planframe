@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Generic, Literal, Protocol, TypeVar
 
 from planframe.backend.errors import PlanFrameExecutionError
 from planframe.execution_options import ExecutionOptions
+from planframe.plan.nodes import PlanNode
+from planframe.schema.ir import Schema
 from planframe.schema.materialize import materialize_model
 from planframe.typing.storage import StorageOptions
 
@@ -14,13 +16,23 @@ BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
 
 
+class _HasFrameIODeps(Protocol[BackendFrameT, BackendExprT]):
+    # Defined as a Protocol so type checkers understand that this mixin requires
+    # `FramePlanMixin`-provided internals, without needing a hard import dependency.
+    _plan: PlanNode
+    _schema: Schema
+    _adapter: Any
+
+    def _eval(self, node: object) -> BackendFrameT: ...
+
+
 class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     """Collect, async materialization, and sink IO."""
 
     __slots__ = ()
 
     def collect(
-        self,
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         *,
         kind: Literal["dataclass", "pydantic"] | None = None,
         name: str = "Row",
@@ -46,7 +58,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             ) from e
 
     async def acollect(
-        self,
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         *,
         kind: Literal["dataclass", "pydantic"] | None = None,
         name: str = "Row",
@@ -72,7 +84,11 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend acollect(kind={kind!r}) failed for {self._adapter.name}"
             ) from e
 
-    def to_dicts(self, *, options: ExecutionOptions | None = None) -> list[dict[str, object]]:
+    def to_dicts(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> list[dict[str, object]]:
         try:
             planned = self._eval(self._plan)
             return self._adapter.to_dicts(planned, options=options)
@@ -81,7 +97,11 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend to_dicts failed for {self._adapter.name}"
             ) from e
 
-    def to_dict(self, *, options: ExecutionOptions | None = None) -> dict[str, list[object]]:
+    def to_dict(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> dict[str, list[object]]:
         try:
             planned = self._eval(self._plan)
             return self._adapter.to_dict(planned, options=options)
@@ -89,7 +109,9 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             raise PlanFrameExecutionError(f"Backend to_dict failed for {self._adapter.name}") from e
 
     async def ato_dicts(
-        self, *, options: ExecutionOptions | None = None
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        options: ExecutionOptions | None = None,
     ) -> list[dict[str, object]]:
         try:
             planned = self._eval(self._plan)
@@ -99,7 +121,11 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend ato_dicts failed for {self._adapter.name}"
             ) from e
 
-    async def ato_dict(self, *, options: ExecutionOptions | None = None) -> dict[str, list[object]]:
+    async def ato_dict(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> dict[str, list[object]]:
         try:
             planned = self._eval(self._plan)
             return await self._adapter.ato_dict(planned, options=options)
@@ -109,7 +135,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             ) from e
 
     def write_parquet(
-        self,
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         path: str,
         *,
         compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = "zstd",
@@ -133,7 +159,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             ) from e
 
     def write_csv(
-        self,
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         path: str,
         *,
         separator: str = ",",
@@ -154,7 +180,12 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend write_csv failed for {self._adapter.name}"
             ) from e
 
-    def write_ndjson(self, path: str, *, storage_options: StorageOptions | None = None) -> None:
+    def write_ndjson(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        path: str,
+        *,
+        storage_options: StorageOptions | None = None,
+    ) -> None:
         try:
             planned = self._eval(self._plan)
             self._adapter.write_ndjson(planned, path, storage_options=storage_options)
@@ -164,7 +195,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             ) from e
 
     def write_ipc(
-        self,
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         path: str,
         *,
         compression: Literal["uncompressed", "lz4", "zstd"] = "uncompressed",
@@ -181,7 +212,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             ) from e
 
     def write_database(
-        self,
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         table_name: str,
         *,
         connection: object,
@@ -202,7 +233,9 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 f"Backend write_database failed for {self._adapter.name}"
             ) from e
 
-    def write_excel(self, path: str, *, worksheet: str = "Sheet1") -> None:
+    def write_excel(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT], path: str, *, worksheet: str = "Sheet1"
+    ) -> None:
         try:
             planned = self._eval(self._plan)
             self._adapter.write_excel(planned, path, worksheet=worksheet)
@@ -212,7 +245,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             ) from e
 
     def write_delta(
-        self,
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         target: str,
         *,
         mode: Literal["error", "append", "overwrite", "ignore", "merge"] = "error",
@@ -227,7 +260,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             ) from e
 
     def write_avro(
-        self,
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         path: str,
         *,
         compression: Literal["uncompressed", "snappy", "deflate"] = "uncompressed",
@@ -242,7 +275,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             ) from e
 
     def materialize_model(
-        self,
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
         name: str,
         *,
         kind: Literal["dataclass", "pydantic"] = "dataclass",

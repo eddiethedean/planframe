@@ -138,6 +138,18 @@ Preserve the iteration order of **`named_aggs`** when building the backend aggre
 
 If you do not implement grouping yet, keep raising `NotImplementedError` from `group_by_agg` with a clear message, as in `examples/rows_adapter_minimal.py`.
 
+## Optional API skins (`planframe.spark` / `planframe.pandas`)
+
+End-user packages may **subclass** a backend `Frame` *and* mix in `planframe.spark.SparkFrame` or `planframe.pandas.PandasLikeFrame` for familiar naming. That does not change the adapter contract: the plan is still standard `Frame` nodes, compiled and executed the same way. See [PySpark-like API](pyspark-like-api.md) and [pandas-like API](pandas-like-api.md).
+
+## Plan-level hints (`Hint` node and `BaseAdapter.hint`)
+
+Plans may include a **`Hint`** node (e.g. via `SparkFrame.hint(...)`). During execution, `execute_plan` calls:
+
+- **`BaseAdapter.hint(self, df, *, hints: tuple[str, ...], kv: dict[str, object]) -> BackendFrameT`**
+
+The default implementation is a **no-op** (returns `df`). If your engine supports broadcast / shuffle / similar hints, override `hint` and forward only what you understand; ignore the rest.
+
 ## Notes
 
 - PlanFrame validates many schema invariants *before* calling the backend. Your adapter can assume the plan is well-formed, but it should still validate backend-specific constraints (e.g. “pivot requires on_columns when lazy”).

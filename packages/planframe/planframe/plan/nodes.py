@@ -90,6 +90,18 @@ class Filter(PlanNode):
 
 
 @dataclass(frozen=True, slots=True)
+class Hint(PlanNode):
+    """Semantics-preserving execution hint node.
+
+    Backends may treat this as a no-op or use it to influence physical execution.
+    """
+
+    prev: PlanNode
+    hints: tuple[str, ...]
+    kv: dict[str, object]
+
+
+@dataclass(frozen=True, slots=True)
 class SortColumnKey:
     """Sort by an existing column named *name*."""
 

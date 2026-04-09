@@ -2,6 +2,8 @@
 
 This track is for **end users** of the Polars adapter (`planframe_polars`).
 
+If you prefer PySpark- or pandas-style ergonomics on the same lazy plan, the core package provides optional mixins—see [PySpark-like API (`planframe.spark`)](../planframe/guides/pyspark-like-api.md) and [Pandas-like API (`planframe.pandas`)](../planframe/guides/pandas-like-api.md).
+
 ## Next steps
 
 - Read the guide: [Using planframe-polars](guides/using-planframe-polars.md)
