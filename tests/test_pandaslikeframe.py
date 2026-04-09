@@ -60,6 +60,19 @@ def test_pandaslike_query_typed() -> None:
     assert out.to_dicts() == [{"x": 2, "y": 20}]
 
 
+def test_pandaslike_query_string_subset() -> None:
+    df = _A({"x": [1, 2], "y": [10, 20]})
+
+    assert df.query("x > 1").to_dicts() == [{"x": 2, "y": 20}]
+    assert df.query("y == 10").to_dicts() == [{"x": 1, "y": 10}]
+
+    with pytest.raises(ValueError, match="only supports simple expressions"):
+        df.query("x > 1 and y < 2")
+
+    with pytest.raises(ValueError, match="only supports simple expressions"):
+        df.query("len(x) > 1")
+
+
 def test_pandaslike_bool_indexing_sugar() -> None:
     df = _A({"x": [1, 2], "y": [10, 20]})
     out = df[df["x"] > 1]

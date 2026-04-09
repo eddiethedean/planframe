@@ -12,7 +12,7 @@ from typing import Any, Generic, Literal, TypeVar, cast, overload
 
 from typing_extensions import LiteralString, Self
 
-from planframe.expr.api import Expr, lit
+from planframe.expr.api import Expr, col, eq, ge, gt, le, lit, lt, ne
 from planframe.frame import Frame
 from planframe.plan.join_options import JoinOptions
 
@@ -37,6 +37,63 @@ def _expr(x: object) -> Expr[Any]:
     if isinstance(x, Expr):
         return x
     return lit(x)
+
+
+_QUERY_SIMPLE_RE = re.compile(
+    r"""^\s*
+    (?P<col>[A-Za-z_][A-Za-z0-9_]*)
+    \s*(?P<op>==|!=|<=|>=|<|>)\s*
+    (?P<lit>
+        True|False|None
+        |-?\d+(?:\.\d+)?
+        |'(?:[^'\\]|\\.)*'
+        |\"(?:[^\"\\]|\\.)*\"
+    )
+    \s*$""",
+    re.VERBOSE,
+)
+
+
+def _parse_query(expr: str) -> Expr[bool]:
+    m = _QUERY_SIMPLE_RE.match(expr)
+    if m is None:
+        raise ValueError(
+            "query(str) only supports simple expressions of the form "
+            "`col op literal` where op is one of == != < <= > >= and literal is "
+            "a number, string, bool, or None"
+        )
+    name = m.group("col")
+    op = m.group("op")
+    lit_s = m.group("lit")
+
+    if lit_s == "True":
+        rhs: object = True
+    elif lit_s == "False":
+        rhs = False
+    elif lit_s == "None":
+        rhs = None
+    elif lit_s[:1] in {"'", '"'}:
+        # Strip quotes; keep minimal escape support for common cases.
+        body = lit_s[1:-1]
+        rhs = body.encode("utf-8").decode("unicode_escape")
+    elif "." in lit_s:
+        rhs = float(lit_s)
+    else:
+        rhs = int(lit_s)
+
+    left = col(name)
+    right = lit(rhs)
+    if op == "==":
+        return eq(left, right)
+    if op == "!=":
+        return ne(left, right)
+    if op == "<":
+        return lt(left, right)
+    if op == "<=":
+        return le(left, right)
+    if op == ">":
+        return gt(left, right)
+    return ge(left, right)
 
 
 class PandasLikeFrame(
@@ -185,10 +242,25 @@ class PandasLikeFrame(
             super().drop_nulls(subset=sub or None, how=how, threshold=thresh),
         )
 
-    def query(self, expr: Series[bool] | Expr[bool]) -> PandasLikeFrame[Any, Any, Any]:
-        """Pandas-like `query`, but typed: accepts `Series[bool]` / `Expr[bool]` (not a string)."""
+    @overload
+    def query(self, expr: str) -> PandasLikeFrame[Any, Any, Any]: ...
 
-        pred = expr.expr if isinstance(expr, Series) else expr
+    @overload
+    def query(self, expr: Series[bool] | Expr[bool]) -> PandasLikeFrame[Any, Any, Any]: ...
+
+    def query(self, expr: str | Series[bool] | Expr[bool]) -> PandasLikeFrame[Any, Any, Any]:
+        """Pandas-like `query`.
+
+        Supported forms:
+
+        - Typed: `Series[bool]` / `Expr[bool]`
+        - String (tiny subset): `col op literal` (no boolean ops, no functions, no parens)
+        """
+
+        if isinstance(expr, str):
+            pred = _parse_query(expr)
+        else:
+            pred = expr.expr if isinstance(expr, Series) else expr
         return cast(PandasLikeFrame[Any, Any, Any], super().filter(pred))
 
     def filter(  # noqa: A003
@@ -256,6 +328,42 @@ class PandasLikeFrame(
     def eval(self, **columns: object) -> PandasLikeFrame[Any, Any, Any]:  # noqa: A003
         # Typed eval: alias to assign; no string expressions.
         return self.assign(**columns)
+
+    def head(self, n: int = 5) -> PandasLikeFrame[Any, Any, Any]:
+        return cast(PandasLikeFrame[Any, Any, Any], super().head(n))
+
+    def tail(self, n: int = 5) -> PandasLikeFrame[Any, Any, Any]:
+        return cast(PandasLikeFrame[Any, Any, Any], super().tail(n))
+
+    def nlargest(
+        self,
+        n: int,
+        columns: str | Sequence[str],
+        *,
+        keep: Literal["first", "last", "all"] = "first",
+    ) -> PandasLikeFrame[Any, Any, Any]:
+        if keep == "all":
+            raise NotImplementedError("nlargest(keep='all') is not supported in PlanFrame.")
+        by = (columns,) if isinstance(columns, str) else tuple(columns)
+        if not by:
+            raise ValueError("nlargest requires non-empty columns=")
+        # pandas: descending sort then head
+        return self.sort_values(by, ascending=False).head(n)
+
+    def nsmallest(
+        self,
+        n: int,
+        columns: str | Sequence[str],
+        *,
+        keep: Literal["first", "last", "all"] = "first",
+    ) -> PandasLikeFrame[Any, Any, Any]:
+        if keep == "all":
+            raise NotImplementedError("nsmallest(keep='all') is not supported in PlanFrame.")
+        by = (columns,) if isinstance(columns, str) else tuple(columns)
+        if not by:
+            raise ValueError("nsmallest requires non-empty columns=")
+        # pandas: ascending sort then head
+        return self.sort_values(by, ascending=True).head(n)
 
     def drop_duplicates(
         self,

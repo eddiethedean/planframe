@@ -35,3 +35,17 @@ PlanFrame is **always lazy** and (in the typed surface) **index-free**, so parit
 - **String expression systems**: pandas `query("...")` and `eval("...")`.
 - **Arbitrary UDFs**: `apply`, `map`, Python lambdas over rows/columns.
 
+## Generated inventories (method-by-method)
+
+For an exhaustive, generated inventory:
+
+- `PandasLikeFrame` surface: `planframe/design/_generated/interface-inventory-pandas.md`
+- pandas methods missing from PlanFrame pandas skin: `planframe/design/_generated/pandas-missing.md`
+
+## Missing / divergent areas (categorized)
+
+- **Index / axis semantics** (unsupported): `.loc/.iloc`, alignment, `drop(axis=0)`, index-aware merges, etc.
+- **Mutation / inplace** (unsupported): `inplace=True`, assignment APIs.
+- **String DSL** (tiny subset): we can support only very small `query("col op literal")` patterns; the full pandas expression engine is out of scope for strict typing.
+- **UDF-heavy APIs** (unsupported): `apply`, `map`, `applymap`.
+
