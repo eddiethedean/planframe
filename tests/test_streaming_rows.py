@@ -4,6 +4,7 @@ import asyncio
 
 from test_core_lazy_and_schema import SpyAdapter, UserDC
 
+from planframe.execution_options import ExecutionOptions
 from planframe.frame import Frame
 
 
@@ -14,6 +15,17 @@ def test_stream_dicts_matches_to_dicts() -> None:
     out = pf.select("id").sort("id")
 
     assert list(out.stream_dicts()) == out.to_dicts()
+
+
+def test_execution_options_forwarded_to_stream_fallback_to_to_dicts() -> None:
+    adapter = SpyAdapter()
+    data = [{"id": 1, "age": 2}]
+    pf = Frame.source(data, adapter=adapter, schema=UserDC)
+    out = pf.select("id")
+
+    opts = ExecutionOptions(streaming=True, engine_streaming=False)
+    _ = list(out.stream_dicts(options=opts))
+    assert ("to_dicts", opts) in adapter.calls
 
 
 def test_stream_models_matches_collect() -> None:
