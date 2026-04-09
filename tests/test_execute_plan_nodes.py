@@ -109,7 +109,7 @@ def test_execute_plan_select_project_with_column_cast_filter_sort_slice_head_tai
 
     out = (
         pf.select(("id2", add(col("id"), lit(1))), ("b2", col("b")))
-        .with_column("x", add(col("b2"), lit(10)))
+        .with_columns(x=add(col("b2"), lit(10)))
         .cast("x", int)
         .filter(gt(col("id2"), lit(1)))
         .sort("id2", descending=True, nulls_last=True)
@@ -155,7 +155,7 @@ def test_execute_plan_drop_nulls_and_drop_nulls_all() -> None:
     data = [{"id": 1, "a": None, "b": 0}, {"id": 2, "a": 1, "b": 0}]
     pf = Frame.source(data, adapter=adapter, schema=S)
 
-    res1, calls1 = _run(pf.drop_nulls("a"))
+    res1, calls1 = _run(pf.drop_nulls(subset=("a",)))
     assert calls1 == ["drop_nulls"]
     assert res1 == [{"id": 2, "a": 1, "b": 0}]
 
@@ -321,7 +321,7 @@ def test_execute_plan_melt_pivot_explode_unnest_sample() -> None:
     data = [{"id": 1, "a": 1, "b": 2}]
     pf = Frame.source(data, adapter=adapter, schema=S)
 
-    melted = pf.melt(id_vars=("id",), value_vars=("a", "b"))
+    melted = pf.unpivot(index=("id",), on=("a", "b"))
     res_m, calls_m = _run(melted)
     assert calls_m == ["melt"]
     assert len(res_m) == 2
@@ -354,7 +354,7 @@ def test_execute_plan_with_row_count() -> None:
     data = [{"id": 1}, {"id": 2}, {"id": 3}]
     pf = Frame.source(data, adapter=adapter, schema=S)
 
-    out = pf.select("id").with_row_count(name="rn", offset=7)
+    out = pf.select("id").with_row_index(name="rn", offset=7)
     res, calls = _run(out)
     assert calls == ["select", "with_row_count"]
     assert res == [{"id": 1, "rn": 7}, {"id": 2, "rn": 8}, {"id": 3, "rn": 9}]
@@ -482,12 +482,12 @@ def test_execute_plan_join_and_concat_and_backend_mismatch_errors() -> None:
     assert calls_j == ["join"]
     assert res_j == [{"id": 1, "a": 1, "b": 0, "a_right": 2, "b_right": 0}]
 
-    cv = left.concat_vertical(right)
+    cv = left.vstack(right)
     res_cv, calls_cv = _run(cv)
     assert calls_cv == ["concat_vertical"]
     assert len(res_cv) == 2
 
-    ch = Frame.source([{"id": 1}], adapter=adapter, schema=LeftOnly).concat_horizontal(
+    ch = Frame.source([{"id": 1}], adapter=adapter, schema=LeftOnly).hstack(
         Frame.source([{"x": 2}], adapter=adapter, schema=RightOnly)
     )
     res_ch, calls_ch = _run(ch)

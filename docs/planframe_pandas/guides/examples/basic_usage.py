@@ -11,7 +11,7 @@ class User(PandasFrame):
 
 pf = User({"id": [1], "age": [10]})
 
-out = pf.with_column("age_plus_one", add(col("age"), lit(1))).select("id", "age", "age_plus_one")
+out = pf.with_columns(age_plus_one=add(col("age"), lit(1))).select("id", "age", "age_plus_one")
 
 df = out.collect()
 

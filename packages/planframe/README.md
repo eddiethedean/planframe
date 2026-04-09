@@ -25,14 +25,14 @@ Documentation (ReadTheDocs):
 
 Some commonly used Frame transforms:
 
-- `with_row_count(name="row_nr", offset=0)`: add a monotonically increasing row number column.
+- `with_row_index(name="row_nr", offset=0)`: add a monotonically increasing row number column.
 - `clip(lower=..., upper=..., subset=...)`: clamp numeric columns (if `subset=None`, clamps all numeric schema fields).
-- `drop_nulls(*columns, how="any"|"all", threshold=...)`: drop rows by null pattern over a column subset.
+- `drop_nulls(subset=..., how="any"|"all", threshold=...)`: drop rows by null pattern over a column subset.
 - `select_schema(selector, strict=True)`: schema-only selectors (backend-independent); `ColumnSelector` is runtime-checkable.
 - `cast_many(mapping, strict=True)` / `cast_subset(*columns, dtype, strict=True)`: multi-column cast helpers.
 - `fill_null_subset(value|strategy, *columns)` / `fill_null_many(mapping, strict=True)`: multi-column fill-null helpers.
 - `rename_upper/lower/title/strip(...)`: schema-driven rename helpers.
-- `pivot_longer(...)` / `pivot_wider(...)`: reshape convenience wrappers around `melt` / `pivot`.
+- `pivot_longer(...)` / `pivot_wider(...)`: reshape convenience wrappers around `unpivot` / `pivot`.
 
 Materialization accepts optional **`ExecutionOptions`** on `collect` / `to_dicts` / `to_dict` (and async counterparts). **`JoinOptions`** on `Frame.join` carries execution hints (including `engine_streaming` where the backend supports it).
 

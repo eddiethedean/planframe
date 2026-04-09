@@ -23,17 +23,16 @@ class User(PolarsFrame):
     id: int
     age: int
 
-pf = User(pl.DataFrame({"id": [1], "age": [2]}))
+# Construct from python data:
+pf = User({"id": [1], "age": [2]})
 df = pf.select("id").collect()
 
-# Common transforms
-#
-# PlanFrame is always lazy; these build a plan until `collect()`.
-pf3 = pf.with_row_count(name="row_nr").clip(lower=0, subset=("age",))
+# Common transforms (PlanFrame is always lazy; these build a plan until `collect()`).
+pf3 = pf.with_row_index(name="row_nr").clip(lower=0, subset=("age",))
 pf4 = pf.rename_upper().cast_many({"age": float})
 
-# Or construct from python data:
-pf2 = User({"id": [1], "age": [2]})
+# If you already have a Polars DataFrame/LazyFrame, use `Frame.source(...)`:
+pf2 = User.source(pl.DataFrame({"id": [1], "age": [2]}).lazy(), adapter=User._adapter_singleton, schema=User)
 ```
 
 ### Execution model
@@ -53,7 +52,7 @@ The core package includes typed **mixins** you can combine with `PolarsFrame` if
 
 - **Pivot**: `LazyFrame.pivot(...)` requires `on_columns` to be provided up-front (Polars must know the output schema prior to `collect()`). PlanFrame enforces this at execution time.
 - **pivot_wider**: wrapper around `pivot(...)`; for deterministic output columns on lazy sources, pass `on_columns`.
-- **concat_vertical**: implemented via `polars.concat(..., how="vertical")`.
+- **vstack**: implemented via `polars.concat(..., how="vertical")`.
 - **Join**: implemented via `LazyFrame.join(...)` / `DataFrame.join(...)` with symmetric `on` or asymmetric `left_on` / `right_on`, plus optional `JoinOptions` mapped to Polars (`nulls_equal`, `validate`, `coalesce`, `maintain_order`, `allow_parallel` / `force_parallel`, `streaming`, `engine_streaming` when supported by the installed Polars).
 - **Group by / agg**: `group_by` compiles to Polars `group_by` with column or expression keys (expression keys are aliased `__pf_g{i}`). `agg` compiles tuple reductions to `pl.col(...).sum()`-style calls and `AggExpr` to aggregated expressions on compiled inners (e.g. `agg_sum(truediv(col("a"), col("b")))`).
 

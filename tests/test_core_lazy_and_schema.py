@@ -789,7 +789,7 @@ def test_always_lazy_no_adapter_calls_until_collect() -> None:
 
     out = (
         pf.select("id", "age")
-        .with_column("age_plus_one", add(col("age"), lit(1)))
+        .with_columns(age_plus_one=add(col("age"), lit(1)))
         .rename(age="years")
         .filter(eq(col("id"), lit(1)))
     )
@@ -818,7 +818,7 @@ def test_always_lazy_with_new_ops() -> None:
 
     out = (
         pf.fill_null(0, "age")
-        .drop_nulls("age")
+        .drop_nulls(subset=("age",))
         .sort("id", nulls_last=True)
         .unique("id", keep="first", maintain_order=True)
         .duplicated("id")
@@ -1310,7 +1310,7 @@ def test_concat_vertical_is_lazy_and_validates_schema() -> None:
     left = Frame.source([{"id": 1, "age": 10}], adapter=adapter, schema=S)
     right = Frame.source([{"id": 2, "age": 20}], adapter=adapter, schema=S)
 
-    out = left.concat_vertical(right)
+    out = left.vstack(right)
     assert adapter.calls == []
     assert out.schema().names() == ("id", "age")
 
@@ -1325,7 +1325,7 @@ def test_concat_vertical_is_lazy_and_validates_schema() -> None:
 
     bad = Frame.source([{"id": 3, "x": 1}], adapter=adapter, schema=S2)
     with pytest.raises(PlanFrameSchemaError):
-        left.concat_vertical(bad)  # type: ignore[arg-type]
+        left.vstack(bad)  # type: ignore[arg-type]
 
 
 def test_concat_vertical_rejects_dtype_mismatch() -> None:
@@ -1344,7 +1344,7 @@ def test_concat_vertical_rejects_dtype_mismatch() -> None:
     left = Frame.source([{"id": 1, "age": 10}], adapter=adapter, schema=S1)
     right = Frame.source([{"id": 2, "age": "x"}], adapter=adapter, schema=S2)
     with pytest.raises(PlanFrameSchemaError):
-        left.concat_vertical(right)  # type: ignore[arg-type]
+        left.vstack(right)  # type: ignore[arg-type]
 
 
 def test_pivot_is_always_lazy() -> None:
@@ -1388,7 +1388,7 @@ def test_call_order_for_mixed_ops_including_pivot_and_concat() -> None:
     )
 
     out = (
-        left.concat_vertical(right)
+        left.vstack(right)
         .pivot(index=("id",), on="k", values="v", on_columns=("a", "b"))
         .head(1)
     )
@@ -1414,8 +1414,8 @@ def test_new_transforms_are_lazy() -> None:
     out = (
         pf.select("id", "x")
         .union_distinct(pf.select("id", "x"))
-        .concat_horizontal(pf.select("lst", "s"))
-        .concat_horizontal(pf.select("id").rename(id="id2"))
+        .hstack(pf.select("lst", "s"))
+        .hstack(pf.select("id").rename(id="id2"))
         .explode("lst")
         .unnest("s")
         .drop_nulls_all("a", "b")
@@ -1451,7 +1451,7 @@ def test_with_row_count_is_lazy_and_respects_offset() -> None:
     data = [{"id": 1, "age": 2}, {"id": 2, "age": 3}, {"id": 3, "age": 4}]
     pf = Frame.source(data, adapter=adapter, schema=UserDC)
 
-    out = pf.select("id").with_row_count(name="rn", offset=10)
+    out = pf.select("id").with_row_index(name="rn", offset=10)
     assert adapter.calls == []
 
     rows = out.collect()
@@ -1632,7 +1632,7 @@ def test_backend_compile_expr_type_guard() -> None:
     # Force a non-Expr into the plan by bypassing typing (runtime misuse).
     with pytest.raises(PlanFrameBackendError):
         # type: ignore[arg-type]
-        pf.with_column("x", "not_an_expr").collect()
+        pf.with_columns(x="not_an_expr").collect()
 
 
 def test_over_rejects_empty_order_by_tuple() -> None:

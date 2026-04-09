@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from typing_extensions import Self
 
 from planframe.backend.errors import PlanFrameBackendError, PlanFrameSchemaError
+from planframe._deprecations import warn_renamed
 from planframe.dynamic_groupby import DynamicGroupedFrame
 from planframe.expr.api import Expr, clip, col, infer_dtype, lit
 from planframe.frame._utils import _coerce_sort_flags
@@ -246,14 +247,24 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _data=self._data, _adapter=self._adapter, _plan=Drop(self._plan, cols), _schema=schema2
         )
 
-    def rename(self, *, strict: bool = True, **mapping: str) -> Self:
-        if not mapping:
+    def rename(
+        self,
+        mapping: Mapping[str, str] | None = None,
+        *,
+        strict: bool = True,
+        **named: str,
+    ) -> Self:
+        mapping2: dict[str, str] = {}
+        if mapping is not None:
+            mapping2.update(dict(mapping))
+        mapping2.update(named)
+        if not mapping2:
             return self
-        schema2 = self._schema.rename(mapping, strict=strict)
+        schema2 = self._schema.rename(mapping2, strict=strict)
         return type(self)(
             _data=self._data,
             _adapter=self._adapter,
-            _plan=Rename(self._plan, mapping, strict=strict),
+            _plan=Rename(self._plan, mapping2, strict=strict),
             _schema=schema2,
         )
 
@@ -355,15 +366,33 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
+    def with_columns(
+        self,
+        exprs: Mapping[str, Expr[Any]] | None = None,
+        **named_exprs: Expr[Any],
+    ) -> Self:
+        mapping: dict[str, Expr[Any]] = {}
+        if exprs is not None:
+            mapping.update(dict(exprs))
+        mapping.update(named_exprs)
+        if not mapping:
+            raise ValueError("with_columns requires at least one column expression")
+
+        out: Self = self
+        for name, expr in mapping.items():
+            dtype = infer_dtype(expr)
+            schema2 = out._schema.with_column(name, dtype=dtype)
+            out = type(out)(
+                _data=out._data,
+                _adapter=out._adapter,
+                _plan=WithColumn(out._plan, name=name, expr=expr),
+                _schema=schema2,
+            )
+        return out
+
     def with_column(self, name: str, expr: Expr[Any]) -> Self:
-        dtype = infer_dtype(expr)
-        schema2 = self._schema.with_column(name, dtype=dtype)
-        return type(self)(
-            _data=self._data,
-            _adapter=self._adapter,
-            _plan=WithColumn(self._plan, name=name, expr=expr),
-            _schema=schema2,
-        )
+        warn_renamed(old="Frame.with_column", new="Frame.with_columns", remove_in="v0.10.0")
+        return self.with_columns(**{name: expr})
 
     def cast(self, name: str, dtype: object) -> Self:
         schema2 = self._schema.cast(name, dtype=dtype)
@@ -414,9 +443,9 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                     out = out.cast(name, dtype)
         return out
 
-    def with_row_count(self, *, name: str = "row_nr", offset: int = 0) -> Self:
+    def with_row_index(self, *, name: str = "row_nr", offset: int = 0) -> Self:
         if offset < 0:
-            raise ValueError("with_row_count offset must be non-negative")
+            raise ValueError("with_row_index offset must be non-negative")
         schema2 = self._schema.with_row_count(name)
         return type(self)(
             _data=self._data,
@@ -424,6 +453,10 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _plan=WithRowCount(self._plan, name=name, offset=offset),
             _schema=schema2,
         )
+
+    def with_row_count(self, *, name: str = "row_nr", offset: int = 0) -> Self:
+        warn_renamed(old="Frame.with_row_count", new="Frame.with_row_index", remove_in="v0.10.0")
+        return self.with_row_index(name=name, offset=offset)
 
     def clip(
         self,
@@ -701,8 +734,28 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *subset: str,
         how: Literal["any", "all"] = "any",
         threshold: int | None = None,
+        **kwargs: object,
     ) -> Self:
-        sub = tuple(subset) if subset else None
+        if "subset" in kwargs:
+            if subset:
+                raise TypeError("drop_nulls: pass either positional subset or subset=, not both")
+            subset_kw = kwargs.pop("subset")
+            if subset_kw is None:
+                sub = None
+            elif isinstance(subset_kw, str):
+                sub = (subset_kw,)
+            else:
+                sub = tuple(cast(Sequence[str], subset_kw))
+        else:
+            if subset:
+                warn_renamed(
+                    old="Frame.drop_nulls(*subset, ...)",
+                    new="Frame.drop_nulls(subset=...)",
+                    remove_in="v0.10.0",
+                )
+            sub = tuple(subset) if subset else None
+        if kwargs:
+            raise TypeError(f"drop_nulls: unexpected keyword arguments: {sorted(kwargs)}")
         if how not in ("any", "all"):
             raise ValueError("drop_nulls how must be 'any' or 'all'")
         if threshold is not None and threshold < 0:
@@ -785,24 +838,38 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         variable_name: str = "variable",
         value_name: str = "value",
     ) -> Self:
+        warn_renamed(old="Frame.melt", new="Frame.unpivot", remove_in="v0.10.0")
+        return self.unpivot(
+            index=tuple(id_vars) if id_vars is not None else None,
+            on=tuple(value_vars) if value_vars is not None else None,
+            variable_name=variable_name,
+            value_name=value_name,
+        )
+
+    def unpivot(
+        self,
+        *,
+        index: Sequence[str] | None = None,
+        on: Sequence[str] | None = None,
+        variable_name: str = "variable",
+        value_name: str = "value",
+    ) -> Self:
         names = self._schema.names()
-        if id_vars is None and value_vars is None:
+        if index is None and on is None:
             id_tup: tuple[str, ...] = ()
             val_tup: tuple[str, ...] = names
-        elif id_vars is None:
-            val_tup = tuple(value_vars or ())
+        elif index is None:
+            val_tup = tuple(on or ())
             id_tup = tuple(n for n in names if n not in set(val_tup))
-        elif value_vars is None:
-            id_tup = tuple(id_vars)
+        elif on is None:
+            id_tup = tuple(index)
             val_tup = tuple(n for n in names if n not in set(id_tup))
         else:
-            id_tup = tuple(id_vars)
-            val_tup = tuple(value_vars)
+            id_tup = tuple(index)
+            val_tup = tuple(on)
 
         if not val_tup:
-            raise PlanFrameSchemaError(
-                "melt requires non-empty value_vars (explicitly or via inference)"
-            )
+            raise PlanFrameSchemaError("unpivot requires non-empty on= (explicit or inferred)")
 
         schema2 = self._schema.melt(
             id_vars=id_tup,
@@ -823,21 +890,6 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
-    def unpivot(
-        self,
-        *,
-        index: Sequence[str] | None = None,
-        on: Sequence[str] | None = None,
-        variable_name: str = "variable",
-        value_name: str = "value",
-    ) -> Self:
-        return self.melt(
-            id_vars=tuple(index) if index is not None else None,
-            value_vars=tuple(on) if on is not None else None,
-            variable_name=variable_name,
-            value_name=value_name,
-        )
-
     def pivot_longer(
         self,
         *,
@@ -846,9 +898,9 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         names_to: str = "variable",
         values_to: str = "value",
     ) -> Self:
-        return self.melt(
-            id_vars=id_vars,
-            value_vars=value_vars,
+        return self.unpivot(
+            index=id_vars,
+            on=value_vars,
             variable_name=names_to,
             value_name=values_to,
         )
@@ -961,16 +1013,14 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
-    def concat_vertical(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
+    def vstack(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
         if other._adapter.name != self._adapter.name:
             raise PlanFrameBackendError("Cannot concat frames from different backends")
         if self._schema.names() != other._schema.names():
-            raise PlanFrameSchemaError(
-                "concat_vertical requires identical column names and ordering"
-            )
+            raise PlanFrameSchemaError("vstack requires identical column names and ordering")
         for name in self._schema.names():
             if self._schema.get(name).dtype != other._schema.get(name).dtype:
-                raise PlanFrameSchemaError(f"concat_vertical dtype mismatch for column: {name}")
+                raise PlanFrameSchemaError(f"vstack dtype mismatch for column: {name}")
         return type(self)(
             _data=self._data,
             _adapter=self._adapter,
@@ -978,16 +1028,14 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
-    def concat_horizontal(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
+    def hstack(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
         if other._adapter.name != self._adapter.name:
             raise PlanFrameBackendError("Cannot concat frames from different backends")
         left_names = set(self._schema.names())
         right_names = set(other._schema.names())
         overlap = left_names.intersection(right_names)
         if overlap:
-            raise PlanFrameSchemaError(
-                f"concat_horizontal has overlapping columns: {sorted(overlap)}"
-            )
+            raise PlanFrameSchemaError(f"hstack has overlapping columns: {sorted(overlap)}")
         schema2 = Schema(fields=tuple([*self._schema.fields, *other._schema.fields]))
         return type(self)(
             _data=self._data,
@@ -996,8 +1044,16 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=schema2,
         )
 
+    def concat_vertical(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
+        warn_renamed(old="Frame.concat_vertical", new="Frame.vstack", remove_in="v0.10.0")
+        return self.vstack(other)
+
+    def concat_horizontal(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
+        warn_renamed(old="Frame.concat_horizontal", new="Frame.hstack", remove_in="v0.10.0")
+        return self.hstack(other)
+
     def union_distinct(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
-        return self.concat_vertical(other).unique()
+        return self.vstack(other).unique()
 
     def explode(self, *columns: str, outer: bool = False) -> Self:
         schema2 = self._schema.explode(columns)

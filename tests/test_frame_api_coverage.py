@@ -75,9 +75,9 @@ def test_frame_drop_nulls_and_fill_null_validation() -> None:
     pf = Frame.source([{"id": 1, "name": "a", "age": None}], adapter=adapter, schema=S)
 
     with pytest.raises(ValueError, match="drop_nulls how"):
-        pf.drop_nulls("age", how="nope")  # type: ignore[arg-type]
+        pf.drop_nulls(subset=("age",), how="nope")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="threshold must be non-negative"):
-        pf.drop_nulls("age", threshold=-1)
+        pf.drop_nulls(subset=("age",), threshold=-1)
 
     # fill_null must specify exactly one of value or strategy
     with pytest.raises(ValueError, match="exactly one of value= or strategy="):
@@ -87,11 +87,11 @@ def test_frame_drop_nulls_and_fill_null_validation() -> None:
 
     # subset validation
     with pytest.raises(PlanFrameSchemaError, match="Cannot select missing column"):
-        pf.drop_nulls("missing")
+        pf.drop_nulls(subset=("missing",))
 
     # subset validation
     with pytest.raises(PlanFrameSchemaError, match="Cannot select missing column"):
-        pf.drop_nulls("missing")
+        pf.drop_nulls(subset=("missing",))
 
 
 def test_frame_sort_flag_coercion_errors() -> None:
@@ -117,7 +117,7 @@ def test_frame_join_concat_backend_mismatch_errors() -> None:
         left.join(right, on=("id",))
 
     with pytest.raises(PlanFrameBackendError, match="different backends"):
-        left.concat_vertical(right)
+        left.vstack(right)
 
 
 def test_frame_write_methods_call_adapter() -> None:
@@ -204,7 +204,7 @@ def test_frame_error_wrapping_for_collect_to_dicts_and_write() -> None:
 
     pf4 = Frame.source([{"id": 1, "name": "a", "age": 2}], adapter=BoomCompileAdapter(), schema=S)
     with pytest.raises(PlanFrameExecutionError, match="Backend collect failed"):
-        pf4.with_column("x", add(col("id"), lit(1))).collect()
+        pf4.with_columns(x=add(col("id"), lit(1))).collect()
 
     class BoomKindAdapter(SpyAdapter):
         def to_dicts(self, df: object) -> list[dict[str, object]]:  # type: ignore[override]

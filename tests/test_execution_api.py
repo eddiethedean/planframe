@@ -13,7 +13,12 @@ def test_execute_plan_matches_frame_eval_for_common_nodes() -> None:
     data = [{"id": 2, "age": None}, {"id": 1, "age": 3}, {"id": 1, "age": 3}]
     pf = Frame.source(data, adapter=adapter, schema=UserDC)
 
-    out = pf.fill_null(0, "age").drop_nulls("age").sort("id", nulls_last=True).unique("id")
+    out = (
+        pf.fill_null(0, "age")
+        .drop_nulls(subset=("age",))
+        .sort("id", nulls_last=True)
+        .unique("id")
+    )
 
     assert adapter.calls == []
 

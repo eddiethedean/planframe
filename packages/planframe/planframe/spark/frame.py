@@ -111,7 +111,7 @@ class SparkFrame(
     ) -> SparkFrame[SchemaT, BackendFrameT, BackendExprT]:  # noqa: N802, N803
         out: Frame[Any, BackendFrameT, BackendExprT] = self
         for name, expr in colsMap.items():
-            out = out.with_column(cast(LiteralString, name), unwrap_expr(expr))
+            out = out.with_columns(**{cast(LiteralString, name): unwrap_expr(expr)})
         return cast(SparkFrame[SchemaT, BackendFrameT, BackendExprT], out)
 
     def hint(self, *hints: str, **kv: object) -> SparkFrame[SchemaT, BackendFrameT, BackendExprT]:
@@ -133,7 +133,7 @@ class SparkFrame(
     ) -> SparkFrame[SchemaT, BackendFrameT, BackendExprT]:  # noqa: N802, N803
         return cast(
             SparkFrame[SchemaT, BackendFrameT, BackendExprT],
-            super().with_column(colName, unwrap_expr(col)),
+            super().with_columns(**{colName: unwrap_expr(col)}),
         )
 
     def withColumnRenamed(  # noqa: N802
@@ -235,7 +235,7 @@ class SparkFrame(
 
     def union(self, other: Frame[Any, BackendFrameT, BackendExprT]) -> SparkFrame[Any, Any, Any]:  # noqa: A003
         """PySpark ``union`` preserves duplicates (SQL UNION ALL)."""
-        return cast(SparkFrame[Any, Any, Any], super().concat_vertical(other))
+        return cast(SparkFrame[Any, Any, Any], super().vstack(other))
 
     def unionAll(self, other: Frame[Any, BackendFrameT, BackendExprT]) -> SparkFrame[Any, Any, Any]:  # noqa: N802
         return self.union(other)
@@ -256,8 +256,8 @@ class SparkFrame(
             )
         if other.schema().names() != names:
             other2 = other.select(*cast(Any, names))
-            return cast(SparkFrame[Any, Any, Any], super().concat_vertical(other2))
-        return cast(SparkFrame[Any, Any, Any], super().concat_vertical(other))
+            return cast(SparkFrame[Any, Any, Any], super().vstack(other2))
+        return cast(SparkFrame[Any, Any, Any], super().vstack(other))
 
     def intersect(
         self, other: Frame[Any, BackendFrameT, BackendExprT]

@@ -13,7 +13,7 @@ class User(PolarsFrame):
 
 pf = User({"id": [1], "age": [2]})
 
-out = pf.select("id", "age").with_column("age_plus_one", add(col("age"), lit(1)))
+out = pf.select("id", "age").with_columns(age_plus_one=add(col("age"), lit(1)))
 
 OutDC = out.materialize_model("OutDC", kind="dataclass")
 OutPD = out.materialize_model("OutPD", kind="pydantic")

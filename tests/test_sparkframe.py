@@ -24,7 +24,7 @@ class _UsersYX(PolarsFrame, SparkFrame):
 def test_sparkframe_with_column_matches_core_plan() -> None:
     s = _UsersXY({"x": [1], "y": [2]})
     sparked = s.withColumn("z", F.lit(3))
-    core = s.with_column("z", lit(3))
+    core = s.with_columns(z=lit(3))
     assert isinstance(sparked.plan(), WithColumn)
     assert isinstance(core.plan(), WithColumn)
 

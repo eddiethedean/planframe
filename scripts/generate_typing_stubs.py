@@ -198,7 +198,9 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        after: Any | None = ...,")
     a("    ) -> Self: ...")
     a("")
-    a("    def rename(self, *, strict: bool = ..., **mapping: str) -> Self: ...")
+    a(
+        "    def rename(self, mapping: Mapping[str, str] | None = ..., *, strict: bool = ..., **named: str) -> Self: ..."
+    )
     a("")
     a("    @overload")
     a("    def rename_prefix(self, prefix: str, *subset: LiteralString) -> Self: ...")
@@ -225,12 +227,12 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("        strict: bool = ...,")
     a("    ) -> Self: ...")
     a("")
-    a("    def with_column(")
-    a("        self,")
-    a("        name: LiteralString,")
-    a("        expr: Expr[T],")
-    a("    ) -> Self: ...")
+    a(
+        "    def with_columns(self, exprs: Mapping[LiteralString, Expr[Any]] | None = ..., **named_exprs: Expr[Any]) -> Self: ..."
+    )
+    a("    def with_column(self, name: LiteralString, expr: Expr[T]) -> Self: ...")
     a("")
+    a("    def with_row_index(self, *, name: str = ..., offset: int = ...) -> Self: ...")
     a("    def with_row_count(self, *, name: str = ..., offset: int = ...) -> Self: ...")
     a("")
     a("    def clip(")
@@ -368,8 +370,12 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
         "    @overload\n"
         '    def drop_nulls(self, *subset: str, how: Literal["any", "all"] = ..., threshold: int | None = ...) -> Self: ...'
     )
+    a("    @overload")
     a(
-        "    def drop_nulls(self, *subset: Any, how: Any = ..., threshold: int | None = ...) -> Self: ..."
+        '    def drop_nulls(self, *, subset: tuple[LiteralString, ...] | None = ..., how: Literal["any", "all"] = ..., threshold: int | None = ...) -> Self: ...'
+    )
+    a(
+        "    def drop_nulls(self, *subset: Any, how: Any = ..., threshold: int | None = ..., **kwargs: Any) -> Self: ..."
     )
     a("    @overload")
     a("    def fill_null(self, value: Scalar, *subset: LiteralString) -> Self: ...")
@@ -448,12 +454,10 @@ def _render_frame_pyi(*, max_arity: int = 10) -> str:
     a("    def limit(self, n: int) -> Self: ...")
     a("    def head(self, n: int) -> Self: ...")
     a("    def tail(self, n: int) -> Self: ...")
-    a(
-        "    def concat_vertical(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ..."
-    )
-    a(
-        "    def concat_horizontal(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ..."
-    )
+    a("    def vstack(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
+    a("    def hstack(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
+    a("    def concat_vertical(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
+    a("    def concat_horizontal(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ...")
     a(
         "    def union_distinct(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self: ..."
     )

@@ -23,7 +23,7 @@ pf = S({"id": [1], "x": [1], "lst": [[1, 2]], "s": [{"a": 1, "b": 2}]})
 
 out = (
     pf.select("id", "x")
-    .concat_horizontal(pf.select("id").rename(id="id2"))
+    .hstack(pf.select("id").rename(id="id2"))
     .union_distinct(pf.select("id", "x"))
     .explode("lst")
     .unnest("s")

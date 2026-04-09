@@ -39,7 +39,7 @@ def test_ir_version_for_side_frames_in_join_and_concat() -> None:
     assert len(sources_j) == 2
     assert {s.ir_version for s in sources_j} == {1}
 
-    cv = left.concat_vertical(right)
+    cv = left.vstack(right)
     sources_cv = [
         n
         for n in iter_plan_nodes(root=cv.plan(), include_side_frames=True)

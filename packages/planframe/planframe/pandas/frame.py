@@ -79,7 +79,7 @@ class PandasLikeFrame(
 
         out: Frame[Any, BackendFrameT, BackendExprT] = self
         for name, value in columns.items():
-            out = out.with_column(cast(LiteralString, name), _expr(value))
+            out = out.with_columns(**{cast(LiteralString, name): _expr(value)})
         return cast(PandasLikeFrame[Any, Any, Any], out)
 
     def sort_values(
@@ -186,7 +186,8 @@ class PandasLikeFrame(
             raise NotImplementedError("dropna(axis='columns') is not supported in PlanFrame.")
         sub = _names(subset) or ()
         return cast(
-            PandasLikeFrame[Any, Any, Any], super().drop_nulls(*sub, how=how, threshold=thresh)
+            PandasLikeFrame[Any, Any, Any],
+            super().drop_nulls(subset=sub or None, how=how, threshold=thresh),
         )
 
     def query(self, expr: Series[bool] | Expr[bool]) -> PandasLikeFrame[Any, Any, Any]:

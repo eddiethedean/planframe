@@ -60,9 +60,9 @@ pf = User({"id": [1], "name": ["a"], "age": [10]})
 
 out = (
     pf.select("id", "name", "age")
-    .with_column("age_plus_one", add(col("age"), lit(1)))
+    .with_columns(age_plus_one=add(col("age"), lit(1)))
     .rename(name="full_name")
-    .with_row_count(name="row_nr")
+    .with_row_index(name="row_nr")
 )
 
 Output = out.materialize_model("Output", kind="dataclass")
@@ -93,7 +93,7 @@ df = out.collect()
 
 ### Highlights from v0.6.x
 
-- `Frame.with_row_count(name="row_nr", offset=0)` to add a monotonically increasing row number column (lazy).
+- `Frame.with_row_index(name="row_nr", offset=0)` to add a monotonically increasing row number column (lazy).
 - `Frame.clip(lower=..., upper=..., subset=...)` to clamp numeric columns (lazy; `subset=None` clamps all numeric schema fields).
 - `Frame.select_schema(selector, strict=True)`: schema-only selectors (no backend dependency).
 - Multi-column helpers: `cast_many`, `cast_subset`, `fill_null_subset`, `fill_null_many`.

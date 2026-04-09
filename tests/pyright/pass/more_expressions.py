@@ -16,13 +16,15 @@ class S(PolarsFrame):
 pf = S({"id": [1], "x": [-1.2], "a": [None], "b": [10]})
 out = (
     pf.select("id", "x", "a", "b")
-    .with_column("ax", abs_(col("x")))
-    .with_column("rx", round_(col("x"), 0))
-    .with_column("fx", floor(col("x")))
-    .with_column("cx", ceil(col("x")))
-    .with_column("c", coalesce(col("a"), col("b")))
-    .with_column("flag", xor(eq(col("id"), lit(1)), eq(col("id"), lit(2))))
-    .with_column("picked", if_else(eq(col("id"), lit(1)), lit("one"), lit("other")))
+    .with_columns(
+        ax=abs_(col("x")),
+        rx=round_(col("x"), 0),
+        fx=floor(col("x")),
+        cx=ceil(col("x")),
+        c=coalesce(col("a"), col("b")),
+        flag=xor(eq(col("id"), lit(1)), eq(col("id"), lit(2))),
+        picked=if_else(eq(col("id"), lit(1)), lit("one"), lit("other")),
+    )
 )
 
 df = out.collect()

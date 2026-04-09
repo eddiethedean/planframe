@@ -13,7 +13,7 @@ class S(PolarsFrame):
 pf1 = S({"id": [1], "age": [10]})
 pf2 = S({"id": [2], "age": [20]})
 
-out = pf1.concat_vertical(pf2)
+out = pf1.vstack(pf2)
 df = out.collect()
 
 reveal_type(out)

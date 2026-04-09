@@ -13,6 +13,10 @@ class S(PolarsFrame):
 
 pf = S({"id": [1], "a": [None], "b": [2]})
 
-out = pf.fill_null(0, "a").drop_nulls("a").melt(id_vars=("id",), value_vars=("a", "b"))
+out = (
+    pf.fill_null(0, "a")
+    .drop_nulls(subset=("a",))
+    .unpivot(index=("id",), on=("a", "b"))
+)
 df = out.collect()
 reveal_type(df)

@@ -16,7 +16,7 @@ def main() -> None:
     out = (
         pf.select("id", "name", "age")
         .rename(name="full_name")
-        .with_column("age_plus_one", add(col("age"), lit(1)))
+        .with_columns(age_plus_one=add(col("age"), lit(1)))
         .drop("age")
     )
 

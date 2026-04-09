@@ -11,6 +11,6 @@ class S:
 
 
 def f(pf: Frame[S, object, object]) -> None:
-    out = pf.with_row_count()
-    out2 = pf.with_row_count(name="rn", offset=5)
+    out = pf.with_row_index()
+    out2 = pf.with_row_index(name="rn", offset=5)
     _ = (out, out2)

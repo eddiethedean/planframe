@@ -122,7 +122,7 @@ def test_select_drop_rename_with_column_filter_collect() -> None:
         pf.select("id", "name", "age")
         .drop("name")
         .rename(age="years")
-        .with_column("years_plus_one", add(col("years"), lit(1)))
+        .with_columns(years_plus_one=add(col("years"), lit(1)))
         .filter(eq(col("id"), lit(1)))
     )
 
@@ -155,7 +155,7 @@ def test_select_equivalence_with_column_polars() -> None:
 
     a = pf.select("id", ("years_plus_one", add(col("age"), lit(1)))).collect()
     b = (
-        pf.with_column("years_plus_one", add(col("age"), lit(1)))
+        pf.with_columns(years_plus_one=add(col("age"), lit(1)))
         .select("id", "years_plus_one")
         .collect()
     )
@@ -166,7 +166,7 @@ def test_select_equivalence_with_column_polars() -> None:
 
 def test_materialize_model_dataclass() -> None:
     pf = User({"id": [1], "name": ["a"], "age": [10]})
-    out = pf.select("id", "age").with_column("age_plus_one", add(col("age"), lit(1)))
+    out = pf.select("id", "age").with_columns(age_plus_one=add(col("age"), lit(1)))
 
     Model = out.materialize_model("Out", kind="dataclass")
     assert Model.__name__ == "Out"
@@ -209,7 +209,7 @@ def test_extended_expressions_compile_and_filter() -> None:
     out = (
         pf.select("id", "age")
         .filter(and_(gt(col("age"), lit(10)), is_not_null(col("age"))))
-        .with_column("age_times_two", mul(col("age"), lit(2)))
+        .with_columns(age_times_two=mul(col("age"), lit(2)))
     )
 
     collected = out.collect()
@@ -227,13 +227,13 @@ def test_more_expressions_abs_round_floor_ceil_coalesce_if_else_xor() -> None:
         b: int | None
 
     pf = S(data)
-    out = pf.select("id", "x", "a", "b").with_column("ax", abs_(col("x")))
-    out = out.with_column("rx", round_(col("x"), 0))
-    out = out.with_column("fx", floor(col("x")))
-    out = out.with_column("cx", ceil(col("x")))
-    out = out.with_column("c", coalesce(col("a"), col("b")))
-    out = out.with_column("flag", xor(eq(col("id"), lit(1)), eq(col("id"), lit(2))))
-    out = out.with_column("picked", if_else(eq(col("id"), lit(1)), lit("one"), lit("other")))
+    out = pf.select("id", "x", "a", "b").with_columns(ax=abs_(col("x")))
+    out = out.with_columns(rx=round_(col("x"), 0))
+    out = out.with_columns(fx=floor(col("x")))
+    out = out.with_columns(cx=ceil(col("x")))
+    out = out.with_columns(c=coalesce(col("a"), col("b")))
+    out = out.with_columns(flag=xor(eq(col("id"), lit(1)), eq(col("id"), lit(2))))
+    out = out.with_columns(picked=if_else(eq(col("id"), lit(1)), lit("one"), lit("other")))
 
     collected = out.collect()
     assert collected.columns == ["id", "x", "a", "b", "ax", "rx", "fx", "cx", "c", "flag", "picked"]
@@ -258,19 +258,21 @@ def test_string_datetime_math_window_expressions() -> None:
     pf = S(data)
     out = (
         pf.select("id", "s", "x", "dt")
-        .with_column("has_hello", contains(lower(col("s")), "hello"))
-        .with_column("sw_h", starts_with(col("s"), "H"))
-        .with_column("ew_o", ends_with(col("s"), "o"))
-        .with_column("s_len", length(col("s")))
-        .with_column("s2", replace(col("s"), "l", "L", literal=True))
-        .with_column("y", year(col("dt")))
-        .with_column("m", month(col("dt")))
-        .with_column("d", day(col("dt")))
-        .with_column("btw", between(col("x"), lit(1.5), lit(3.0)))
-        .with_column("clp", clip(col("x"), lower=lit(1.5)))
-        .with_column("p", pow_(col("x"), lit(2)))
-        .with_column("lg", log(exp(lit(1.0))))
-        .with_column("x_max_by_id", over(col("x"), partition_by=("id",)))
+        .with_columns(
+            has_hello=contains(lower(col("s")), "hello"),
+            sw_h=starts_with(col("s"), "H"),
+            ew_o=ends_with(col("s"), "o"),
+            s_len=length(col("s")),
+            s2=replace(col("s"), "l", "L", literal=True),
+            y=year(col("dt")),
+            m=month(col("dt")),
+            d=day(col("dt")),
+            btw=between(col("x"), lit(1.5), lit(3.0)),
+            clp=clip(col("x"), lower=lit(1.5)),
+            p=pow_(col("x"), lit(2)),
+            lg=log(exp(lit(1.0))),
+            x_max_by_id=over(col("x"), partition_by=("id",)),
+        )
     )
 
     df = out.collect()
@@ -285,10 +287,12 @@ def test_string_ops_nulls_and_literal_replace() -> None:
 
     pf = S(data)
     out = (
-        pf.with_column("c1", contains(col("s"), ".", literal=True))
-        .with_column("c2", contains(col("s"), ".", literal=False))
-        .with_column("r", replace(col("s"), ".", "_", literal=True))
-        .with_column("ln", length(col("s")))
+        pf.with_columns(
+            c1=contains(col("s"), ".", literal=True),
+            c2=contains(col("s"), ".", literal=False),
+            r=replace(col("s"), ".", "_", literal=True),
+            ln=length(col("s")),
+        )
     )
     df = out.collect()
     assert df.columns == ["s", "c1", "c2", "r", "ln"]
@@ -306,10 +310,10 @@ def test_strip_split_sqrt_is_finite_exprs() -> None:
     from planframe.expr import is_finite, split, sqrt, strip
 
     df = (
-        pf.with_column("s2", strip(col("s")))
-        .with_column("parts", split(strip(col("s")), ","))
-        .with_column("r", sqrt(col("x")))
-        .with_column("ok", is_finite(col("y")))
+        pf.with_columns(s2=strip(col("s")))
+        .with_columns(parts=split(strip(col("s")), ","))
+        .with_columns(r=sqrt(col("x")))
+        .with_columns(ok=is_finite(col("y")))
         .collect()
     )
     assert df.columns == ["s", "x", "y", "s2", "parts", "r", "ok"]
@@ -326,7 +330,7 @@ def test_window_over_partition_by_multiple_keys() -> None:
     pf = S(data)
     # Note: `over()` applies window context; without an aggregation the values remain unchanged.
     df = (
-        pf.with_column("x_over", over(col("x"), partition_by=("g1", "g2"), order_by=("x",)))
+        pf.with_columns(x_over=over(col("x"), partition_by=("g1", "g2"), order_by=("x",)))
         .sort("x")
         .collect()
     )
@@ -420,7 +424,7 @@ def test_drop_nulls_fill_null_and_melt() -> None:
     pf = S(data)
 
     filled = pf.fill_null(0, "a")
-    out = filled.drop_nulls("a")
+    out = filled.drop_nulls(subset=("a",))
     collected = out.collect()
     assert collected["a"].to_list() == [0, 5]
 
@@ -433,7 +437,7 @@ def test_drop_nulls_fill_null_and_melt() -> None:
     expr_fill = pf.fill_null(add(col("b"), lit(1)), "a").collect()
     assert expr_fill["a"].to_list() == [11, 5]
 
-    melted = pf.melt(id_vars=("id",), value_vars=("a", "b"), variable_name="k", value_name="v")
+    melted = pf.unpivot(index=("id",), on=("a", "b"), variable_name="k", value_name="v")
     m = melted.collect()
     assert m.columns == ["id", "k", "v"]
 
@@ -625,7 +629,7 @@ def test_concat_vertical() -> None:
     pf1 = User({"id": [1], "name": ["a"], "age": [10]})
     pf2 = User({"id": [2], "name": ["b"], "age": [20]})
 
-    out = pf1.concat_vertical(pf2).sort("id")
+    out = pf1.vstack(pf2).sort("id")
     collected = out.collect()
     assert collected["id"].to_list() == [1, 2]
 
@@ -633,7 +637,7 @@ def test_concat_vertical() -> None:
 def test_concat_vertical_preserves_order_without_sort() -> None:
     pf1 = User({"id": [2], "name": ["b"], "age": [20]})
     pf2 = User({"id": [1], "name": ["a"], "age": [10]})
-    collected = pf1.concat_vertical(pf2).collect()
+    collected = pf1.vstack(pf2).collect()
     assert collected["id"].to_list() == [2, 1]
 
 
@@ -850,7 +854,7 @@ def test_concat_horizontal_union_distinct_explode_unnest_drop_nulls_all() -> Non
     pf = S(data)
     left = pf.select("id", "x")
     right = pf.select("id").rename(id="id2")
-    out = left.concat_horizontal(right)
+    out = left.hstack(right)
     assert out.schema().names() == ("id", "x", "id2")
 
     u = left.union_distinct(left).sort("id").collect()
@@ -879,7 +883,7 @@ def test_concat_horizontal_overlap_raises() -> None:
     from planframe.backend.errors import PlanFrameSchemaError
 
     with pytest.raises(PlanFrameSchemaError):
-        pf.select("id").concat_horizontal(pf.select("id"))
+        pf.select("id").hstack(pf.select("id"))
 
 
 def test_unnest_duplicate_field_raises() -> None:

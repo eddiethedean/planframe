@@ -10,7 +10,7 @@ def test_iter_plan_nodes_linear_chain_preorder() -> None:
         a: int | None
 
     pf = S({"id": [1], "a": [None]})
-    out = pf.select("id", "a").fill_null(0, "a").drop_nulls("a").head(1)
+    out = pf.select("id", "a").fill_null(0, "a").drop_nulls(subset=("a",)).head(1)
 
     names = [type(n).__name__ for n in iter_plan_nodes(root=out.plan())]
     assert names[:4] == ["Head", "DropNulls", "FillNull", "Select"]
@@ -75,7 +75,7 @@ def test_iter_plan_nodes_concat_can_include_other_plan() -> None:
     right_v = Bv({"id": [2]}).select("id")
     right_h = Bh({"x": [2]}).select("x")
 
-    out_v = left.concat_vertical(right_v)
+    out_v = left.vstack(right_v)
     names_v = [
         type(n).__name__ for n in iter_plan_nodes(root=out_v.plan(), include_side_frames=True)
     ]
@@ -86,7 +86,7 @@ def test_iter_plan_nodes_concat_can_include_other_plan() -> None:
     assert len(src_idx_v) == 2
     assert src_idx_v[1] > src_idx_v[0]
 
-    out_h = left.concat_horizontal(right_h)
+    out_h = left.hstack(right_h)
     names_h = [
         type(n).__name__ for n in iter_plan_nodes(root=out_h.plan(), include_side_frames=True)
     ]

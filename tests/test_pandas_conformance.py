@@ -34,7 +34,7 @@ def test_pandas_select_with_column_filter_sort() -> None:
     pf = User({"id": [2, 1, 3], "name": ["b", "a", "c"], "age": [20, 10, 30]})
     out = (
         pf.select("id", "age")
-        .with_column("age2", add(col("age"), lit(1)))
+        .with_columns(age2=add(col("age"), lit(1)))
         .filter(ne(col("id"), lit(2)))
         .sort("id")
     )
@@ -85,7 +85,7 @@ def test_pandas_melt_pivot_explode_unnest(tmp_path: Any) -> None:
         ]
     )
 
-    melted = pf.melt(id_vars=("id",), value_vars=("a", "b"), variable_name="k", value_name="v")
+    melted = pf.unpivot(index=("id",), on=("a", "b"), variable_name="k", value_name="v")
     piv = melted.pivot(index=("id",), columns="k", values="v", on_columns=("a", "b"), agg="first")
     df = piv.sort("id").collect()
     assert df.columns.tolist() == ["id", "a", "b"]
@@ -144,16 +144,16 @@ def test_pandas_drop_nulls_threshold_matches_polars() -> None:
         b: int | None
 
     data = {"a": [1, None, None], "b": [None, 2, None]}
-    p = RowP(data).drop_nulls("a", "b", threshold=1).collect()
-    polars_out = RowL(data).drop_nulls("a", "b", threshold=1).collect()
+    p = RowP(data).drop_nulls(subset=("a", "b"), threshold=1).collect()
+    polars_out = RowL(data).drop_nulls(subset=("a", "b"), threshold=1).collect()
     assert_frame_equal(
         p.reset_index(drop=True),
         polars_out.to_pandas().reset_index(drop=True),
         check_dtype=False,
     )
 
-    p_all = RowP(data).drop_nulls("a", "b", how="all", threshold=1).collect()
-    polars_all = RowL(data).drop_nulls("a", "b", how="all", threshold=1).collect()
+    p_all = RowP(data).drop_nulls(subset=("a", "b"), how="all", threshold=1).collect()
+    polars_all = RowL(data).drop_nulls(subset=("a", "b"), how="all", threshold=1).collect()
     assert_frame_equal(
         p_all.reset_index(drop=True),
         polars_all.to_pandas().reset_index(drop=True),
