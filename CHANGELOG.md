@@ -10,6 +10,7 @@ All notable changes to this repository are documented here.
 ### Added
 
 - Stable 1.0 packaging for `planframe`, `planframe-polars`, and `planframe-pandas`.
+- GitHub Actions **CI** workflow: Ruff, Astral `ty`, full pytest (including Pyright typing tests), strict MkDocs build, and smoke wheel builds for all packages.
 
 ### Changed
 

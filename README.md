@@ -1,5 +1,6 @@
 ## PlanFrame
 
+[![CI](https://github.com/eddiethedean/planframe/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/eddiethedean/planframe/actions/workflows/ci.yml?query=branch%3Amain)
 [![Docs](https://readthedocs.org/projects/planframe/badge/?version=latest)](https://planframe.readthedocs.io/en/latest/)
 [![PyPI - planframe](https://img.shields.io/pypi/v/planframe)](https://pypi.org/project/planframe/)
 [![PyPI - planframe-polars](https://img.shields.io/pypi/v/planframe-polars)](https://pypi.org/project/planframe-polars/)
@@ -167,4 +168,8 @@ Install tooling (included in `pip install -e ".[dev]"`): `hypothesis`, `pytest-c
 ### Security
 
 See `SECURITY.md` for how to report vulnerabilities. Dependency scanning runs in CI (`.github/workflows/security.yml`) and locally via `bash scripts/audit-deps.sh`.
+
+### Continuous integration
+
+On each push and pull request to `main`, CI runs Ruff, `ty`, the full pytest suite (including Pyright stub checks), a strict MkDocs build, and smoke wheel builds for all published packages (`.github/workflows/ci.yml`).
  

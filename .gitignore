@@ -16,6 +16,7 @@ env/
 # Packaging / build artifacts
 build/
 dist/
+dist-ci/
 dist-release/
 *.egg-info/
 *.egg

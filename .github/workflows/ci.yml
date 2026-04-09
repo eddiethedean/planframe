@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, typecheck, tests, docs, wheels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dev environment (uv.lock)
+        run: uv sync --all-extras --group dev
+
+      # Root lockfile names the workspace meta-package `planframe`; install real packages as editables.
+      - name: Install workspace packages (editable)
+        run: |
+          uv pip install -e packages/planframe \
+            -e packages/planframe-polars \
+            -e packages/planframe-pandas \
+            -e packages/planframe-sparkless
+
+      - name: Ruff
+        run: .venv/bin/ruff check packages/planframe packages/planframe-polars packages/planframe-pandas packages/planframe-sparkless scripts
+
+      - name: ty
+        run: .venv/bin/ty check
+
+      - name: Pytest
+        run: .venv/bin/pytest -q
+
+      - name: MkDocs (strict)
+        env:
+          DISABLE_MKDOCS_2_WARNING: "true"
+        run: .venv/bin/mkdocs build --strict
+
+      - name: Build wheels (smoke)
+        run: |
+          mkdir -p dist-ci
+          uv build packages/planframe --wheel --out-dir dist-ci
+          uv build packages/planframe-polars --wheel --out-dir dist-ci
+          uv build packages/planframe-pandas --wheel --out-dir dist-ci
+          uv build packages/planframe-sparkless --wheel --out-dir dist-ci
