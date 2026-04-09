@@ -12,6 +12,7 @@ from planframe.expr.api import (
     Abs,
     Add,
     AggExpr,
+    Alias,
     And,
     Between,
     Ceil,
@@ -78,6 +79,8 @@ def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
             )
         return cast(PandasExpr, out)
 
+    if isinstance(expr, Alias):
+        return compile_expr(expr.expr)
     if isinstance(expr, Col):
         name = expr.name
         return lambda df: df[name]

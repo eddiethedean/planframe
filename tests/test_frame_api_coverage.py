@@ -125,14 +125,14 @@ def test_frame_write_methods_call_adapter() -> None:
     pf = Frame.source([{"id": 1, "name": "a", "age": None}], adapter=adapter, schema=S)
 
     adapter.calls.clear()
-    pf.write_parquet("x.parquet")
-    pf.write_csv("x.csv")
-    pf.write_ndjson("x.ndjson")
-    pf.write_ipc("x.ipc")
-    pf.write_excel("x.xlsx")
-    pf.write_delta("x.delta")
-    pf.write_avro("x.avro")
-    pf.write_database(table_name="t", connection=object())
+    pf.sink_parquet("x.parquet")
+    pf.sink_csv("x.csv")
+    pf.sink_ndjson("x.ndjson")
+    pf.sink_ipc("x.ipc")
+    pf.sink_excel("x.xlsx")
+    pf.sink_delta("x.delta")
+    pf.sink_avro("x.avro")
+    pf.sink_database(table_name="t", connection=object())
 
     called = {c[0] for c in adapter.calls}
     assert {
@@ -195,8 +195,8 @@ def test_frame_error_wrapping_for_collect_to_dicts_and_write() -> None:
             raise RuntimeError("boom")
 
     pf3 = Frame.source([{"id": 1, "name": "a", "age": 2}], adapter=BoomWriteAdapter(), schema=S)
-    with pytest.raises(PlanFrameExecutionError, match="Backend write_csv failed"):
-        pf3.write_csv("x.csv")
+    with pytest.raises(PlanFrameExecutionError, match="Backend sink_csv failed"):
+        pf3.sink_csv("x.csv")
 
     class BoomCompileAdapter(SpyAdapter):
         def compile_expr(self, expr: object, *, schema: object = None) -> object:  # type: ignore[override]

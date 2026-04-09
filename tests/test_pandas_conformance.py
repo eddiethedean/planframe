@@ -106,7 +106,7 @@ def test_pandas_melt_pivot_explode_unnest(tmp_path: Any) -> None:
 
     # IO: csv should work
     out_path = tmp_path / "out.csv"
-    pf.select("id", "a").write_csv(str(out_path))
+    pf.select("id", "a").sink_csv(str(out_path))
     assert out_path.exists()
 
 

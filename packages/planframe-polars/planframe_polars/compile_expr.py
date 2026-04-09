@@ -9,6 +9,7 @@ from planframe.expr.api import (
     Abs,
     Add,
     AggExpr,
+    Alias,
     And,
     Between,
     Ceil,
@@ -57,6 +58,8 @@ from planframe.expr.api import (
 
 
 def compile_expr(expr: Expr[Any]) -> pl.Expr:
+    if isinstance(expr, Alias):
+        return compile_expr(expr.expr)
     if isinstance(expr, Col):
         return pl.col(expr.name)
     if isinstance(expr, Lit):

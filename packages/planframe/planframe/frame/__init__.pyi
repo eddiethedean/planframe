@@ -133,7 +133,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     @overload
     def select(self, *columns: LiteralString) -> Self: ...
     @overload
-    def select(self, *columns: LiteralString | tuple[str, Expr[Any]]) -> Self: ...
+    def select(self, *columns: LiteralString | tuple[str, Expr[Any]] | Expr[Any]) -> Self: ...
     def select(self, *columns: Any) -> Self: ...
     def select_prefix(self, prefix: str) -> Self: ...
     def select_suffix(self, suffix: str) -> Self: ...
@@ -641,7 +641,10 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         strict: bool = ...,
     ) -> Self: ...
     def with_columns(
-        self, exprs: Mapping[LiteralString, Expr[Any]] | None = ..., **named_exprs: Expr[Any]
+        self,
+        *expressions: Expr[Any],
+        exprs: Mapping[LiteralString, Expr[Any]] | None = ...,
+        **named_exprs: Expr[Any],
     ) -> Self: ...
     def with_column(self, name: LiteralString, expr: Expr[T]) -> Self: ...
     def with_row_index(self, *, name: str = ..., offset: int = ...) -> Self: ...
@@ -1508,6 +1511,54 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     async def ato_dict(
         self, *, options: ExecutionOptions | None = ...
     ) -> dict[str, list[object]]: ...
+    def sink_parquet(
+        self,
+        path: str,
+        *,
+        compression: Literal["uncompressed", "snappy", "gzip", "brotli", "zstd", "lz4"] = ...,
+        row_group_size: int | None = ...,
+        partition_by: tuple[LiteralString, ...] | None = ...,
+        storage_options: StorageOptions | None = ...,
+    ) -> None: ...
+    def sink_csv(
+        self,
+        path: str,
+        *,
+        separator: str = ...,
+        include_header: bool = ...,
+        storage_options: StorageOptions | None = ...,
+    ) -> None: ...
+    def sink_ndjson(self, path: str, *, storage_options: StorageOptions | None = ...) -> None: ...
+    def sink_ipc(
+        self,
+        path: str,
+        *,
+        compression: Literal["uncompressed", "lz4", "zstd"] = ...,
+        storage_options: StorageOptions | None = ...,
+    ) -> None: ...
+    def sink_database(
+        self,
+        table_name: str,
+        *,
+        connection: object,
+        if_table_exists: Literal["fail", "replace", "append"] = ...,
+        engine: str | None = ...,
+    ) -> None: ...
+    def sink_excel(self, path: str, *, worksheet: str = ...) -> None: ...
+    def sink_delta(
+        self,
+        target: str,
+        *,
+        mode: Literal["error", "append", "overwrite", "ignore", "merge"] = ...,
+        storage_options: StorageOptions | None = ...,
+    ) -> None: ...
+    def sink_avro(
+        self,
+        path: str,
+        *,
+        compression: Literal["uncompressed", "snappy", "deflate"] = ...,
+        name: str = ...,
+    ) -> None: ...
     def write_parquet(
         self,
         path: str,

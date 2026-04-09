@@ -15,7 +15,7 @@ class S:
 pf = PolarsFrame.scan_parquet_dataset(
     "s3://bucket/data/**/*.parquet", schema=S, storage_options={"aws_region": "us-east-1"}
 )
-pf.write_parquet(
+pf.sink_parquet(
     "s3://bucket/out/",
     partition_by=("part",),
     compression="zstd",

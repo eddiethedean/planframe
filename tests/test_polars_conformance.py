@@ -691,7 +691,7 @@ def test_io_write_parquet_and_scan_parquet(tmp_path: Any) -> None:
     path = tmp_path / "out.parquet"
     pf = User({"id": [1, 2], "name": ["a", "b"], "age": [10, 20]})
 
-    pf.select("id", "age").write_parquet(str(path))
+    pf.select("id", "age").sink_parquet(str(path))
     out = PolarsFrame.scan_parquet(str(path), schema=UserSchema).select("id", "age").collect()
     assert out["id"].to_list() == [1, 2]
 
@@ -704,7 +704,7 @@ def test_io_write_csv_and_scan_csv(tmp_path: Any) -> None:
         age: int
 
     pf = S({"id": [1, 2], "age": [10, 20]})
-    pf.write_csv(str(path))
+    pf.sink_csv(str(path))
 
     out = PolarsFrame.scan_csv(str(path), schema=S).sort("id").collect()
     assert out["age"].to_list() == [10, 20]
@@ -718,7 +718,7 @@ def test_io_write_ndjson_and_scan_ndjson(tmp_path: Any) -> None:
         age: int
 
     pf = S({"id": [1, 2], "age": [10, 20]})
-    pf.write_ndjson(str(path))
+    pf.sink_ndjson(str(path))
 
     out = PolarsFrame.scan_ndjson(str(path), schema=S).sort("id").collect()
     assert out["age"].to_list() == [10, 20]
@@ -732,7 +732,7 @@ def test_io_write_ipc_and_scan_ipc(tmp_path: Any) -> None:
         age: int
 
     pf = S({"id": [1, 2], "age": [10, 20]})
-    pf.write_ipc(str(path))
+    pf.sink_ipc(str(path))
 
     out = PolarsFrame.scan_ipc(str(path), schema=S).sort("id").collect()
     assert out["age"].to_list() == [10, 20]
@@ -776,7 +776,7 @@ def test_io_parquet_dataset_partitioned_write_and_scan(tmp_path: Any) -> None:
         age: int
 
     pf = S(data)
-    pf.write_parquet(str(base), partition_by=("part",), compression="zstd")
+    pf.sink_parquet(str(base), partition_by=("part",), compression="zstd")
 
     out = (
         PolarsFrame.scan_parquet_dataset(str(base / "**" / "*.parquet"), schema=S)
@@ -801,7 +801,7 @@ def test_io_excel_roundtrip_if_available(tmp_path: Any) -> None:
         id: int
         age: int
 
-    S(data, lazy=False).write_excel(str(path), worksheet="Sheet1")
+    S(data, lazy=False).sink_excel(str(path), worksheet="Sheet1")
     out = PolarsFrame.read_excel(str(path), schema=S, sheet_name="Sheet1").sort("id").collect()
     assert out["age"].to_list() == [10, 20]
 
@@ -814,7 +814,7 @@ def test_io_avro_roundtrip_if_available(tmp_path: Any) -> None:
         id: int
         age: int
 
-    S(data, lazy=False).write_avro(str(path), compression="uncompressed")
+    S(data, lazy=False).sink_avro(str(path), compression="uncompressed")
     out = PolarsFrame.read_avro(str(path), schema=S).sort("id").collect()
     assert out["age"].to_list() == [10, 20]
 
@@ -832,7 +832,7 @@ def test_io_delta_roundtrip_if_available(tmp_path: Any) -> None:
         id: int
         age: int
 
-    S(data, lazy=False).write_delta(str(path), mode="overwrite")
+    S(data, lazy=False).sink_delta(str(path), mode="overwrite")
     out = PolarsFrame.scan_delta(str(path), schema=S).sort("id").collect()
     assert out["age"].to_list() == [10, 20]
 

@@ -18,5 +18,5 @@ csv_path = Path("data.csv")
 pf1 = PolarsFrame.scan_parquet(str(parquet_path), schema=S)
 pf2 = PolarsFrame.scan_csv(str(csv_path), schema=S)
 
-pf1.select("id").write_parquet("out.parquet")
-pf2.select("id").write_csv("out.csv")
+pf1.select("id").sink_parquet("out.parquet")
+pf2.select("id").sink_csv("out.csv")

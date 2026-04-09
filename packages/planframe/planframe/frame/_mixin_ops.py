@@ -15,7 +15,7 @@ from typing_extensions import Self
 from planframe.backend.errors import PlanFrameBackendError, PlanFrameSchemaError
 from planframe._deprecations import warn_renamed
 from planframe.dynamic_groupby import DynamicGroupedFrame
-from planframe.expr.api import Expr, clip, col, infer_dtype, lit
+from planframe.expr.api import Alias, Col, Expr, clip, col, infer_dtype, lit
 from planframe.frame._utils import _coerce_sort_flags
 from planframe.groupby import GroupedFrame
 from planframe.plan.join_options import JoinOptions
@@ -84,7 +84,7 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         ) -> None: ...
         def _normalize_join_keys(self, items: tuple[str | Expr[Any], ...]) -> tuple[Any, ...]: ...
 
-    def select(self, *columns: str | tuple[str, Expr[Any]]) -> Self:
+    def select(self, *columns: str | tuple[str, Expr[Any]] | Expr[Any]) -> Self:
         if not columns:
             cols: tuple[str, ...] = tuple()
             schema2 = self._schema.select(cols)
@@ -109,9 +109,14 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
                 items.append(ProjectPick(column=c))
             elif isinstance(c, tuple) and len(c) == 2 and isinstance(c[0], str):
                 items.append(ProjectExpr(name=c[0], expr=c[1]))
+            elif isinstance(c, Col):
+                items.append(ProjectPick(column=c.name))
+            elif isinstance(c, Alias):
+                items.append(ProjectExpr(name=c.name, expr=c.expr))
             else:
                 raise TypeError(
-                    "select arguments must be column names (str) or (name, Expr) tuples"
+                    "select arguments must be column names (str), (name, Expr) tuples, "
+                    "column Exprs (col('x')), or aliased Exprs (expr.alias('name'))"
                 )
         tup = tuple(items)
         schema3 = self._schema.project(tup)
@@ -368,10 +373,21 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     def with_columns(
         self,
+        *expressions: Expr[Any],
         exprs: Mapping[str, Expr[Any]] | None = None,
         **named_exprs: Expr[Any],
     ) -> Self:
         mapping: dict[str, Expr[Any]] = {}
+        if expressions:
+            for e in expressions:
+                if not isinstance(e, Alias):
+                    raise TypeError(
+                        "with_columns positional arguments must be aliased expressions, "
+                        "e.g. add(col('a'), lit(1)).alias('a_plus_1')"
+                    )
+                if e.name in mapping:
+                    raise ValueError(f"Duplicate with_columns name: {e.name!r}")
+                mapping[e.name] = e.expr
         if exprs is not None:
             mapping.update(dict(exprs))
         mapping.update(named_exprs)
@@ -559,6 +575,18 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _schema=self._schema,
         )
 
+    def sort_by(
+        self,
+        by: str | Expr[Any] | Sequence[str | Expr[Any]],
+        *,
+        descending: bool | Sequence[bool] = False,
+        nulls_last: bool | Sequence[bool] = False,
+    ) -> Self:
+        """Polars-like wrapper for `sort(*keys, ...)`."""
+
+        keys = (by,) if isinstance(by, (str, Expr)) else tuple(by)
+        return self.sort(*keys, descending=descending, nulls_last=nulls_last)
+
     def unique(
         self,
         *subset: str,
@@ -600,6 +628,23 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             _plan=Duplicated(self._plan, subset=sub, keep=keep, out_name=out_name),
             _schema=schema2,
         )
+
+    def is_duplicated(
+        self,
+        subset: Sequence[str] | str | None = None,
+        *,
+        keep: Literal["first", "last"] | bool = "first",
+        out_name: str = "duplicated",
+    ) -> Self:
+        """Polars-like wrapper around `duplicated`."""
+
+        if subset is None:
+            sub = ()
+        elif isinstance(subset, str):
+            sub = (subset,)
+        else:
+            sub = tuple(subset)
+        return self.duplicated(*sub, keep=keep, out_name=out_name)
 
     def sample(
         self,
@@ -1051,6 +1096,20 @@ class FrameOpsMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def concat_horizontal(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
         warn_renamed(old="Frame.concat_horizontal", new="Frame.hstack", remove_in="v0.10.0")
         return self.hstack(other)
+
+    def concat(
+        self,
+        other: Frame[SchemaT, BackendFrameT, BackendExprT],
+        *,
+        how: Literal["vertical", "horizontal"] = "vertical",
+    ) -> Self:
+        """Polars-like `concat` convenience wrapper."""
+
+        if how == "vertical":
+            return self.vstack(other)
+        if how == "horizontal":
+            return self.hstack(other)
+        raise ValueError("concat how must be 'vertical' or 'horizontal'")
 
     def union_distinct(self, other: Frame[SchemaT, BackendFrameT, BackendExprT]) -> Self:
         return self.vstack(other).unique()

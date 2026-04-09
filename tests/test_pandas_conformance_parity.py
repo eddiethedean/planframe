@@ -493,7 +493,7 @@ def test_io_write_csv_roundtrip_via_pandas_reader(tmp_path: Any) -> None:
         age: int
 
     pf = S({"id": [1, 2], "age": [10, 20]})
-    pf.write_csv(str(path))
+    pf.sink_csv(str(path))
     df = pd.read_csv(path).sort_values("id")
     assert df["age"].to_list() == [10, 20]
 
@@ -506,7 +506,7 @@ def test_io_write_ndjson_roundtrip_via_pandas_reader(tmp_path: Any) -> None:
         age: int
 
     pf = S({"id": [1, 2], "age": [10, 20]})
-    pf.write_ndjson(str(path))
+    pf.sink_ndjson(str(path))
     df = pd.read_json(path, lines=True).sort_values("id")
     assert df["age"].to_list() == [10, 20]
 
@@ -522,7 +522,7 @@ def test_io_write_database_sqlite_dbapi(tmp_path: Any) -> None:
         age: int
 
     pf = S({"id": [1, 2], "age": [10, 20]})
-    pf.write_database(table_name="t", connection=conn, if_table_exists="replace")
+    pf.sink_database(table_name="t", connection=conn, if_table_exists="replace")
     out = pd.read_sql_query("SELECT id, age FROM t ORDER BY id", conn)
     assert out["age"].to_list() == [10, 20]
 
@@ -531,7 +531,7 @@ def test_write_ipc_not_implemented_raises_execution_error(tmp_path: Any) -> None
     path = tmp_path / "out.ipc"
     pf = User({"id": [1], "name": ["a"], "age": [10]})
     with pytest.raises(PlanFrameExecutionError):
-        pf.write_ipc(str(path))
+        pf.sink_ipc(str(path))
 
 
 def test_pandas_scan_csv_and_ndjson_convenience(tmp_path: Any) -> None:
@@ -542,8 +542,8 @@ def test_pandas_scan_csv_and_ndjson_convenience(tmp_path: Any) -> None:
         id: int
         age: int
 
-    S({"id": [1, 2], "age": [10, 20]}).write_csv(str(csv_path))
-    S({"id": [1, 2], "age": [10, 20]}).write_ndjson(str(ndjson_path))
+    S({"id": [1, 2], "age": [10, 20]}).sink_csv(str(csv_path))
+    S({"id": [1, 2], "age": [10, 20]}).sink_ndjson(str(ndjson_path))
 
     out1 = PandasFrame.scan_csv(str(csv_path), schema=S).sort("id").collect()
     assert out1["age"].to_list() == [10, 20]

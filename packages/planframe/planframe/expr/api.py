@@ -11,6 +11,17 @@ T = TypeVar("T")
 class Expr(Generic[T]):
     """Typed expression IR base."""
 
+    def alias(self, name: str) -> Alias[T]:
+        if not name:
+            raise ValueError("alias name must be non-empty")
+        return Alias(expr=self, name=name)
+
+
+@dataclass(frozen=True, slots=True)
+class Alias(Expr[T]):
+    expr: Expr[T]
+    name: str
+
 
 @dataclass(frozen=True, slots=True)
 class Col(Expr[T]):

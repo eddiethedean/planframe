@@ -1611,11 +1611,11 @@ def test_write_methods_execute_and_are_boundaries(tmp_path: Any) -> None:
     out = pf.select("id").head(1)
     assert adapter.calls == []
 
-    out.write_parquet(str(tmp_path / "x.parquet"))
+    out.sink_parquet(str(tmp_path / "x.parquet"))
     assert [c[0] for c in adapter.calls] == ["select", "head", "write_parquet"]
 
     adapter.calls.clear()
-    out.write_csv(str(tmp_path / "x.csv"))
+    out.sink_csv(str(tmp_path / "x.csv"))
     assert [c[0] for c in adapter.calls] == ["select", "head", "write_csv"]
 
 
