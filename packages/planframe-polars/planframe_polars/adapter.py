@@ -455,7 +455,10 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
                 join_kwargs["allow_parallel"] = not options.streaming
             if options.allow_parallel is not None:
                 join_kwargs["allow_parallel"] = options.allow_parallel
-            if options.force_parallel is not None and "force_parallel" in _LAZYFRAME_JOIN_PARAM_NAMES:
+            if (
+                options.force_parallel is not None
+                and "force_parallel" in _LAZYFRAME_JOIN_PARAM_NAMES
+            ):
                 join_kwargs["force_parallel"] = options.force_parallel
             if (
                 options.engine_streaming is not None

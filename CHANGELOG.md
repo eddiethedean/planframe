@@ -4,6 +4,11 @@ All notable changes to this project are documented here. Versions follow the wor
 
 ## 0.7.1
 
+### Documentation
+
+- Workspace meta-package: optional `[docs]` extra in the repo root `pyproject.toml` (MkDocs, Material, mkdocstrings, section-index, PyMdown) for local documentation builds (`pip install -e ".[docs]"`).
+- [Core layout](https://planframe.readthedocs.io/en/latest/planframe/design/core-layout/) design note: how `Frame`, compilation, and `execute_plan` are organized.
+
 ### Fixed
 
 - **pandas**: `fill_null(..., strategy=...)` applies forward/backward fill only to the selected subset columns (matches Polars).
