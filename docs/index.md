@@ -41,5 +41,6 @@ Choose a path:
 If you’re creating a new adapter, start with:
 
 - [Creating an adapter](planframe/guides/creating-an-adapter.md)
+- [Core layout](planframe/design/core-layout.md) (how `Frame`, compilation, and `execute_plan` are organized in the codebase)
 - [Adapter docs template](adapters/template/README.md)
 

@@ -30,6 +30,12 @@ This is a light API reference intended for quick discovery. For the full surface
 
 ::: planframe.execution.execute_plan
 
+## `planframe.compile_context.PlanCompileContext`
+
+Internal helper shared by `Frame` and `execute_plan` for compiling expression IR and related structures. Adapter authors rarely import it directly; see [Core layout](../design/core-layout.md).
+
+::: planframe.compile_context.PlanCompileContext
+
 ## `planframe.plan.walk.iter_plan_nodes`
 
 ::: planframe.plan.walk.iter_plan_nodes

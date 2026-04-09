@@ -14,6 +14,10 @@ The adapter API is the abstract base class:
 
 - `packages/planframe/planframe/backend/adapter.py` (`BaseAdapter`)
 
+### How plans reach your adapter
+
+Chaining on `Frame` records a **`PlanNode`** tree and updates the derived schema. At materialization (`collect`, `to_dicts`, `to_dict`, `write_*`, …), PlanFrame runs **`execute_plan`**, which walks that tree and invokes the matching **`BaseAdapter`** methods. Expression IR is compiled through **`PlanCompileContext`** (`planframe.compile_context`) so the same rules apply when building plans and when executing them. For a file-level map (mixins, dispatch registry, stub location), see [Core layout](../design/core-layout.md).
+
 ## A minimal runnable adapter
 
 Below we implement an adapter for a tiny engine that represents a “DataFrame” as `list[dict[str, object]]`.

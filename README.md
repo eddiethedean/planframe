@@ -116,7 +116,7 @@ Backend-specific frames (example):
 
 ### Notes / constraints
 
-- **Typing**: PlanFrame ships heavy `.pyi` stubs to encourage *literal* column names and provide better Pyright feedback. Re-generate with `python scripts/generate_typing_stubs.py` and validate drift with `python scripts/generate_typing_stubs.py --check`.
+- **Typing**: PlanFrame ships heavy `.pyi` stubs (notably `packages/planframe/planframe/frame/__init__.pyi` for `Frame`) to encourage *literal* column names and provide better Pyright feedback. Re-generate with `python scripts/generate_typing_stubs.py` and validate drift with `python scripts/generate_typing_stubs.py --check`.
 - **Pivot (Polars)**: lazy pivot requires `on_columns` to be provided up-front (Polars needs output schema known before `collect()`).
 - **Not supported**: arbitrary Python UDFs / `.apply(...)` and schema-dependent compile-time column-name unions (that would require per-schema codegen).
 

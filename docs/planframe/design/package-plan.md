@@ -161,13 +161,7 @@ df_out = result.collect()
 
 # 9. Package Structure
 
-planframe/
-  core/
-  expr/
-  schema/
-  backend/
-  adapters/
-  codegen/
+The repository ships a flatter layout than this early sketch (`planframe/expr`, `planframe/schema`, `planframe/backend`, …). For an up-to-date map of how **`Frame`**, **`PlanCompileContext`**, and **`execute_plan`** fit together, see [Core layout](core-layout.md).
 
 ---
 
