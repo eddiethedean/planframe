@@ -54,6 +54,7 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
     # NOTE: Pyright's behavior around LiteralString vs str can be permissive.
     # Overloads here are intended to encourage literal call sites and improve IDE help.
+
     @overload
     def select(self, __c1: LiteralString) -> Self: ...
     @overload
@@ -137,7 +138,9 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     def select(self, *columns: LiteralString) -> Self: ...
     @overload
     def select(
-        self, *columns: LiteralString | tuple[str, Expr[Any]] | Expr[Any], **named_exprs: Expr[Any]
+        self,
+        *columns: LiteralString | tuple[str, Expr[Any]] | Expr[Any],
+        **named_exprs: Expr[Any],
     ) -> Self: ...
     def select(self, *columns: Any) -> Self: ...
     def select_prefix(self, prefix: str) -> Self: ...
@@ -619,7 +622,11 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         after: Any | None = ...,
     ) -> Self: ...
     def rename(
-        self, mapping: Mapping[str, str] | None = ..., *, strict: bool = ..., **named: str
+        self,
+        mapping: Mapping[str, str] | None = ...,
+        *,
+        strict: bool = ...,
+        **named: str,
     ) -> Self: ...
     @overload
     def rename_prefix(self, prefix: str, *subset: LiteralString) -> Self: ...
@@ -835,7 +842,10 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         maintain_order: bool = ...,
     ) -> Self: ...
     def drop_duplicates(
-        self, *subset: Any, keep: Literal["first", "last"] = ..., maintain_order: bool = ...
+        self,
+        *subset: Any,
+        keep: Literal["first", "last"] = ...,
+        maintain_order: bool = ...,
     ) -> Self: ...
     @overload
     def duplicated(
@@ -852,33 +862,26 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         out_name: str = ...,
     ) -> Self: ...
     def duplicated(
-        self, *subset: Any, keep: Literal["first", "last"] | bool = ..., out_name: str = ...
+        self,
+        *subset: Any,
+        keep: Literal["first", "last"] | bool = ...,
+        out_name: str = ...,
     ) -> Self: ...
     @overload
     def group_by(
-        self,
-        __gk1: LiteralString,
+        self, __gk1: LiteralString
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
-        self,
-        __gk1: LiteralString,
-        __gk2: LiteralString,
+        self, __gk1: LiteralString, __gk2: LiteralString
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
-        self,
-        __gk1: LiteralString,
-        __gk2: LiteralString,
-        __gk3: LiteralString,
+        self, __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
-        self,
-        __gk1: LiteralString,
-        __gk2: LiteralString,
-        __gk3: LiteralString,
-        __gk4: LiteralString,
+        self, __gk1: LiteralString, __gk2: LiteralString, __gk3: LiteralString, __gk4: LiteralString
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
@@ -955,7 +958,8 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     @overload
     def group_by(
-        self, *keys: LiteralString | Expr[Any]
+        self,
+        *keys: LiteralString | Expr[Any],
     ) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     def group_by(self, *keys: Any) -> GroupedFrame[SchemaT, BackendFrameT, BackendExprT]: ...
     def group_by_dynamic(
@@ -1030,7 +1034,15 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         names_from: LiteralString,
         values_from: LiteralString | tuple[LiteralString, ...],
         aggregate_function: Literal[
-            "first", "last", "sum", "mean", "min", "max", "count", "len", "median"
+            "first",
+            "last",
+            "sum",
+            "mean",
+            "min",
+            "max",
+            "count",
+            "len",
+            "median",
         ] = ...,
         on_columns: tuple[LiteralString, ...] | None = ...,
         sort_columns: bool = ...,
@@ -1083,11 +1095,23 @@ class Frame(Generic[SchemaT, BackendFrameT, BackendExprT]):
         columns: LiteralString | None = ...,
         on: LiteralString | None = ...,
         values: LiteralString | tuple[LiteralString, ...],
-        agg: Literal["first", "last", "sum", "mean", "min", "max", "count", "len", "median"] = ...,
+        agg: Literal[
+            "first",
+            "last",
+            "sum",
+            "mean",
+            "min",
+            "max",
+            "count",
+            "len",
+            "median",
+        ] = ...,
         on_columns: tuple[str, ...] | None = ...,
         separator: str = ...,
         sort_columns: bool = ...,
     ) -> Self: ...
+
+    # One broad signature for tooling; runtime validation lives in Frame.pivot.
     def sample(
         self,
         n: int | None = ...,
