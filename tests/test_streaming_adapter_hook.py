@@ -4,6 +4,8 @@ import asyncio
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
+from test_core_lazy_and_schema import SpyAdapter
+
 from planframe.backend.adapter import BaseAdapter
 from planframe.backend.io import AdapterRowStreamer
 from planframe.execution_options import ExecutionOptions
@@ -240,6 +242,27 @@ def test_stream_dicts_prefers_adapter_streamer_hook() -> None:
     rows = list(pf.stream_dicts(options=ExecutionOptions(streaming=True)))
     assert rows == [{"x": 1}, {"x": 2}]
     assert adapter.seen[0][0] == "stream_dicts"
+
+
+class _SyncOnlyStreamAdapter(SpyAdapter):
+    """Defines ``stream_dicts`` but not ``astream_dicts`` — must not qualify as ``AdapterRowStreamer``."""
+
+    def stream_dicts(
+        self, df: list[dict[str, Any]], *, options: ExecutionOptions | None = None
+    ) -> Iterator[dict[str, object]]:
+        raise AssertionError("sync-only stream_dicts must not be used when protocol incomplete")
+
+
+def test_sync_only_streaming_falls_back_to_to_dicts() -> None:
+    """Adapters with only sync ``stream_dicts`` are not ``AdapterRowStreamer``; use materialized path."""
+    adapter = _SyncOnlyStreamAdapter()
+    assert not isinstance(adapter, AdapterRowStreamer)
+
+    pf = Frame.source([{"x": 1}], adapter=adapter, schema=_S)
+    rows = list(pf.stream_dicts(options=ExecutionOptions(streaming=True)))
+    assert rows == [{"x": 1}]
+    names = [c[0] for c in adapter.calls]
+    assert "to_dicts" in names
 
 
 def test_astream_dicts_prefers_adapter_streamer_hook() -> None:

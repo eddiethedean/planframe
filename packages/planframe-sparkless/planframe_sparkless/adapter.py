@@ -207,18 +207,19 @@ class SparklessAdapter(BaseAdapter[SparklessBackendFrame, SparklessBackendExpr])
         descending: tuple[bool, ...],
         nulls_last: tuple[bool, ...],
     ) -> SparklessBackendFrame:
-        # sparkless orderBy accepts Columns with .asc()/.desc().
-        # Null ordering controls are not universally available; ignore nulls_last for now.
-        _ = nulls_last
+        # sparkless Columns support Spark-style null ordering (asc_nulls_* / desc_nulls_*).
         cols: list[Any] = []
-        for k, desc in zip(keys, descending, strict=True):
+        for k, desc, nl in zip(keys, descending, nulls_last, strict=True):
             if k.column is not None:
                 c = F.col(k.column)
             else:
                 if k.expr is None:
                     raise PlanFrameBackendError("Sort key expr cannot be None")
                 c = k.expr
-            cols.append(c.desc() if desc else c.asc())
+            if desc:
+                cols.append(c.desc_nulls_last() if nl else c.desc_nulls_first())
+            else:
+                cols.append(c.asc_nulls_last() if nl else c.asc_nulls_first())
         return df.orderBy(*cols)
 
     def unique(
@@ -340,6 +341,25 @@ class SparklessAdapter(BaseAdapter[SparklessBackendFrame, SparklessBackendExpr])
             return left.crossJoin(right)
         if len(left_on) != len(right_on):
             raise ValueError("Join keys must match in length")
+
+        # Prefer Spark-style ``on=`` / ``left_on=``/``right_on=`` so join keys are not
+        # ambiguous when column names overlap (unqualified ``F.col`` in a boolean ``on``).
+        simple_name_keys = True
+        left_names: list[str] = []
+        right_names: list[str] = []
+        for lk, rk in zip(left_on, right_on, strict=True):
+            if lk.column is None or lk.expr is not None or rk.column is None or rk.expr is not None:
+                simple_name_keys = False
+                break
+            left_names.append(lk.column)
+            right_names.append(rk.column)
+
+        if simple_name_keys:
+            if left_names == right_names:
+                on_arg = left_names[0] if len(left_names) == 1 else left_names
+                return left.join(right, on=on_arg, how=how)
+            return left.join(right, left_on=left_names, right_on=right_names, how=how)
+
         conds: list[Any] = []
         for lk, rk in zip(left_on, right_on, strict=True):
             lcol = F.col(lk.column) if lk.column is not None else lk.expr
@@ -561,7 +581,7 @@ class SparklessAdapter(BaseAdapter[SparklessBackendFrame, SparklessBackendExpr])
     ) -> dict[str, list[object]]:
         rows = self.to_dicts(df, options=options)
         if not rows:
-            return {}
+            return {str(c): [] for c in df.columns}
         out: dict[str, list[object]] = {k: [] for k in rows[0]}
         for r in rows:
             for k, v in r.items():

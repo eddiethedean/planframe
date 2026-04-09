@@ -48,7 +48,7 @@ dict={'id': [1, 2], 'age': [10, 20]}
 - **Always-lazy**: return lazy objects from transforms; only execute inside `collect`/`to_dicts`/writes
 - **I/O**: implement `write_*` (used by PlanFrame’s `sink_*`/`write_*`) or override `BaseAdapter.writer` with a custom writer implementation
 - **Async I/O (optional)**: override `BaseAdapter.areader` / `BaseAdapter.awriter` for true async IO (defaults wrap sync IO in `asyncio.to_thread`)
-- **Row streaming (optional)**: implement `AdapterRowStreamer` to support `Frame.stream_dicts()` / `Frame.astream_dicts()` without materializing all rows at once
+- **Row streaming (optional)**: implement `AdapterRowStreamer` (**both** `stream_dicts` and `astream_dicts` are required for detection) to support `Frame.stream_dicts()` / `Frame.astream_dicts()` without materializing all rows at once
 
 ## Execution boundaries and `ExecutionOptions`
 
@@ -72,7 +72,7 @@ Materialization and row export happen only at execution boundaries. On `BaseAdap
 
 ## Optional: row streaming + true async IO
 
-If your engine can stream rows (cursor-based DB reads, chunked readers, etc.), implement `AdapterRowStreamer` on your adapter:
+If your engine can stream rows (cursor-based DB reads, chunked readers, etc.), implement `AdapterRowStreamer` on your adapter. **Both** sync and async entrypoints are required: PlanFrame uses `isinstance(adapter, AdapterRowStreamer)`; an adapter that only defines `stream_dicts` is treated like a non-streaming adapter and will fall back to `to_dicts()` / `ato_dicts()`.
 
 ```python
 from collections.abc import AsyncIterator, Iterator

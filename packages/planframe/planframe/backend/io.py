@@ -298,7 +298,13 @@ class AdapterAsyncWriter(Protocol[BackendFrameT]):
 
 @runtime_checkable
 class AdapterRowStreamer(Protocol[BackendFrameT]):
-    """Optional adapter hook for true row streaming."""
+    """Optional adapter hook for true row streaming.
+
+    **Contract:** implement **both** ``stream_dicts`` *and* ``astream_dicts``.
+    PlanFrame uses ``isinstance(..., AdapterRowStreamer)``; adapters that only implement
+    the sync iterator are **not** treated as streamers and ``Frame.stream_dicts`` /
+    ``Frame.astream_dicts`` fall back to materializing via ``to_dicts`` / ``ato_dicts``.
+    """
 
     def stream_dicts(
         self, df: BackendFrameT, *, options: ExecutionOptions | None = None

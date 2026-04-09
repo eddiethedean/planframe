@@ -11,7 +11,7 @@ This guide explains the **row-streaming** APIs:
 
 `stream_*` is a convenience API for *iterating* rows.
 
-- If the adapter implements **`AdapterRowStreamer`**, PlanFrame can stream rows without building an intermediate `list[dict]`.
+- If the adapter implements **`AdapterRowStreamer`** (see contract below), PlanFrame can stream rows without building an intermediate `list[dict]`.
 - If not, PlanFrame falls back to **`to_dicts()` / `ato_dicts()`** internally and yields from the materialized list.
 
 In other words:
@@ -59,12 +59,12 @@ for row in pf[["id", "age"]].stream_dicts():
 
 ## Adapter authors: implementing true streaming
 
-To enable true streaming, implement `AdapterRowStreamer` on your adapter (in addition to the normal `to_dicts` export).
+To enable true streaming, implement **`AdapterRowStreamer`** on your adapter (in addition to the normal `to_dicts` export).
 
-Conceptually:
+**Contract:** you must provide **both** of the following:
 
 - `stream_dicts(df, ...) -> Iterator[dict[str, object]]`
-- `astream_dicts(df, ...) -> AsyncIterator[dict[str, object]]`
+- `astream_dicts(df, ...) -> AsyncIterator[dict[str, object]]` (async generator or equivalent)
 
-PlanFrame will prefer these hooks when present.
+PlanFrame detects streaming support with `isinstance(adapter, AdapterRowStreamer)`. If you only implement sync `stream_dicts` and omit `astream_dicts`, the adapter **does not** qualify—`Frame.stream_dicts()` / `Frame.astream_dicts()` will fall back to `to_dicts()` / `ato_dicts()` (materialize-then-yield), same as a non-streaming adapter.
 

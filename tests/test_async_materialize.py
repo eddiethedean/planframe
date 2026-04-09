@@ -22,6 +22,14 @@ class AsyncSpyAdapter(SpyAdapter):
         await asyncio.sleep(0)
         return self.collect(df, options=options)
 
+    async def ato_dicts(
+        self, df: list[dict[str, Any]], *, options: object | None = None
+    ) -> list[dict[str, object]]:
+        """Async-native export: avoid ``asyncio.to_thread`` so tests can forbid thread hops."""
+        self.calls.append(("ato_dicts", options))
+        await asyncio.sleep(0)
+        return self.to_dicts(df, options=options)
+
 
 def test_acollect_default_adapter_matches_collect() -> None:
     async def run() -> None:
@@ -48,6 +56,7 @@ def test_acollect_async_adapter_path() -> None:
         assert out[0].id == 1 and out[0].age == 2
         names = [c[0] for c in adapter.calls]
         assert "acollect" in names
+        assert "ato_dicts" in names
         assert names[-1] == "to_dicts"
 
     asyncio.run(run())
@@ -90,6 +99,35 @@ def test_acollect_builds_pydantic_models() -> None:
         row = rows[0]
         assert type(row).__name__ == "UserRow"
         assert row.id == 1 and row.age == 2
+
+    asyncio.run(run())
+
+
+class AtoDictsOverrideAdapter(SpyAdapter):
+    """Overrides ``ato_dicts`` so ``acollect`` must use async export, not ``to_dicts``."""
+
+    async def ato_dicts(
+        self, df: list[dict[str, Any]], *, options: object | None = None
+    ) -> list[dict[str, object]]:
+        self.calls.append(("ato_dicts", options))
+        await asyncio.sleep(0)
+        return await super().ato_dicts(df, options=options)
+
+
+def test_acollect_uses_ato_dicts_not_to_dicts() -> None:
+    """Regression: ``acollect`` must await ``adapter.ato_dicts`` after ``acollect_backend``."""
+
+    adapter = AtoDictsOverrideAdapter()
+    data = [{"id": 1, "age": 2}]
+    pf = Frame.source(data, adapter=adapter, schema=UserDC)
+
+    async def run() -> None:
+        rows = await pf.select("id").acollect()
+        assert len(rows) == 1 and rows[0].id == 1
+        names = [c[0] for c in adapter.calls]
+        assert "ato_dicts" in names
+        # Must route through ``ato_dicts`` (not call ``to_dicts`` on the frame path alone).
+        assert names.index("ato_dicts") < names.index("to_dicts")
 
     asyncio.run(run())
 

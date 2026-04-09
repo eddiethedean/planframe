@@ -174,7 +174,7 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
 
         Model = materialize_model(name=name, schema=self._schema, kind="pydantic")
         try:
-            rows = self._adapter.to_dicts(out, options=options)
+            rows = await self._adapter.ato_dicts(out, options=options)
             return [Model(**r) for r in rows]
         except Exception as e:  # noqa: BLE001
             raise PlanFrameExecutionError(
