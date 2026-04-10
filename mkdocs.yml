@@ -39,6 +39,7 @@ nav:
           - Migrating to v1.0.0: planframe/guides/migrating-to-1-0.md
           - Streaming rows: planframe/guides/streaming-rows.md
           - Embedding Frame (composition): planframe/guides/embedding-frame.md
+          - Pydantic bridge: planframe/guides/pydantic-bridge.md
           - PySpark-like API (SparkFrame): planframe/guides/pyspark-like-api.md
           - Pandas-like API (PandasLikeFrame): planframe/guides/pandas-like-api.md
       - Reference:
