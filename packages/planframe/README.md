@@ -12,6 +12,7 @@ Documentation (ReadTheDocs):
 - Design docs: `https://planframe.readthedocs.io/en/latest/planframe/design/`
 - Light API reference: `https://planframe.readthedocs.io/en/latest/planframe/reference/api/`
 - Streaming rows: `https://planframe.readthedocs.io/en/latest/planframe/guides/streaming-rows/`
+- Adapter conformance kit (third-party `BaseAdapter` CI): `https://planframe.readthedocs.io/en/latest/planframe/guides/adapter-conformance/`
 - Optional API skins: [PySpark-like (`planframe.spark`)](https://planframe.readthedocs.io/en/latest/planframe/guides/pyspark-like-api/), [pandas-like (`planframe.pandas`)](https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/)
 
 ### Install
@@ -31,6 +32,7 @@ pip install planframe
 - `planframe.schema`: schema reflection (dataclass + Pydantic) and materialization
 - `planframe.spark`: optional PySpark-like `SparkFrame` / `Column` / `functions` (import `from planframe.spark import SparkFrame`, or `from planframe import spark`)
 - `planframe.pandas`: optional pandas-like `PandasLikeFrame` / `Series` (import `from planframe.pandas import PandasLikeFrame`, or `from planframe import pandas`); mix with any `Frame` subclass for familiar naming without new backend dependencies
+- `planframe.adapter_conformance`: minimal **`run_minimal_adapter_conformance`** helper for adapter authors; optional extra **`planframe[adapter-dev]`** includes pytest for local runs
 
 ### Common transforms
 

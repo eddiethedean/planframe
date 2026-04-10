@@ -21,7 +21,12 @@ classifiers = [
    "typing-extensions>=4.8",
    "pydantic>=1.10",
  ]
- 
+
+[project.optional-dependencies]
+adapter-dev = [
+  "pytest>=8.0",
+]
+
  [project.urls]
 Homepage = "https://github.com/eddiethedean/planframe"
 Repository = "https://github.com/eddiethedean/planframe"

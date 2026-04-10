@@ -36,6 +36,7 @@ nav:
       - Overview: planframe/index.md
       - Guides:
           - Creating an adapter: planframe/guides/creating-an-adapter.md
+          - Adapter conformance kit: planframe/guides/adapter-conformance.md
           - Migrating to v1.0.0: planframe/guides/migrating-to-1-0.md
           - Streaming rows: planframe/guides/streaming-rows.md
           - Embedding Frame (composition): planframe/guides/embedding-frame.md
