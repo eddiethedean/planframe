@@ -72,6 +72,18 @@ Materialization and row export happen only at execution boundaries. On `BaseAdap
 
 `Frame.collect_backend`, `Frame.to_dicts`, `Frame.to_dict`, and the async counterparts accept the same `ExecutionOptions` and pass them through to the adapter.
 
+### Columnar boundary helpers (`planframe.materialize`)
+
+For a **stable import** at the “lazy `Frame` → columnar dict” step (without pulling in Pydantic or other integrations in adapter code), use:
+
+| Helper | Behavior |
+| --- | --- |
+| `materialize_columns(frame, *, options=...)` | Same as `frame.to_dict(...)`; forwards `ExecutionOptions`. |
+| `materialize_into(frame, factory, *, options=...)` | Columnar dict → your `factory(dict[str, list[object]])` (Pydantic, dataclass batching, Arrow, etc.). |
+| `amaterialize_columns` / `amaterialize_into` | Async path (`Frame.ato_dict`); same options contract. |
+
+PlanFrame stays **generic**: it does not build models—adapters or host libraries supply the callable. Re-exported from `from planframe import ...` for discoverability.
+
 ## Async execution contract (third-party adapters)
 
 PlanFrame’s **lazy chaining is always synchronous**: building a `Frame` never does I/O and never awaits. Async support exists only at **materialization boundaries**.

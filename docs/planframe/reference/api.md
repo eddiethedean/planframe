@@ -50,6 +50,10 @@ Typed mixins (import from `planframe.spark` / `planframe.pandas`, or `from planf
 
 ::: planframe.execution.execute_plan_async
 
+## `planframe.materialize`
+
+::: planframe.materialize
+
 ## `planframe.compile_context.PlanCompileContext`
 
 Internal helper shared by `Frame` and `execute_plan` for compiling expression IR and related structures. Adapter authors rarely import it directly; see [Core layout](../design/core-layout.md).
