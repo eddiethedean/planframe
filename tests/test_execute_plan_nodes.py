@@ -8,6 +8,7 @@ from test_core_lazy_and_schema import SpyAdapter
 
 from planframe.execution import execute_plan
 from planframe.expr import add, col, gt, lit
+from planframe.expr.api import Col
 from planframe.frame import Frame
 from planframe.plan.join_options import JoinOptions
 from planframe.schema.ir import Schema
@@ -134,6 +135,26 @@ def test_execute_plan_select_project_with_column_cast_filter_sort_slice_head_tai
         "tail",
     ]
     assert res == [{"id2": "computed", "b2": "computed", "x": "computed"}]
+
+
+def test_execute_plan_filter_compiles_predicate_with_input_schema_before_select() -> None:
+    """Regression (GH #103): filter(...).select(...) must compile the predicate using the
+    schema at the filter input, not the projected schema after select.
+    """
+
+    class Adapter(SpyAdapter):
+        def compile_expr(self, expr: Any, *, schema: Any = None) -> object:
+            if schema is not None and isinstance(expr, Col):
+                assert expr.name in schema.names(), (expr.name, schema.names())
+            return super().compile_expr(expr, schema=schema)
+
+    adapter = Adapter()
+    data = [{"id": 1, "a": 1, "b": 2}]
+    pf = Frame.source(data, adapter=adapter, schema=S)
+
+    out = pf.filter(gt(col("b"), lit(0))).select("id")
+    _ = execute_plan(adapter=adapter, plan=out.plan(), root_data=pf._data, schema=out.schema())
+    assert ("filter", gt(col("b"), lit(0))) in adapter.calls
 
 
 def test_execute_plan_unique_and_duplicated() -> None:

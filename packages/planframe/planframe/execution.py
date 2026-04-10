@@ -44,6 +44,7 @@ from planframe.plan.nodes import (
     WithColumn,
     WithRowCount,
 )
+from planframe.plan.output_schema import plan_output_schema
 from planframe.schema.ir import Schema
 from planframe.typing.frame_like import FrameLike
 
@@ -51,11 +52,31 @@ BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
 
 
+def _compile_ctx_at_input(
+    adapter: BackendAdapter[BackendFrameT, BackendExprT],
+    node: PlanNode,
+) -> PlanCompileContext[BackendFrameT, BackendExprT]:
+    """Compile expressions as evaluated **on the input rows to** *node* (output of ``node.prev``)."""
+
+    prev = getattr(node, "prev", None)
+    if not isinstance(prev, PlanNode):
+        raise PlanFrameBackendError("Internal error: compile context requires a plan node with .prev")
+    return PlanCompileContext(adapter, plan_output_schema(prev))
+
+
+def _compile_ctx_groupby_source(
+    adapter: BackendAdapter[BackendFrameT, BackendExprT], agg_node: Agg
+) -> PlanCompileContext[BackendFrameT, BackendExprT]:
+    gb = agg_node.prev
+    if not isinstance(gb, GroupBy):
+        raise PlanFrameBackendError("Agg must follow GroupBy")
+    return PlanCompileContext(adapter, plan_output_schema(gb.prev))
+
+
 @dataclass
 class _ExecState(Generic[BackendFrameT, BackendExprT]):
     adapter: BackendAdapter[BackendFrameT, BackendExprT]
     root_data: BackendFrameT
-    ctx: PlanCompileContext[BackendFrameT, BackendExprT]
 
     def evaluate(self, node: object) -> BackendFrameT:
         if not isinstance(node, PlanNode):
@@ -85,7 +106,7 @@ def _handle_project(
 ) -> BackendFrameT:
     assert isinstance(node, Project)
     prev = state.evaluate(node.prev)
-    parts = state.ctx.compile_project_items(node.items)
+    parts = _compile_ctx_at_input(state.adapter, node).compile_project_items(node.items)
     return state.adapter.project(prev, parts)
 
 
@@ -104,7 +125,9 @@ def _handle_with_column(
 ) -> BackendFrameT:
     assert isinstance(node, WithColumn)
     return state.adapter.with_column(
-        state.evaluate(node.prev), node.name, state.ctx.compile_expr(node.expr)
+        state.evaluate(node.prev),
+        node.name,
+        _compile_ctx_at_input(state.adapter, node).compile_expr(node.expr),
     )
 
 
@@ -124,7 +147,10 @@ def _handle_with_row_count(
 
 def _handle_filter(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode) -> BackendFrameT:
     assert isinstance(node, Filter)
-    return state.adapter.filter(state.evaluate(node.prev), state.ctx.compile_expr(node.predicate))
+    return state.adapter.filter(
+        state.evaluate(node.prev),
+        _compile_ctx_at_input(state.adapter, node).compile_expr(node.predicate),
+    )
 
 
 def _handle_hint(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode) -> BackendFrameT:
@@ -135,7 +161,7 @@ def _handle_hint(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode)
 def _handle_sort(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode) -> BackendFrameT:
     assert isinstance(node, Sort)
     prev = state.evaluate(node.prev)
-    compiled = state.ctx.compile_sort_keys(node.keys)
+    compiled = _compile_ctx_at_input(state.adapter, node).compile_sort_keys(node.keys)
     return state.adapter.sort(
         prev,
         compiled,
@@ -177,8 +203,9 @@ def _handle_agg(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode) 
     assert isinstance(node, Agg)
     if not isinstance(node.prev, GroupBy):
         raise PlanFrameBackendError("Agg must follow GroupBy")
-    compiled_keys = state.ctx.compile_join_keys_tuple(node.prev.keys)
-    compiled_aggs = state.ctx.compile_named_aggs(node.named_aggs)
+    gb_ctx = _compile_ctx_groupby_source(state.adapter, node)
+    compiled_keys = gb_ctx.compile_join_keys_tuple(node.prev.keys)
+    compiled_aggs = gb_ctx.compile_named_aggs(node.named_aggs)
     return state.adapter.group_by_agg(
         state.evaluate(node.prev.prev),
         keys=compiled_keys,
@@ -190,7 +217,7 @@ def _handle_dynamic_group_by_agg(
     state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode
 ) -> BackendFrameT:
     assert isinstance(node, DynamicGroupByAgg)
-    compiled_aggs = state.ctx.compile_named_aggs(node.named_aggs)
+    compiled_aggs = _compile_ctx_at_input(state.adapter, node).compile_named_aggs(node.named_aggs)
     return state.adapter.group_by_dynamic_agg(
         state.evaluate(node.prev),
         index_column=node.index_column,
@@ -226,7 +253,9 @@ def _handle_fill_null(
     assert isinstance(node, FillNull)
     prev = state.evaluate(node.prev)
     if node.value is not None and isinstance(node.value, Expr):
-        compiled_value: object | BackendExprT = state.ctx.compile_expr(node.value)
+        compiled_value: object | BackendExprT = _compile_ctx_at_input(
+            state.adapter, node
+        ).compile_expr(node.value)
     else:
         compiled_value = node.value
     return state.adapter.fill_null(prev, compiled_value, node.subset, strategy=node.strategy)
@@ -252,12 +281,17 @@ def _handle_join(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode)
     if getattr(right_frame._adapter, "name", None) != state.adapter.name:
         raise PlanFrameBackendError("Cannot join frames from different backends")
     right_df = right_frame._eval(right_frame._plan)
+    left_ctx = _compile_ctx_at_input(state.adapter, node)
+    right_schema = getattr(right_frame, "_schema", None)
+    if right_schema is None:
+        raise PlanFrameBackendError("Join node right frame is missing _schema")
+    right_ctx = PlanCompileContext(state.adapter, right_schema)
     if node.left_keys is node.right_keys:
-        compiled = state.ctx.compile_join_keys_tuple(node.left_keys)
+        compiled = left_ctx.compile_join_keys_tuple(node.left_keys)
         lo = ro = compiled
     else:
-        lo = state.ctx.compile_join_keys_tuple(node.left_keys)
-        ro = state.ctx.compile_join_keys_tuple(node.right_keys)
+        lo = left_ctx.compile_join_keys_tuple(node.left_keys)
+        ro = right_ctx.compile_join_keys_tuple(node.right_keys)
     return state.adapter.join(
         left_df,
         right_df,
@@ -434,8 +468,8 @@ def execute_plan(
       `collect=True` is provided.
     """
 
-    ctx = PlanCompileContext(adapter, schema)
-    state = _ExecState(adapter=adapter, root_data=root_data, ctx=ctx)
+    _ = schema  # Public API; compile schemas are derived per plan node via plan_output_schema().
+    state = _ExecState(adapter=adapter, root_data=root_data)
     out = state.evaluate(plan)
     if collect:
         return adapter.collect(out, options=options)
