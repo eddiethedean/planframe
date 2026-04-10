@@ -170,7 +170,7 @@ The repository ships a flatter layout than this early sketch (`planframe/expr`, 
 - Use Literal for column names
 - Avoid Any leakage
 - Provide .pyi stubs if needed
-- Optional plugin for Resolve
+- Tier 3 “Resolve”: external resolver tool + generated artifacts (Pyright has no general plugin system)
 
 ---
 
@@ -190,7 +190,7 @@ Supported operations:
 
 # 12. Future Enhancements
 
-- Pyright plugin
+- Full Resolve tool (external) + improved stub/codegen integration
 - SQL compilation
 - schema diffing
 - query optimization
