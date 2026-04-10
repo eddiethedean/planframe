@@ -5,7 +5,7 @@
   "venv": ".venv",
   "executionEnvironments": [
     {
-      "root": ".",
+      "root": "../..",
       "extraPaths": [
         "../../packages/planframe",
         "../../packages/planframe-polars",

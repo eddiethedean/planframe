@@ -5,8 +5,8 @@ from typing import Any, Literal, TypeVar
 
 import polars as pl
 
-from planframe.frame import Frame
-from planframe.typing.storage import StorageOptions
+from planframe import Frame
+from planframe.typing import StorageOptions
 
 SchemaT = TypeVar("SchemaT")
 PolarsFrameT = TypeVar("PolarsFrameT", bound="PolarsFrame")
