@@ -27,6 +27,17 @@ AggSpec: TypeAlias = tuple[str, ColumnName] | BackendExprT
 
 
 @dataclass(frozen=True, slots=True)
+class CompileExprContext:
+    """Context passed to :meth:`BaseAdapter.compile_expr` and :meth:`BaseAdapter.resolve_dtype`.
+
+    *schema* is the PlanFrame :class:`~planframe.schema.ir.Schema` for the current plan step
+    (the row shape expressions are compiled against).
+    """
+
+    schema: Schema | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class AdapterCapabilities:
     """Optional backend capability flags.
 
@@ -765,8 +776,29 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         seed: int | None = None,
     ) -> BackendFrameT: ...
 
+    def resolve_dtype(self, name: str, *, ctx: CompileExprContext) -> object | None:
+        """Return the PlanFrame field dtype for *name*, or ``None`` if unknown.
+
+        Invoked when lowering :class:`~planframe.expr.api.Col` during :meth:`compile_expr`.
+        Override when *ctx.schema* is partial (e.g. projected) and dtypes must be recovered
+        from backend metadata or a wider known schema.
+        """
+
+        if ctx.schema is None:
+            return None
+        fm = ctx.schema.field_map()
+        if name in fm:
+            return fm[name].dtype
+        return None
+
     @abstractmethod
-    def compile_expr(self, expr: object, *, schema: Schema | None = None) -> BackendExprT: ...
+    def compile_expr(
+        self,
+        expr: object,
+        *,
+        schema: Schema | None = None,
+        ctx: CompileExprContext | None = None,
+    ) -> BackendExprT: ...
 
     @abstractmethod
     def collect(

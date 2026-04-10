@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any, TypeAlias, cast
 
@@ -68,11 +69,26 @@ class AggExprSpec:
     inner: PandasExpr
 
 
-def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
+_dtype_hook: ContextVar[Callable[[str], object | None] | None] = ContextVar(
+    "_dtype_hook", default=None
+)
+
+
+def compile_expr(
+    expr: Expr[Any], *, dtype_for: Callable[[str], object | None] | None = None
+) -> PandasExpr | AggExprSpec:
+    tok = _dtype_hook.set(dtype_for)
+    try:
+        return _pe_impl(expr)
+    finally:
+        _dtype_hook.reset(tok)
+
+
+def _pe_impl(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
     """Compile PlanFrame expression IR into a callable pandas expression."""
 
     def _as_expr(e: Expr[Any]) -> PandasExpr:
-        out = compile_expr(e)
+        out = _pe_impl(e)
         if isinstance(out, AggExprSpec):
             raise PlanFrameExpressionError(
                 "AggExpr is only supported inside group_by(...).agg(...)"
@@ -80,8 +96,11 @@ def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
         return cast(PandasExpr, out)
 
     if isinstance(expr, Alias):
-        return compile_expr(expr.expr)
+        return _pe_impl(expr.expr)
     if isinstance(expr, Col):
+        cb = _dtype_hook.get()
+        if cb is not None:
+            _ = cb(expr.name)
         name = expr.name
         return lambda df: df[name]
     if isinstance(expr, Lit):
@@ -91,14 +110,14 @@ def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
     # Aggregations are represented as a wrapper; group_by_agg handles execution.
     if isinstance(expr, AggExpr):
         op = expr.op
-        inner = compile_expr(expr.inner)
+        inner = _pe_impl(expr.inner)
         if isinstance(inner, AggExprSpec):
             raise PlanFrameExpressionError("Nested AggExpr is not supported")
         return AggExprSpec(op=op, inner=cast(PandasExpr, inner))
 
     if isinstance(expr, (Add, Sub, Mul, TrueDiv, Eq, Ne, Lt, Le, Gt, Ge, And, Or)):
-        left = compile_expr(expr.left)
-        right = compile_expr(expr.right)
+        left = _pe_impl(expr.left)
+        right = _pe_impl(expr.right)
         if isinstance(left, AggExprSpec) or isinstance(right, AggExprSpec):
             raise PlanFrameExpressionError(
                 "AggExpr is only supported inside group_by(...).agg(...)"
@@ -134,8 +153,8 @@ def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
             return lambda df: cast(pd.Series, left_fn(df)) | cast(pd.Series, right_fn(df))
 
     if isinstance(expr, Pow):
-        base = compile_expr(expr.base)
-        exponent = compile_expr(expr.exponent)
+        base = _pe_impl(expr.base)
+        exponent = _pe_impl(expr.exponent)
         if isinstance(base, AggExprSpec) or isinstance(exponent, AggExprSpec):
             raise PlanFrameExpressionError(
                 "AggExpr is only supported inside group_by(...).agg(...)"
@@ -145,7 +164,7 @@ def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
         return lambda df: cast(Any, base_fn(df)) ** cast(Any, exp_fn(df))
 
     if isinstance(expr, Not):
-        inner = compile_expr(expr.value)
+        inner = _pe_impl(expr.value)
         if isinstance(inner, AggExprSpec):
             raise PlanFrameExpressionError(
                 "AggExpr is only supported inside group_by(...).agg(...)"
@@ -154,7 +173,7 @@ def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
         return lambda df: ~cast(pd.Series, inner_fn(df))
 
     if isinstance(expr, Coalesce):
-        values = [compile_expr(v) for v in expr.values]
+        values = [_pe_impl(v) for v in expr.values]
         if any(isinstance(v, AggExprSpec) for v in values):
             raise PlanFrameExpressionError(
                 "AggExpr is only supported inside group_by(...).agg(...)"
@@ -175,7 +194,7 @@ def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
         return _coalesce
 
     if isinstance(expr, IsNull):
-        inner = compile_expr(expr.value)
+        inner = _pe_impl(expr.value)
         if isinstance(inner, AggExprSpec):
             raise PlanFrameExpressionError(
                 "AggExpr is only supported inside group_by(...).agg(...)"
@@ -191,9 +210,9 @@ def compile_expr(expr: Expr[Any]) -> PandasExpr | AggExprSpec:
         return _is_null
 
     if isinstance(expr, IfElse):
-        cond = compile_expr(expr.cond)
-        if_true = compile_expr(expr.then_value)
-        if_false = compile_expr(expr.else_value)
+        cond = _pe_impl(expr.cond)
+        if_true = _pe_impl(expr.then_value)
+        if_false = _pe_impl(expr.else_value)
         if (
             isinstance(cond, AggExprSpec)
             or isinstance(if_true, AggExprSpec)

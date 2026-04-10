@@ -143,10 +143,10 @@ def test_execute_plan_filter_compiles_predicate_with_input_schema_before_select(
     """
 
     class Adapter(SpyAdapter):
-        def compile_expr(self, expr: Any, *, schema: Any = None) -> object:
+        def compile_expr(self, expr: Any, *, schema: Any = None, ctx: Any = None) -> object:
             if schema is not None and isinstance(expr, Col):
                 assert expr.name in schema.names(), (expr.name, schema.names())
-            return super().compile_expr(expr, schema=schema)
+            return super().compile_expr(expr, schema=schema, ctx=ctx)
 
     adapter = Adapter()
     data = [{"id": 1, "a": 1, "b": 2}]

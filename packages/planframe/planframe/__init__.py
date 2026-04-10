@@ -11,6 +11,7 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _dist_version
 from typing import Any
 
+from planframe.backend.adapter import CompileExprContext
 from planframe.dynamic_groupby import DynamicGroupedFrame
 from planframe.execution import execute_plan
 from planframe.execution_options import ExecutionOptions
@@ -48,6 +49,7 @@ __all__ = [
     "__version__",
     "__expr_ir_version__",
     "__plan_ir_version__",
+    "CompileExprContext",
     "Frame",
     "Schema",
     "GroupedFrame",

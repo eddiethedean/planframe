@@ -13,12 +13,14 @@ from planframe.backend.adapter import (
     CompiledJoinKey,
     CompiledProjectItem,
     CompiledSortKey,
+    CompileExprContext,
 )
 from planframe.backend.errors import PlanFrameBackendError
 from planframe.execution_options import ExecutionOptions
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import UnnestItem
+from planframe.schema.ir import Schema
 from planframe.typing.scalars import Scalar
 from planframe.typing.storage import StorageOptions
 from planframe_polars.compile_expr import compile_expr
@@ -253,10 +255,21 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         mask = df.select(mask_expr.alias(out_name))[out_name]
         return pl.DataFrame({out_name: mask})
 
-    def compile_expr(self, expr: object, *, schema: Any = None) -> pl.Expr:
+    def compile_expr(
+        self,
+        expr: object,
+        *,
+        schema: Schema | None = None,
+        ctx: CompileExprContext | None = None,
+    ) -> pl.Expr:
         if not isinstance(expr, Expr):
             raise TypeError(f"Expected PlanFrame Expr, got {type(expr)!r}")
-        return compile_expr(expr)
+        if ctx is None:
+            ctx = CompileExprContext(schema=schema)
+        return compile_expr(
+            expr,
+            dtype_for=lambda n: self.resolve_dtype(n, ctx=ctx),
+        )
 
     def group_by_agg(
         self,
