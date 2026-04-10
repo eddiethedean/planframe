@@ -26,10 +26,12 @@ def materialize_dataclass(name: str, schema: Schema) -> type[Any]:
     return deco(cls)
 
 
-def materialize_pydantic(name: str, schema: Schema) -> type[BaseModel]:
+def materialize_pydantic(
+    name: str, schema: Schema, *, base: type[BaseModel] = BaseModel
+) -> type[BaseModel]:
     # Pydantic's `create_model` accepts field definitions as kwargs: name=(type, default).
     field_definitions: dict[str, Any] = {f.name: (f.dtype, ...) for f in schema.fields}
-    return create_model(name, **field_definitions)
+    return create_model(name, __base__=base, **field_definitions)
 
 
 def materialize_model(
