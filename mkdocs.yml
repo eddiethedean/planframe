@@ -48,6 +48,7 @@ nav:
           - Package plan: planframe/design/package-plan.md
           - Core layout: planframe/design/core-layout.md
           - Backend adapter design: planframe/design/backend-adapter-design.md
+          - IR versioning (adapters): planframe/design/ir-versioning.md
           - Interface parity (Polars): planframe/design/interface-parity-polars.md
           - Interface parity (pandas): planframe/design/interface-parity-pandas.md
           - Interface parity (Spark): planframe/design/interface-parity-spark.md
