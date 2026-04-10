@@ -4,7 +4,7 @@
  
  [project]
  name = "planframe-polars"
-version = "1.0.0"
+version = "1.1.0"
  description = "Polars backend adapter for PlanFrame."
  readme = "README.md"
  requires-python = ">=3.10"
@@ -18,7 +18,7 @@ classifiers = [
   "Typing :: Typed",
 ]
  dependencies = [
-  "planframe>=1.0.0,<2.0.0",
+  "planframe>=1.1.0,<2.0.0",
    "polars>=0.20",
  ]
  
