@@ -17,6 +17,10 @@ All notable changes to this repository are documented here.
 
 - Documentation and READMEs were refreshed to reflect 1.0+ install paths and current contracts (async boundaries, streaming hooks, adapter notes).
 
+### Typing
+
+- Typing behavior (generated `.pyi` stubs and public generics like `Frame[...]`) is treated as part of PlanFrame’s public API. When releases change user-visible typing behavior, we document it here (see docs “Stability & compatibility” for policy).
+
 ## 0.8.0
 
 ### Added
