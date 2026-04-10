@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from planframe import Frame, execute_plan
+from planframe import Frame, execute_plan, execute_plan_async
 from planframe.plan.walk import iter_plan_nodes
 from planframe_polars import PolarsFrame
 
@@ -15,6 +15,8 @@ pf = S({"id": [1], "a": [None]})
 # public execution API
 planned = execute_plan(adapter=pf._adapter, plan=pf.plan(), root_data=pf._data, schema=pf.schema())
 _ = pf._adapter.collect(planned)
+
+_: object = execute_plan_async
 
 # plan walking tooling
 names = [type(n).__name__ for n in iter_plan_nodes(root=pf.fill_null(0, "a").plan())]

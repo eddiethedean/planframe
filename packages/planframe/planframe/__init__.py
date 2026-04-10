@@ -13,7 +13,7 @@ from typing import Any
 
 from planframe.backend.adapter import CompileExprContext
 from planframe.dynamic_groupby import DynamicGroupedFrame
-from planframe.execution import execute_plan
+from planframe.execution import execute_plan, execute_plan_async
 from planframe.execution_options import ExecutionOptions
 from planframe.frame import Frame
 from planframe.groupby import GroupedFrame
@@ -57,6 +57,7 @@ __all__ = [
     "ColumnSelector",
     "JoinOptions",
     "execute_plan",
+    "execute_plan_async",
     "ExecutionOptions",
     "expr",
     "spark",

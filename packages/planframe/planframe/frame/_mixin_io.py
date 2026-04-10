@@ -104,6 +104,25 @@ class _HasFrameIODeps(Protocol[BackendFrameT, BackendExprT]):
         options: ExecutionOptions | None = None,
     ) -> list[dict[str, object]]: ...
 
+    async def collect_async(
+        self,
+        *,
+        name: str = ...,
+        options: ExecutionOptions | None = ...,
+    ) -> list[Any]: ...
+
+    async def collect_backend_async(
+        self, *, options: ExecutionOptions | None = ...
+    ) -> BackendFrameT: ...
+
+    async def to_dicts_async(
+        self, *, options: ExecutionOptions | None = ...
+    ) -> list[dict[str, object]]: ...
+
+    async def to_dict_async(
+        self, *, options: ExecutionOptions | None = ...
+    ) -> dict[str, list[object]]: ...
+
     def stream_dicts(
         self,
         *,
@@ -280,6 +299,43 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
             raise PlanFrameExecutionError(
                 f"Backend ato_dict failed for {self._adapter.name}"
             ) from e
+
+    async def collect_async(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        name: str = "Row",
+        options: ExecutionOptions | None = None,
+    ) -> list[Any]:
+        """Alias for :meth:`acollect` (async materialize rows as schema models)."""
+
+        return await self.acollect(name=name, options=options)
+
+    async def collect_backend_async(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> BackendFrameT:
+        """Alias for :meth:`acollect_backend` (async materialize backend-native frame)."""
+
+        return await self.acollect_backend(options=options)
+
+    async def to_dicts_async(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> list[dict[str, object]]:
+        """Alias for :meth:`ato_dicts`."""
+
+        return await self.ato_dicts(options=options)
+
+    async def to_dict_async(
+        self: _HasFrameIODeps[BackendFrameT, BackendExprT],
+        *,
+        options: ExecutionOptions | None = None,
+    ) -> dict[str, list[object]]:
+        """Alias for :meth:`ato_dict`."""
+
+        return await self.ato_dict(options=options)
 
     def write_parquet(
         self: _HasFrameIODeps[BackendFrameT, BackendExprT],
