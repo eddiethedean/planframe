@@ -16,6 +16,18 @@ class Expr(Generic[T]):
             raise ValueError("alias name must be non-empty")
         return Alias(expr=self, name=name)
 
+    def __lt__(self, other: object) -> Expr[bool]:
+        return lt(cast(Expr[object], self), _coerce_expr(other))
+
+    def __le__(self, other: object) -> Expr[bool]:
+        return le(cast(Expr[object], self), _coerce_expr(other))
+
+    def __gt__(self, other: object) -> Expr[bool]:
+        return gt(cast(Expr[object], self), _coerce_expr(other))
+
+    def __ge__(self, other: object) -> Expr[bool]:
+        return ge(cast(Expr[object], self), _coerce_expr(other))
+
 
 @dataclass(frozen=True, slots=True)
 class Alias(Expr[T]):
@@ -298,6 +310,12 @@ def col(name: str) -> Col[object]:
 
 def lit(value: T) -> Lit[T]:
     return Lit(value=value)
+
+
+def _coerce_expr(value: object) -> Expr[object]:
+    if isinstance(value, Expr):
+        return cast(Expr[object], value)
+    return cast(Expr[object], lit(value))
 
 
 def add(left: Expr[object], right: Expr[object]) -> Add:
