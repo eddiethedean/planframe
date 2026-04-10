@@ -136,6 +136,8 @@ source .venv/bin/activate
 pytest
 ```
 
+Third-party adapter authors can run PlanFrame’s **published** minimal conformance helper (`planframe.adapter_conformance`) in their own CI; see the docs: [Adapter conformance kit](https://planframe.readthedocs.io/en/latest/planframe/guides/adapter-conformance/).
+
 Run tests in parallel (optional):
 
 ```bash

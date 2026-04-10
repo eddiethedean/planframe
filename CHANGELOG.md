@@ -5,6 +5,12 @@ All notable changes to this repository are documented here.
 - `planframe`, `planframe-polars`, and `planframe-pandas` are released together at the same version.
 - `planframe-sparkless` is versioned independently.
 
+## Unreleased
+
+### Added
+
+- **`planframe.adapter_conformance`**: minimal `run_minimal_adapter_conformance` helper for third-party `BaseAdapter` implementations, plus optional extra **`planframe[adapter-dev]`** (pytest) for adapter author workflows. See the [Adapter conformance kit](https://planframe.readthedocs.io/en/latest/planframe/guides/adapter-conformance/) guide.
+
 ## 1.0.0
 
 ### Added
