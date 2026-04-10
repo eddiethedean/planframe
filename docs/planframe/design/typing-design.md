@@ -233,6 +233,19 @@ Filtering does not change schema.
 
 ---
 
+## 7.1 Expr operator overloads (typing semantics)
+
+PlanFrame builds expression IR from `Expr` operator overloads (`>`, `==`, `&`, `|`, `~`, …). Typing tools treat these as returning **`Expr[bool]`** (or the appropriate comparison node type) so idiomatic code type-checks:
+
+- **Comparisons** (`<`, `<=`, `>`, `>=`, `==`, `!=`): the right-hand side may be another `Expr` or a literal coerced via `lit` (`int`, `float`, `str`, `bool`, `None`, …).
+- **Boolean combinators** (`&`, `|`, `~`): operands are **`Expr`** values interpreted as boolean expressions at execution time; `&` / `|` also accept Python `bool` on the left or right (coerced to `lit(...)`), matching lazy Spark/Polars-style patterns.
+
+IR node dataclasses use `eq=False` so **operator** `==` / `!=` stay on `Expr` and produce `Eq` / `Ne` nodes instead of Python structural equality on dataclass fields.
+
+Regression coverage: `tests/pyright/pass/expr_comparisons.py` (Pyright strict) and runtime tests in `tests/test_expr_api_coverage.py`.
+
+---
+
 ## 8. Recommended Public Typing Constraints
 
 To maximize Pyright success, the public typed API should enforce these rules:

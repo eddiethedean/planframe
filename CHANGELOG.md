@@ -7,6 +7,10 @@ All notable changes to this repository are documented here.
 
 ## Unreleased
 
+### Added
+
+- **`Expr` operator overloads** aligned with IR construction (`==`, `!=`, `&`, `|`, `~`, plus existing ordered comparisons): typing regression coverage in `tests/pyright/pass/expr_comparisons.py` and documented semantics in [typing-design](docs/planframe/design/typing-design.md) ([issue #106](https://github.com/eddiethedean/planframe/issues/106)).
+
 ## 1.2.0
 
 ### Fixed
