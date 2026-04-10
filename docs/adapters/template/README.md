@@ -14,6 +14,13 @@ Copy this folder as a starting point for a new adapter track.
 pip install <your-adapter-package>
 ```
 
+## Adapter author checklist (recommended)
+
+- Run PlanFrame’s published conformance helper in your CI:
+  - Docs: `https://planframe.readthedocs.io/en/latest/planframe/guides/adapter-conformance/`
+  - API: `planframe.adapter_conformance.run_minimal_adapter_conformance`
+- Set conservative capability flags via `BaseAdapter.capabilities` (see core docs and `AdapterCapabilities`).
+
 ## Quickstart
 
 Show a minimal example:

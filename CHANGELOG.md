@@ -9,7 +9,21 @@ All notable changes to this repository are documented here.
 
 ### Added
 
-- **`planframe.adapter_conformance`**: minimal `run_minimal_adapter_conformance` helper for third-party `BaseAdapter` implementations, plus optional extra **`planframe[adapter-dev]`** (pytest) for adapter author workflows. See the [Adapter conformance kit](https://planframe.readthedocs.io/en/latest/planframe/guides/adapter-conformance/) guide.
+- (none yet)
+
+## 1.1.0
+
+### Added
+
+- **Adapter conformance kit**: `planframe.adapter_conformance.run_minimal_adapter_conformance` for third-party `BaseAdapter` implementations, plus optional extra **`planframe[adapter-dev]`** (pytest). See the [Adapter conformance kit](https://planframe.readthedocs.io/en/latest/planframe/guides/adapter-conformance/) guide.
+
+### Changed
+
+- **Adapters**: expanded `BaseAdapter.capabilities` (`AdapterCapabilities`) to cover optional IO surfaces (read/sink hooks) and used it to fail fast on unsupported sinks.
+
+### Typing
+
+- Added regression coverage for `group_by(...)` with expression keys; improved robustness of the Pyright typing test runner.
 
 ## 1.0.0
 

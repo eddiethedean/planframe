@@ -81,6 +81,11 @@ PlanFrame is lazy-first, so IO methods are exposed as sinks. For Polars familiar
 
 Adapters now expose capability flags via `BaseAdapter.capabilities` to help frontends decide whether a feature is supported (or should fail loudly with a clear message).
 
+### Conformance kit (recommended)
+
+Third-party adapters can run PlanFrame’s **published** minimal test utility (`planframe.adapter_conformance`) in their own CI for an actionable pass/fail signal.
+See [Adapter conformance kit](adapter-conformance.md).
+
 ## Common issues
 
 ### “I expected eager pandas semantics”
