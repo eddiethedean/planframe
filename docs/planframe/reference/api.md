@@ -25,10 +25,14 @@ Typed mixins (import from `planframe.spark` / `planframe.pandas`, or `from planf
         - optimize
         - collect
         - acollect
+        - collect_async
+        - collect_backend_async
         - to_dicts
         - ato_dicts
+        - to_dicts_async
         - to_dict
         - ato_dict
+        - to_dict_async
 
 ## `planframe.execution_options.ExecutionOptions`
 
@@ -41,6 +45,10 @@ Typed mixins (import from `planframe.spark` / `planframe.pandas`, or `from planf
 ## `planframe.execution.execute_plan`
 
 ::: planframe.execution.execute_plan
+
+## `planframe.execution.execute_plan_async`
+
+::: planframe.execution.execute_plan_async
 
 ## `planframe.compile_context.PlanCompileContext`
 

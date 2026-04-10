@@ -13,6 +13,8 @@ All notable changes to this repository are documented here.
 
 ### Added
 
+- **Async public API** ([issue #105](https://github.com/eddiethedean/planframe/issues/105)): **`execute_plan_async`** (runs :func:`execute_plan` via :func:`asyncio.to_thread`) and Frame aliases **`collect_async`**, **`collect_backend_async`**, **`to_dict_async`**, **`to_dicts_async`** (wrappers around existing ``a*`` materializers).
+
 - **`BaseAdapter.resolve_dtype`**: optional hook for dtype-aware `Col(...)` lowering during `compile_expr`, with **`CompileExprContext`** (exported from `planframe`) carrying the active schema. Polars, pandas, and sparkless adapters invoke the hook for every column reference ([issue #104](https://github.com/eddiethedean/planframe/issues/104)).
 
 ## 1.1.0

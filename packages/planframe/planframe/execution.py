@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar, cast
@@ -474,3 +475,36 @@ def execute_plan(
     if collect:
         return adapter.collect(out, options=options)
     return out
+
+
+async def execute_plan_async(
+    *,
+    adapter: BackendAdapter[BackendFrameT, BackendExprT],
+    plan: PlanNode,
+    root_data: BackendFrameT,
+    schema: Schema,
+    options: ExecutionOptions | None = None,
+    collect: bool = False,
+) -> BackendFrameT:
+    """Async counterpart of :func:`execute_plan`.
+
+    Runs the synchronous plan interpreter in a worker thread (:func:`asyncio.to_thread`)
+    so callers can ``await`` plan execution without blocking the event loop. Transform
+    interpretation remains synchronous; pair with :meth:`~planframe.backend.adapter.BaseAdapter.acollect`
+    (or other async materializers) when the backend supports async I/O.
+
+    See also :meth:`planframe.frame.Frame.acollect_backend` / :meth:`~planframe.frame.Frame.collect_async`.
+    """
+
+    return cast(
+        BackendFrameT,
+        await asyncio.to_thread(
+            execute_plan,
+            adapter=adapter,
+            plan=plan,
+            root_data=root_data,
+            schema=schema,
+            options=options,
+            collect=collect,
+        ),
+    )
