@@ -144,6 +144,15 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
             explode_outer=False,
             posexplode_outer=True,
             lazy_sample=True,
+            scan_delta=False,
+            read_delta=False,
+            sink_delta=False,
+            read_avro=False,
+            sink_avro=False,
+            read_excel=False,
+            sink_excel=True,
+            read_database_uri=False,
+            sink_database=True,
             storage_options=False,
         )
 

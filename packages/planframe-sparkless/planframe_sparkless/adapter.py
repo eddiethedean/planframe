@@ -7,6 +7,7 @@ from sparkless.sql import functions as F
 from sparkless.sql.window import Window
 
 from planframe.backend.adapter import (
+    AdapterCapabilities,
     BaseAdapter,
     ColumnName,
     Columns,
@@ -30,6 +31,25 @@ SparklessBackendExpr = Any  # runtime type is `builtins.PyColumn`
 
 class SparklessAdapter(BaseAdapter[SparklessBackendFrame, SparklessBackendExpr]):
     name = "sparkless"
+
+    @property
+    def capabilities(self) -> AdapterCapabilities:
+        # sparkless adapter currently implements a subset of IO and plan nodes.
+        return AdapterCapabilities(
+            explode_outer=False,
+            posexplode_outer=False,
+            lazy_sample=True,
+            scan_delta=False,
+            read_delta=False,
+            sink_delta=False,
+            read_avro=False,
+            sink_avro=False,
+            read_excel=False,
+            sink_excel=False,
+            read_database_uri=False,
+            sink_database=False,
+            storage_options=False,
+        )
 
     # ---- AdapterReader surface (used by SparklessFrame classmethods) ----
     def scan_parquet(
