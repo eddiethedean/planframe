@@ -160,7 +160,14 @@ PlanFrame stays **synchronous for lazy chaining**: building a `Frame` only updat
 
 `BaseAdapter` provides default `acollect` / `ato_dicts` / `ato_dict` that run the matching sync method in `asyncio.to_thread`, so existing adapters work without changes. Backends backed by asyncio-only clients should **override** `acollect` (and optionally `ato_dicts` / `ato_dict`) to await their native I/O instead of blocking a thread.
 
-**Plan evaluation** (`execute_plan` walking the `PlanNode` tree—what `Frame` runs before `collect` / `to_dict*`) remains synchronous on the event-loop thread; only adapter execution at the materialization boundary is async. Async backends should keep plan translation fast and perform I/O inside `acollect` (or related hooks).
+**Plan evaluation** (`execute_plan` walking the `PlanNode` tree—what `Frame` runs before `collect` / `to_dict*`) remains synchronous on the event-loop thread for both sync and async terminals. Concretely, `Frame.acollect_backend()` first computes `planned = Frame._eval(Frame.plan)` (synchronous), then awaits `BaseAdapter.acollect(planned, options=...)`.
+
+**ExecutionOptions propagation:** the optional `options: ExecutionOptions | None` is forwarded to both:
+
+- `execute_plan(..., options=...)` (plan interpretation / compilation context)
+- adapter materialization/export (`collect` / `to_dicts` / `to_dict` and async variants)
+
+Adapters should accept `options` and treat it as a set of backend-defined hints: forward what is meaningful for the engine, ignore unknown hints, and keep signatures stable for third-party consumers.
 
 **Thread safety:** default async methods may invoke the adapter from multiple thread-pool workers concurrently if several `acollect` tasks run in parallel. Adapters that mutate shared connection state should document constraints or serialize; thread-local or per-task clients are typical.
 
