@@ -56,7 +56,19 @@ from planframe.expr import (
     xor,
     year,
 )
-from planframe.expr.api import _assert_bool, infer_dtype, is_bool_expr
+from planframe.expr.api import (
+    And,
+    Eq,
+    Gt,
+    Lit,
+    Lt,
+    Ne,
+    Not,
+    Or,
+    _assert_bool,
+    infer_dtype,
+    is_bool_expr,
+)
 
 
 def test_expr_api_wrappers_construct_nodes() -> None:
@@ -148,6 +160,31 @@ def test_expr_bool_narrowing_helpers() -> None:
 
     with pytest.raises(PlanFrameExpressionError, match="Expected boolean Expr"):
         _assert_bool(add(col("a"), lit(1)))
+
+
+def test_expr_operator_overloads_build_ir() -> None:
+    a = col("a")
+    b = col("b")
+    gt = a > 1
+    assert isinstance(gt, Gt) and gt.left is a and isinstance(gt.right, Lit) and gt.right.value == 1
+
+    eqn = a == 1
+    assert isinstance(eqn, Eq) and eqn.left is a and isinstance(eqn.right, Lit) and eqn.right.value == 1
+
+    neq = a != b
+    assert isinstance(neq, Ne) and neq.left is a and neq.right is b
+
+    p = a > lit(0)
+    both = p & (b < lit(1))
+    assert isinstance(both, And) and both.left is p and isinstance(both.right, Lt)
+
+    either = p | (b < lit(1))
+    assert isinstance(either, Or) and either.left is p and isinstance(either.right, Lt)
+
+    assert isinstance(~p, Not) and (~p).value is p
+
+    assert isinstance(True & p, And) and isinstance((True & p).left, Lit)
+    assert isinstance(False | p, Or) and isinstance((False | p).left, Lit)
 
 
 def test_infer_dtype_covers_common_cases() -> None:

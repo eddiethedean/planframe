@@ -28,163 +28,196 @@ class Expr(Generic[T]):
     def __ge__(self, other: object) -> Expr[bool]:
         return ge(cast(Expr[object], self), _coerce_expr(other))
 
+    def __eq__(self, other: object) -> Expr[bool]:  # ty: ignore[invalid-method-override]
+        return eq(cast(Expr[object], self), _coerce_expr(other))
 
-@dataclass(frozen=True, slots=True)
+    def __ne__(self, other: object) -> Expr[bool]:  # ty: ignore[invalid-method-override]
+        return ne(cast(Expr[object], self), _coerce_expr(other))
+
+    def __and__(self, other: object) -> Expr[bool]:
+        return and_(
+            cast(Expr[bool], cast(Expr[object], self)),
+            cast(Expr[bool], _coerce_expr(other)),
+        )
+
+    def __rand__(self, other: object) -> Expr[bool]:
+        return and_(
+            cast(Expr[bool], _coerce_expr(other)),
+            cast(Expr[bool], cast(Expr[object], self)),
+        )
+
+    def __or__(self, other: object) -> Expr[bool]:
+        return or_(
+            cast(Expr[bool], cast(Expr[object], self)),
+            cast(Expr[bool], _coerce_expr(other)),
+        )
+
+    def __ror__(self, other: object) -> Expr[bool]:
+        return or_(
+            cast(Expr[bool], _coerce_expr(other)),
+            cast(Expr[bool], cast(Expr[object], self)),
+        )
+
+    def __invert__(self) -> Expr[bool]:
+        return not_(cast(Expr[bool], cast(Expr[object], self)))
+
+
+@dataclass(frozen=True, slots=True, eq=False)
 class Alias(Expr[T]):
     expr: Expr[T]
     name: str
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Col(Expr[T]):
     name: str
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Lit(Expr[T]):
     value: T
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Add(Expr[object]):
     left: Expr[object]
     right: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Eq(Expr[bool]):
     left: Expr[object]
     right: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Ne(Expr[bool]):
     left: Expr[object]
     right: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Lt(Expr[bool]):
     left: Expr[object]
     right: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Le(Expr[bool]):
     left: Expr[object]
     right: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Gt(Expr[bool]):
     left: Expr[object]
     right: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Ge(Expr[bool]):
     left: Expr[object]
     right: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Sub(Expr[object]):
     left: Expr[object]
     right: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Mul(Expr[object]):
     left: Expr[object]
     right: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class TrueDiv(Expr[object]):
     left: Expr[object]
     right: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class IsNull(Expr[bool]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class IsNotNull(Expr[bool]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class IsIn(Expr[bool]):
     value: Expr[object]
     options: tuple[object, ...]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class And(Expr[bool]):
     left: Expr[bool]
     right: Expr[bool]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Or(Expr[bool]):
     left: Expr[bool]
     right: Expr[bool]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Not(Expr[bool]):
     value: Expr[bool]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Xor(Expr[bool]):
     left: Expr[bool]
     right: Expr[bool]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Abs(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Round(Expr[object]):
     value: Expr[object]
     ndigits: int | None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Floor(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Ceil(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Coalesce(Expr[object]):
     values: tuple[Expr[object], ...]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class IfElse(Expr[object]):
     cond: Expr[bool]
     then_value: Expr[object]
     else_value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Over(Expr[object]):
     value: Expr[object]
     partition_by: tuple[str, ...]
     order_by: tuple[str, ...] | None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Between(Expr[bool]):
     value: Expr[object]
     low: Expr[object]
@@ -192,64 +225,64 @@ class Between(Expr[bool]):
     closed: str = "both"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Clip(Expr[object]):
     value: Expr[object]
     lower: Expr[object] | None
     upper: Expr[object] | None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Pow(Expr[object]):
     base: Expr[object]
     exponent: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Exp(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Log(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StrContains(Expr[bool]):
     value: Expr[object]
     pattern: str
     literal: bool = False
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StrStartsWith(Expr[bool]):
     value: Expr[object]
     prefix: str
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StrEndsWith(Expr[bool]):
     value: Expr[object]
     suffix: str
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StrLower(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StrUpper(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StrLen(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StrReplace(Expr[object]):
     value: Expr[object]
     pattern: str
@@ -257,38 +290,38 @@ class StrReplace(Expr[object]):
     literal: bool = False
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StrStrip(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class StrSplit(Expr[object]):
     value: Expr[object]
     by: str
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class DtYear(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class DtMonth(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class DtDay(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class Sqrt(Expr[object]):
     value: Expr[object]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class IsFinite(Expr[bool]):
     value: Expr[object]
 
@@ -296,7 +329,7 @@ class IsFinite(Expr[bool]):
 AggOpLiteral = Literal["count", "sum", "mean", "min", "max", "n_unique"]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, eq=False)
 class AggExpr(Expr[object]):
     """Apply an aggregation *op* to *inner* inside :meth:`~planframe.groupby.GroupedFrame.agg`."""
 
