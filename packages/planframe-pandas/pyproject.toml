@@ -4,7 +4,7 @@
  
  [project]
  name = "planframe-pandas"
-version = "1.1.0"
+version = "1.2.0"
  description = "pandas backend adapter for PlanFrame."
  readme = "README.md"
  requires-python = ">=3.10"
@@ -18,7 +18,7 @@ version = "1.1.0"
    "Typing :: Typed",
  ]
  dependencies = [
-  "planframe>=1.1.0,<2.0.0",
+  "planframe>=1.2.0,<2.0.0",
    "pandas>=2.0",
  ]
  

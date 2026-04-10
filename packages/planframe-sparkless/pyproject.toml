@@ -18,7 +18,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "planframe>=1.1.0,<2.0.0",
+  "planframe>=1.2.0,<2.0.0",
   "sparkless>=4.5",
 ]
 

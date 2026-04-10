@@ -4,7 +4,7 @@
  
  [project]
 name = "planframe"
-version = "1.1.0"
+version = "1.2.0"
  description = "Core typed relational planning layer for Python DataFrames."
  readme = "README.md"
  requires-python = ">=3.10"

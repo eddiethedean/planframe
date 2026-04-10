@@ -7,6 +7,8 @@ All notable changes to this repository are documented here.
 
 ## Unreleased
 
+## 1.2.0
+
 ### Fixed
 
 - **`execute_plan`**: compile expressions (filter predicates, projections, sort keys, join keys, etc.) using each step’s **input** schema from the plan, not the final frame schema—fixes `filter(...).select(...)` when the predicate references columns dropped by the downstream projection ([issue #103](https://github.com/eddiethedean/planframe/issues/103)).
