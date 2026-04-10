@@ -13,7 +13,7 @@ All notable changes to this repository are documented here.
 
 ### Added
 
-- (none yet)
+- **`BaseAdapter.resolve_dtype`**: optional hook for dtype-aware `Col(...)` lowering during `compile_expr`, with **`CompileExprContext`** (exported from `planframe`) carrying the active schema. Polars, pandas, and sparkless adapters invoke the hook for every column reference ([issue #104](https://github.com/eddiethedean/planframe/issues/104)).
 
 ## 1.1.0
 

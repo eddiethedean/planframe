@@ -194,7 +194,7 @@ def test_frame_error_wrapping_for_collect_to_dicts_and_write() -> None:
         pf3.sink_csv("x.csv")
 
     class BoomCompileAdapter(SpyAdapter):
-        def compile_expr(self, expr: object, *, schema: object = None) -> object:  # type: ignore[override]
+        def compile_expr(self, expr: object, *, schema: object = None, ctx: object = None) -> object:  # type: ignore[override]
             raise RuntimeError("boom")
 
     pf4 = Frame.source([{"id": 1, "name": "a", "age": 2}], adapter=BoomCompileAdapter(), schema=S)

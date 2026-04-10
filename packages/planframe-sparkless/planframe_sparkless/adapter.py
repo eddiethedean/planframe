@@ -14,6 +14,7 @@ from planframe.backend.adapter import (
     CompiledJoinKey,
     CompiledProjectItem,
     CompiledSortKey,
+    CompileExprContext,
 )
 from planframe.backend.errors import PlanFrameBackendError, PlanFrameExpressionError
 from planframe.execution_options import ExecutionOptions
@@ -562,14 +563,24 @@ class SparklessAdapter(BaseAdapter[SparklessBackendFrame, SparklessBackendExpr])
         return df.sample(withReplacement=with_replacement, fraction=frac, seed=seed)
 
     # ---- Expression compilation + materialization ----
-    def compile_expr(self, expr: object, *, schema: Schema | None = None) -> SparklessBackendExpr:
-        _ = schema
+    def compile_expr(
+        self,
+        expr: object,
+        *,
+        schema: Schema | None = None,
+        ctx: CompileExprContext | None = None,
+    ) -> SparklessBackendExpr:
+        if ctx is None:
+            ctx = CompileExprContext(schema=schema)
         if isinstance(expr, object) and hasattr(expr, "__class__"):
             # PlanFrame Expr nodes are dataclasses; compile using our mapping.
             from planframe.expr.api import Expr as PFExpr
 
             if isinstance(expr, PFExpr):
-                return compile_expr(cast(Any, expr))
+                return compile_expr(
+                    cast(Any, expr),
+                    dtype_for=lambda n: self.resolve_dtype(n, ctx=ctx),
+                )
         raise PlanFrameExpressionError(f"Unsupported expr type for sparkless: {type(expr)!r}")
 
     def collect(

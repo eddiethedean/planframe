@@ -13,6 +13,7 @@ from planframe.backend.adapter import (
     CompiledJoinKey,
     CompiledProjectItem,
     CompiledSortKey,
+    CompileExprContext,
 )
 from planframe.backend.errors import (
     PlanFrameBackendError,
@@ -179,7 +180,12 @@ class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
         self.calls.append(("filter", predicate))
         return df[:1]
 
-    def compile_expr(self, expr: Any, *, schema: Any = None) -> object:
+    def compile_expr(self, expr: Any, *, schema: Any = None, ctx: Any = None) -> object:
+        if ctx is None:
+            ctx = CompileExprContext(schema=schema)
+        if isinstance(expr, Expr):
+            for n in collect_col_names_in_expr(expr):
+                self.resolve_dtype(n, ctx=ctx)
         self.calls.append(("compile_expr", (type(expr).__name__, schema is not None)))
         return expr
 
@@ -1631,10 +1637,10 @@ def test_write_methods_execute_and_are_boundaries(tmp_path: Any) -> None:
 
 def test_backend_compile_expr_type_guard() -> None:
     class StrictAdapter(SpyAdapter):
-        def compile_expr(self, expr: Any, *, schema: Any = None) -> object:
+        def compile_expr(self, expr: Any, *, schema: Any = None, ctx: Any = None) -> object:
             if not isinstance(expr, Expr):
                 raise TypeError("Expected Expr")
-            return super().compile_expr(expr, schema=schema)
+            return super().compile_expr(expr, schema=schema, ctx=ctx)
 
     adapter = StrictAdapter()
     pf = Frame.source([{"id": 1, "age": 2}], adapter=adapter, schema=UserDC)

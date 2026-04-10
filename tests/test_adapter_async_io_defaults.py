@@ -183,8 +183,8 @@ class _AsyncIODefaultsAdapter(BaseAdapter[list[dict[str, Any]], object]):
     def sample(self, df: list[dict[str, Any]], **_: Any) -> list[dict[str, Any]]:
         return df
 
-    def compile_expr(self, expr: object, *, schema: object | None = None) -> object:
-        _ = expr, schema
+    def compile_expr(self, expr: object, *, schema: object | None = None, ctx: object | None = None) -> object:
+        _ = expr, schema, ctx
         return expr
 
     def collect(

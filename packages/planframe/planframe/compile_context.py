@@ -9,6 +9,7 @@ from planframe.backend.adapter import (
     CompiledJoinKey,
     CompiledProjectItem,
     CompiledSortKey,
+    CompileExprContext,
 )
 from planframe.backend.errors import PlanFrameBackendError
 from planframe.expr.api import Expr
@@ -41,7 +42,8 @@ class PlanCompileContext(Generic[BackendFrameT, BackendExprT]):
 
     def compile_expr(self, expr: object) -> BackendExprT:
         try:
-            return self._adapter.compile_expr(expr, schema=self._schema)
+            ctx = CompileExprContext(schema=self._schema)
+            return self._adapter.compile_expr(expr, schema=self._schema, ctx=ctx)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameBackendError(
                 f"Failed to compile expression for backend {self._adapter.name}"

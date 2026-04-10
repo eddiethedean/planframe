@@ -13,12 +13,14 @@ from planframe.backend.adapter import (
     CompiledJoinKey,
     CompiledProjectItem,
     CompiledSortKey,
+    CompileExprContext,
 )
 from planframe.backend.errors import PlanFrameBackendError
 from planframe.execution_options import ExecutionOptions
 from planframe.expr.api import Expr
 from planframe.plan.join_options import JoinOptions
 from planframe.plan.nodes import UnnestItem
+from planframe.schema.ir import Schema
 from planframe.typing.scalars import Scalar
 from planframe.typing.storage import StorageOptions
 from planframe_pandas.compile_expr import AggExprSpec, PandasExpr, compile_expr
@@ -298,10 +300,21 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
         )
         return pd.DataFrame({out_name: mask})
 
-    def compile_expr(self, expr: object, *, schema: Any = None) -> PandasBackendExpr:
+    def compile_expr(
+        self,
+        expr: object,
+        *,
+        schema: Schema | None = None,
+        ctx: CompileExprContext | None = None,
+    ) -> PandasBackendExpr:
         if not isinstance(expr, Expr):
             raise TypeError(f"Expected PlanFrame Expr, got {type(expr)!r}")
-        return compile_expr(cast(Expr[Any], expr))
+        if ctx is None:
+            ctx = CompileExprContext(schema=schema)
+        return compile_expr(
+            cast(Expr[Any], expr),
+            dtype_for=lambda n: self.resolve_dtype(n, ctx=ctx),
+        )
 
     def group_by_agg(
         self,
