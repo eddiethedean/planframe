@@ -494,6 +494,10 @@ async def execute_plan_async(
     (or other async materializers) when the backend supports async I/O.
 
     See also :meth:`planframe.frame.Frame.acollect_backend` / :meth:`~planframe.frame.Frame.collect_async`.
+
+    **See also:** *Async execution contract* and *Thread-safety expectations* in the
+    **Creating an adapter** guide (``docs/planframe/guides/creating-an-adapter.md``;
+    ReadTheDocs path ``planframe/guides/creating-an-adapter/``).
     """
 
     return cast(

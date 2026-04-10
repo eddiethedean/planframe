@@ -34,6 +34,8 @@ Both **`Frame`** (when building or validating plans) and **`execute_plan`** use 
 
 `Frame` materialization calls into this interpreter; adapters still implement the per-operation primitives (`select`, `filter`, `join`, …).
 
+**`execute_plan_async`:** does not run a separate async plan interpreter. It schedules the same synchronous `execute_plan` implementation on a worker thread via `asyncio.to_thread`, so callers can `await` plan evaluation without blocking the event loop. Async engine I/O remains on `BaseAdapter` async materialization methods (`acollect`, `ato_dict`, …). See [Migrating since v1.1.0](../guides/migrating-since-1-1.md) (async public API) and [Creating an adapter — Async execution contract](../guides/creating-an-adapter.md#async-execution-contract-third-party-adapters).
+
 ## Typing stubs
 
 Generated Pyright stubs for `Frame` are emitted to **`planframe/frame/__init__.pyi`**. Regenerate with:

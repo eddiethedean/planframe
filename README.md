@@ -10,6 +10,8 @@ PlanFrame is a typed relational planning layer for Python DataFrames.
 
 **Principle**: PlanFrame is **always lazy**. Every transformation builds a typed plan and evolves schema metadata. **No backend work runs** until you hit an execution boundary like `collect()` / `to_dicts()` / `to_dict()` (or async equivalents).
 
+**Highlights (v1.2+)**: [Migrating since v1.1.0](https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/) (changes after v1.1.0); [API reference](https://planframe.readthedocs.io/en/latest/planframe/reference/api/) (`execute_plan_async`, `planframe.materialize`, …); [Typing design](https://planframe.readthedocs.io/en/latest/planframe/design/typing-design/) (Expr operator overload semantics).
+
 This repository is a mono-repo that ships:
 - **`planframe`**: core package (import as `planframe`; optional skins `planframe.spark` and `planframe.pandas` for PySpark-like and pandas-like ergonomics)
 - **`planframe-polars`**: Polars adapter (import as `planframe_polars`)

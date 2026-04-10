@@ -6,6 +6,7 @@ PlanFrame core builds a typed plan and delegates execution to a backend via `Bas
 
 ## Next steps
 
+- Upgrading from **v1.1.0** or earlier: [Migrating since v1.1.0](guides/migrating-since-1-1.md) (v1.2.0 fixes and additions, including async API, `planframe.materialize`, and Expr operators)
 - Read the guide: [Creating an adapter](guides/creating-an-adapter.md)
 - **Third-party adapters:** run the minimal CI suite — [Adapter conformance kit](guides/adapter-conformance.md)
 - Learn the row-export APIs: [Streaming rows](guides/streaming-rows.md)

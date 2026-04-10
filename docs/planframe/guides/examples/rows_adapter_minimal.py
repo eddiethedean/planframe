@@ -224,13 +224,16 @@ class RowsAdapter(BaseAdapter[RowsFrame, Expr[object]]):
     ) -> RowsFrame:
         raise NotImplementedError
 
-    def collect(self, df: RowsFrame) -> RowsFrame:
+    def collect(self, df: RowsFrame, *, options: object | None = None) -> RowsFrame:
+        _ = options
         return df
 
-    def to_dicts(self, df: RowsFrame) -> list[dict[str, object]]:
+    def to_dicts(self, df: RowsFrame, *, options: object | None = None) -> list[dict[str, object]]:
+        _ = options
         return list(df)
 
-    def to_dict(self, df: RowsFrame) -> dict[str, list[object]]:
+    def to_dict(self, df: RowsFrame, *, options: object | None = None) -> dict[str, list[object]]:
+        _ = options
         out: dict[str, list[object]] = {}
         for row in df:
             for k, v in row.items():

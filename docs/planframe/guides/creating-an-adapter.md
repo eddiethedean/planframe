@@ -84,6 +84,8 @@ For a **stable import** at the “lazy `Frame` → columnar dict” step (withou
 
 PlanFrame stays **generic**: it does not build models—adapters or host libraries supply the callable. Re-exported from `from planframe import ...` for discoverability.
 
+Example (Polars-backed frame): [`examples/materialize_boundary_minimal.py`](examples/materialize_boundary_minimal.py) (run from repo root with `PYTHONPATH=packages/planframe`, see the script docstring).
+
 ## Async execution contract (third-party adapters)
 
 PlanFrame’s **lazy chaining is always synchronous**: building a `Frame` never does I/O and never awaits. Async support exists only at **materialization boundaries**.

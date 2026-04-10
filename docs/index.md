@@ -29,6 +29,7 @@ pip install planframe
 
 ## Start here
 
+- [Migrating since v1.1.0](planframe/guides/migrating-since-1-1.md) (changes in **v1.2.0** and later)
 - [PlanFrame (core)](planframe/index.md)
 - [planframe-polars](planframe_polars/index.md)
 - [planframe-pandas](planframe_pandas/index.md)

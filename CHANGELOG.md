@@ -7,12 +7,6 @@ All notable changes to this repository are documented here.
 
 ## Unreleased
 
-### Added
-
-- **`planframe.materialize`**: `materialize_columns` / `materialize_into` (and async `amaterialize_*`) as thin, options-preserving boundaries for columnar export and downstream factories—documented in [Creating an adapter](docs/planframe/guides/creating-an-adapter.md) ([issue #107](https://github.com/eddiethedean/planframe/issues/107)).
-
-- **`Expr` operator overloads** aligned with IR construction (`==`, `!=`, `&`, `|`, `~`, plus existing ordered comparisons): typing regression coverage in `tests/pyright/pass/expr_comparisons.py` and documented semantics in [typing-design](docs/planframe/design/typing-design.md) ([issue #106](https://github.com/eddiethedean/planframe/issues/106)).
-
 ## 1.2.0
 
 ### Fixed
@@ -24,6 +18,10 @@ All notable changes to this repository are documented here.
 - **Async public API** ([issue #105](https://github.com/eddiethedean/planframe/issues/105)): **`execute_plan_async`** (runs :func:`execute_plan` via :func:`asyncio.to_thread`) and Frame aliases **`collect_async`**, **`collect_backend_async`**, **`to_dict_async`**, **`to_dicts_async`** (wrappers around existing ``a*`` materializers).
 
 - **`BaseAdapter.resolve_dtype`**: optional hook for dtype-aware `Col(...)` lowering during `compile_expr`, with **`CompileExprContext`** (exported from `planframe`) carrying the active schema. Polars, pandas, and sparkless adapters invoke the hook for every column reference ([issue #104](https://github.com/eddiethedean/planframe/issues/104)).
+
+- **`Expr` operator overloads** aligned with IR construction (`==`, `!=`, `&`, `|`, `~`, plus existing ordered comparisons): typing regression coverage in `tests/pyright/pass/expr_comparisons.py` and documented semantics in [typing-design](docs/planframe/design/typing-design.md) ([issue #106](https://github.com/eddiethedean/planframe/issues/106)).
+
+- **`planframe.materialize`**: `materialize_columns` / `materialize_into` (and async `amaterialize_*`) as thin, options-preserving boundaries for columnar export and downstream factories—documented in [Creating an adapter](docs/planframe/guides/creating-an-adapter.md) ([issue #107](https://github.com/eddiethedean/planframe/issues/107)).
 
 ## 1.1.0
 
