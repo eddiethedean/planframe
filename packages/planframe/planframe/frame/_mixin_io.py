@@ -104,6 +104,19 @@ class _HasFrameIODeps(Protocol[BackendFrameT, BackendExprT]):
         options: ExecutionOptions | None = None,
     ) -> list[dict[str, object]]: ...
 
+    async def acollect(
+        self,
+        *,
+        name: str = ...,
+        options: ExecutionOptions | None = ...,
+    ) -> list[Any]: ...
+
+    async def ato_dict(
+        self,
+        *,
+        options: ExecutionOptions | None = ...,
+    ) -> dict[str, list[object]]: ...
+
     async def collect_async(
         self,
         *,

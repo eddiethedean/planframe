@@ -496,12 +496,15 @@ async def execute_plan_async(
     See also :meth:`planframe.frame.Frame.acollect_backend` / :meth:`~planframe.frame.Frame.collect_async`.
     """
 
-    return await asyncio.to_thread(
-        execute_plan,
-        adapter=adapter,
-        plan=plan,
-        root_data=root_data,
-        schema=schema,
-        options=options,
-        collect=collect,
+    return cast(
+        BackendFrameT,
+        await asyncio.to_thread(
+            execute_plan,
+            adapter=adapter,
+            plan=plan,
+            root_data=root_data,
+            schema=schema,
+            options=options,
+            collect=collect,
+        ),
     )
