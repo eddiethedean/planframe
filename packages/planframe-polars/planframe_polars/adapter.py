@@ -132,7 +132,16 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
             explode_outer=False,
             posexplode_outer=False,
             lazy_sample=False,
-            storage_options=False,
+            scan_delta=True,
+            read_delta=True,
+            sink_delta=True,
+            read_avro=True,
+            sink_avro=True,
+            read_excel=True,
+            sink_excel=True,
+            read_database_uri=True,
+            sink_database=True,
+            storage_options=True,
         )
 
     def _collect_df(self, df: PolarsBackendFrame) -> pl.DataFrame:

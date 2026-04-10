@@ -35,9 +35,29 @@ class AdapterCapabilities:
     typed-parity, or explicitly unsupported.
     """
 
+    # ---- Plan node capabilities (transform-time) ----
     explode_outer: bool = False
     posexplode_outer: bool = False
     lazy_sample: bool = False
+
+    # ---- IO capabilities (read/sink surfaces) ----
+    #
+    # These flags are intended to avoid "discovering" missing support only when a sink
+    # or reader method is called. PlanFrame uses them to fail fast with actionable errors.
+    scan_delta: bool = False
+    read_delta: bool = False
+    sink_delta: bool = False
+
+    read_avro: bool = False
+    sink_avro: bool = False
+
+    read_excel: bool = False
+    sink_excel: bool = False
+
+    read_database_uri: bool = False
+    sink_database: bool = False
+
+    # Whether `storage_options=` is accepted on IO methods that expose it.
     storage_options: bool = False
 
 

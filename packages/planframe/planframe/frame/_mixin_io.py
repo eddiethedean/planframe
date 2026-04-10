@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, Generic, Literal, Protocol, TypeVar
 
+from planframe.backend.adapter import AdapterCapabilities
 from planframe.backend.errors import PlanFrameExecutionError
 from planframe.backend.io import AdapterRowStreamer
 from planframe.execution_options import ExecutionOptions
@@ -377,6 +378,12 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         storage_options: StorageOptions | None = None,
     ) -> None:
         try:
+            caps: AdapterCapabilities = self._adapter.capabilities
+            if storage_options is not None and not caps.storage_options:
+                raise PlanFrameExecutionError(
+                    f"Backend sink_parquet does not support storage_options for {self._adapter.name} "
+                    "(capabilities.storage_options=False)"
+                )
             planned = self._eval(self._plan)
             self._adapter.writer.sink_parquet(
                 planned,
@@ -400,6 +407,12 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         storage_options: StorageOptions | None = None,
     ) -> None:
         try:
+            caps: AdapterCapabilities = self._adapter.capabilities
+            if storage_options is not None and not caps.storage_options:
+                raise PlanFrameExecutionError(
+                    f"Backend sink_csv does not support storage_options for {self._adapter.name} "
+                    "(capabilities.storage_options=False)"
+                )
             planned = self._eval(self._plan)
             self._adapter.writer.sink_csv(
                 planned,
@@ -420,6 +433,12 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         storage_options: StorageOptions | None = None,
     ) -> None:
         try:
+            caps: AdapterCapabilities = self._adapter.capabilities
+            if storage_options is not None and not caps.storage_options:
+                raise PlanFrameExecutionError(
+                    f"Backend sink_ndjson does not support storage_options for {self._adapter.name} "
+                    "(capabilities.storage_options=False)"
+                )
             planned = self._eval(self._plan)
             self._adapter.writer.sink_ndjson(planned, path, storage_options=storage_options)
         except Exception as e:  # noqa: BLE001
@@ -435,6 +454,12 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         storage_options: StorageOptions | None = None,
     ) -> None:
         try:
+            caps: AdapterCapabilities = self._adapter.capabilities
+            if storage_options is not None and not caps.storage_options:
+                raise PlanFrameExecutionError(
+                    f"Backend sink_ipc does not support storage_options for {self._adapter.name} "
+                    "(capabilities.storage_options=False)"
+                )
             planned = self._eval(self._plan)
             self._adapter.writer.sink_ipc(
                 planned, path, compression=compression, storage_options=storage_options
@@ -453,6 +478,12 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         engine: str | None = None,
     ) -> None:
         try:
+            caps: AdapterCapabilities = self._adapter.capabilities
+            if not caps.sink_database:
+                raise PlanFrameExecutionError(
+                    f"Backend sink_database is not supported for {self._adapter.name} "
+                    "(capabilities.sink_database=False)"
+                )
             planned = self._eval(self._plan)
             self._adapter.writer.sink_database(
                 planned,
@@ -470,6 +501,12 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         self: _HasFrameIODeps[BackendFrameT, BackendExprT], path: str, *, worksheet: str = "Sheet1"
     ) -> None:
         try:
+            caps: AdapterCapabilities = self._adapter.capabilities
+            if not caps.sink_excel:
+                raise PlanFrameExecutionError(
+                    f"Backend sink_excel is not supported for {self._adapter.name} "
+                    "(capabilities.sink_excel=False)"
+                )
             planned = self._eval(self._plan)
             self._adapter.writer.sink_excel(planned, path, worksheet=worksheet)
         except Exception as e:  # noqa: BLE001
@@ -485,6 +522,17 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         storage_options: StorageOptions | None = None,
     ) -> None:
         try:
+            caps: AdapterCapabilities = self._adapter.capabilities
+            if not caps.sink_delta:
+                raise PlanFrameExecutionError(
+                    f"Backend sink_delta is not supported for {self._adapter.name} "
+                    "(capabilities.sink_delta=False)"
+                )
+            if storage_options is not None and not caps.storage_options:
+                raise PlanFrameExecutionError(
+                    f"Backend sink_delta does not support storage_options for {self._adapter.name} "
+                    "(capabilities.storage_options=False)"
+                )
             planned = self._eval(self._plan)
             self._adapter.writer.sink_delta(
                 planned, target, mode=mode, storage_options=storage_options
@@ -502,6 +550,12 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         name: str = "",
     ) -> None:
         try:
+            caps: AdapterCapabilities = self._adapter.capabilities
+            if not caps.sink_avro:
+                raise PlanFrameExecutionError(
+                    f"Backend sink_avro is not supported for {self._adapter.name} "
+                    "(capabilities.sink_avro=False)"
+                )
             planned = self._eval(self._plan)
             self._adapter.writer.sink_avro(planned, path, compression=compression, name=name)
         except Exception as e:  # noqa: BLE001

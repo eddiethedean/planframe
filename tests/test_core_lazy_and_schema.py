@@ -8,6 +8,7 @@ import pytest
 from pydantic import BaseModel
 
 from planframe.backend.adapter import (
+    AdapterCapabilities,
     BackendAdapter,
     CompiledJoinKey,
     CompiledProjectItem,
@@ -88,6 +89,19 @@ def _spy_agg_reduce(values: list[Any], op: str) -> Any:
 
 class SpyAdapter(BackendAdapter[list[dict[str, Any]], object]):
     name = "spy"
+
+    @property
+    def capabilities(self) -> AdapterCapabilities:
+        # SpyAdapter is a test adapter that implements the legacy write_* surface and
+        # accepts `storage_options` on the relevant sinks.
+        return AdapterCapabilities(
+            lazy_sample=True,
+            sink_delta=True,
+            sink_avro=True,
+            sink_excel=True,
+            sink_database=True,
+            storage_options=True,
+        )
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, Any]] = []
