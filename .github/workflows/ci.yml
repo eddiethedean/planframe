@@ -1,8 +1,8 @@
 name: CI
 
 on:
+  # Run on every push (feature branches included). PRs to main also trigger via pull_request.
   push:
-    branches: [main]
   pull_request:
     branches: [main]
 
