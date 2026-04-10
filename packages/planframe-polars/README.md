@@ -43,6 +43,8 @@ pf2 = User.source(pl.DataFrame({"id": [1], "age": [2]}).lazy(), adapter=User._ad
 
 ### Execution model
 
+Core **v1.2+** adds `execute_plan_async`, `planframe.materialize`, and discoverable Frame async aliases (`collect_async`, `to_dict_async`, …)—see the [migration guide](https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/) and [API reference](https://planframe.readthedocs.io/en/latest/planframe/reference/api/).
+
 PlanFrame is always lazy:
 - Chaining methods (like `.select(...)`) does **not** run Polars operations.
 - `collect()` evaluates the full plan (and returns `list[pydantic.BaseModel]`).

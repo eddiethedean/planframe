@@ -9,6 +9,7 @@ Core package for PlanFrame (typed planning layer). Import as `planframe`.
 Documentation (ReadTheDocs):
 
 - Core (adapter authors): `https://planframe.readthedocs.io/en/latest/planframe/`
+- **Migrating since v1.1.0** (v1.2.0+): `https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/`
 - Design docs: `https://planframe.readthedocs.io/en/latest/planframe/design/`
 - Light API reference: `https://planframe.readthedocs.io/en/latest/planframe/reference/api/`
 - Streaming rows: `https://planframe.readthedocs.io/en/latest/planframe/guides/streaming-rows/`
@@ -27,7 +28,7 @@ pip install planframe
 
 ### What you get
 - `planframe.Frame`: immutable, schema-aware transformation plan (**always lazy**)
-- `planframe.expr`: typed expression IR (`col`, `lit`, arithmetic/compare/boolean ops, `coalesce`, `if_else`, etc.), plus **aggregation wrappers** for use inside `group_by(...).agg(...)`: `agg_sum`, `agg_mean`, `agg_min`, `agg_max`, `agg_count`, `agg_n_unique` (these build `AggExpr` nodes)
+- `planframe.expr`: typed expression IR (`col`, `lit`, arithmetic/compare/boolean ops, `coalesce`, `if_else`, etc.); **operator overloads** on `Expr` (`==`, `!=`, `&`, `|`, `~`, …) build IR nodes—see [Typing design](https://planframe.readthedocs.io/en/latest/planframe/design/typing-design/). **Aggregation wrappers** for `group_by(...).agg(...)`: `agg_sum`, `agg_mean`, `agg_min`, `agg_max`, `agg_count`, `agg_n_unique` (these build `AggExpr` nodes)
 - `planframe.groupby.GroupedFrame`: produced by `Frame.group_by`; **`group_by`** accepts column names and/or expressions (expression keys show up as `__pf_g0`, `__pf_g1`, … in the result schema). **`agg`** accepts `(op, column)` tuples and/or `AggExpr` values—not arbitrary bare expressions
 - `planframe.schema`: schema reflection (dataclass + Pydantic) and materialization
 - `planframe.spark`: optional PySpark-like `SparkFrame` / `Column` / `functions` (import `from planframe.spark import SparkFrame`, or `from planframe import spark`)
@@ -49,10 +50,14 @@ Some commonly used Frame transforms:
 
 Materialization accepts optional **`ExecutionOptions`** on `collect` / `to_dicts` / `to_dict` (and async counterparts). **`JoinOptions`** on `Frame.join` carries execution hints (including `engine_streaming` where the backend supports it).
 
+**`planframe.materialize`**: `materialize_columns` / `materialize_into` (and `amaterialize_*`) forward the same options as `Frame.to_dict` / `ato_dict`—useful for adapter and host-library boundaries ([Creating an adapter](https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/) — columnar helpers).
+
+**`execute_plan` / `execute_plan_async`**: the supported plan interpreters; `execute_plan_async` runs the sync interpreter in `asyncio.to_thread` so you can `await` without blocking the event loop ([Core layout](https://planframe.readthedocs.io/en/latest/planframe/design/core-layout/)).
+
 ### Note on backends
 `planframe` is backend-agnostic. It does not execute anything until `collect()` (even for eager backends). To execute plans you need an adapter package (e.g. `planframe-polars`).
 
-For async stacks, `Frame.acollect()`, `Frame.ato_dicts()`, and `Frame.ato_dict()` await adapter hooks (`BaseAdapter.acollect` and friends); defaults run sync methods in a thread pool. See `https://planframe.readthedocs.io/en/latest/planframe/design/backend-adapter-design/`.
+For async stacks, use `Frame.acollect()` / `ato_dicts()` / `ato_dict()` or the discoverable aliases **`collect_async`**, **`to_dicts_async`**, **`to_dict_async`** (same behavior). These await adapter hooks (`BaseAdapter.acollect` and friends); defaults run sync methods in a thread pool. See [Backend adapter design](https://planframe.readthedocs.io/en/latest/planframe/design/backend-adapter-design/) and [Creating an adapter — Async execution](https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#async-execution-contract-third-party-adapters).
 
 ### Typing
 PlanFrame includes `py.typed` plus generated stubs (notably `planframe/frame/__init__.pyi`) to improve static typing in editors and Pyright.

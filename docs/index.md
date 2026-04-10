@@ -41,7 +41,8 @@ pip install planframe
 
 ## What’s new (high-level)
 
-See the project changelog: `https://github.com/eddiethedean/planframe/blob/main/CHANGELOG.md`
+- [Migrating since v1.1.0](planframe/guides/migrating-since-1-1.md) — v1.2.0+ behavior and API notes (async plan execution, `planframe.materialize`, Expr operators, …)
+- [CHANGELOG.md](https://github.com/eddiethedean/planframe/blob/main/CHANGELOG.md) (authoritative per-release list)
 
 ## Adding a new adapter
 

@@ -6,6 +6,7 @@ This track is for **end users** of the pandas adapter (`planframe_pandas`).
 
 ## Next steps
 
+- Upgrading from older `planframe` releases: [Migrating since v1.1.0](../planframe/guides/migrating-since-1-1.md)
 - Read the guide: [Using planframe-pandas](guides/using-planframe-pandas.md)
 - Browse the API reference (light): [API](reference/api.md)
 

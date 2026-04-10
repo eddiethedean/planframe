@@ -2,6 +2,8 @@
 
 This track provides a **real execution backend** for the **Spark UI** (`planframe.spark`) by running plans on the [`sparkless`](https://pypi.org/project/sparkless/) engine (no JVM).
 
+For **core** API changes (async materialization, `planframe.materialize`, Expr operators, …), see [Migrating since v1.1.0](../planframe/guides/migrating-since-1-1.md).
+
 ## Quickstart
 
 ```python

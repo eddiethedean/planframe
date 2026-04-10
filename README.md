@@ -29,6 +29,7 @@ Documentation is organized **by package**:
 
 Key pages:
 
+- **Migrating since v1.1.0** (v1.2.0+ fixes and features): `https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/`
 - **Creating an adapter**: `https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/`
 - **Adapter conformance kit** (third-party `BaseAdapter` CI): `https://planframe.readthedocs.io/en/latest/planframe/guides/adapter-conformance/`
 - **Streaming rows**: `https://planframe.readthedocs.io/en/latest/planframe/guides/streaming-rows/`
@@ -97,7 +98,7 @@ df = out.collect()
 
 ### What’s new
 
-See `CHANGELOG.md` (workspace packages are released together).
+See `CHANGELOG.md` (workspace packages are released together). For upgrades from **v1.1.0**, read [Migrating since v1.1.0](https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/) on ReadTheDocs.
 
 ### Learn more
 
@@ -110,8 +111,10 @@ See `CHANGELOG.md` (workspace packages are released together).
 
 Preferred imports:
 
-- `from planframe import Frame, Schema, JoinOptions, execute_plan`
-- `from planframe import expr` (then `expr.col`, `expr.lit`, `expr.add`, ...)
+- `from planframe import Frame, Schema, JoinOptions, execute_plan, execute_plan_async`
+- `from planframe import CompileExprContext, ExecutionOptions` (expression compile context; materialization hints)
+- `from planframe import materialize_columns, materialize_into` (and `amaterialize_*` for async columnar export)
+- `from planframe import expr` (then `expr.col`, `expr.lit`, `expr.add`, …; `==`, `&`, `|` on `Expr` build IR)
 - `from planframe import spark` / `from planframe import pandas` (lazy submodules: PySpark-like and pandas-like skins)
 
 Backend-specific frames (example):

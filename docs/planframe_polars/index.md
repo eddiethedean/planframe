@@ -6,6 +6,7 @@ If you prefer PySpark- or pandas-style ergonomics on the same lazy plan, the cor
 
 ## Next steps
 
+- Upgrading from older `planframe` releases: [Migrating since v1.1.0](../planframe/guides/migrating-since-1-1.md)
 - Read the guide: [Using planframe-polars](guides/using-planframe-polars.md)
 - Browse the API reference (light): [API](reference/api.md)
 

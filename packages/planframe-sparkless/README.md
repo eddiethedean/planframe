@@ -51,7 +51,8 @@ print(out.to_dicts())
   - `collect()` returns `list[pydantic.BaseModel]`
   - `collect_backend()` returns the sparkless backend dataframe object
   - `to_dicts()` / `to_dict()` export rows/columns
-  - Async equivalents: `acollect()` / `ato_dicts()` / `ato_dict()`
+  - Async: `acollect()` / `ato_dicts()` / `ato_dict()` (aliases: `collect_async`, `to_dicts_async`, `to_dict_async`)
+- Core **v1.2+**: `execute_plan_async`, `planframe.materialize`, Expr `==` / `&` / … as IR—see [Migrating since v1.1.0](https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/).
 
 ### Notes / limitations
 

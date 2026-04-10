@@ -10,7 +10,7 @@ No. PlanFrame is always lazy; execution happens at explicit boundaries like `col
 
 ## Is there an async API?
 
-Yes. `Frame` exposes `acollect`, `ato_dicts`, and `ato_dict`, which await the adapter’s async hooks (`BaseAdapter.acollect`, etc.). Defaults run synchronous adapter methods in a worker thread so existing backends keep working without code changes.
+Yes. `Frame` exposes `acollect`, `ato_dicts`, and `ato_dict`, which await the adapter’s async hooks (`BaseAdapter.acollect`, etc.). Discoverable aliases **`collect_async`**, **`to_dicts_async`**, and **`to_dict_async`** are the same operations. For awaiting **plan evaluation** without blocking the event loop, core also provides **`execute_plan_async`** (it runs the sync `execute_plan` in `asyncio.to_thread`). Defaults run synchronous adapter methods in a worker thread so existing backends keep working without code changes. See [Migrating since v1.1.0](../planframe/guides/migrating-since-1-1.md).
 
 ## Can I detect PlanFrame column selectors at runtime?
 
