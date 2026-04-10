@@ -70,6 +70,47 @@ Materialization and row export happen only at execution boundaries. On `BaseAdap
 
 `Frame.collect_backend`, `Frame.to_dicts`, `Frame.to_dict`, and the async counterparts accept the same `ExecutionOptions` and pass them through to the adapter.
 
+## Async execution contract (third-party adapters)
+
+PlanFrame’s **lazy chaining is always synchronous**: building a `Frame` never does I/O and never awaits. Async support exists only at **materialization boundaries**.
+
+### Call graph (what runs on async terminals)
+
+All materialization paths evaluate the plan the same way:
+
+- **Sync**: `Frame.collect_backend()` / `Frame.to_dicts()` / `Frame.to_dict()`
+  - Plan evaluation: `planned = execute_plan(frame.plan, adapter=..., schema=..., options=...)` (via `Frame._eval`)
+  - Adapter boundary: `adapter.collect(planned, options=...)` then `adapter.to_dicts(...)` / `adapter.to_dict(...)`
+- **Async**: `Frame.acollect_backend()` / `Frame.ato_dicts()` / `Frame.ato_dict()` / `Frame.acollect()`
+  - Plan evaluation: **still synchronous** (`planned = frame._eval(frame.plan)` on the event loop thread)
+  - Adapter boundary: awaits `adapter.acollect(planned, options=...)` / `adapter.ato_dicts(...)` / `adapter.ato_dict(...)`
+
+**Implication:** async terminals still go through PlanFrame’s interpreter. Third-party adapters should not bypass `execute_plan` by delegating async paths directly to the underlying engine unless they are intentionally opting out of PlanFrame’s execution/options semantics.
+
+### What `BaseAdapter` must implement for async
+
+- **Minimum**: implement the sync boundaries (`collect`, `to_dicts`, `to_dict`) and accept `options=...`.
+  - You get async terminals “for free” via `BaseAdapter.acollect` / `ato_dicts` / `ato_dict`, which wrap sync work in `asyncio.to_thread`.
+- **Async-native backends**: override `acollect` and usually also `ato_dicts` / `ato_dict` to avoid blocking a worker thread.
+  - Keep `acollect` focused on I/O / engine execution; plan translation should already be completed before it’s called.
+
+### `ExecutionOptions` propagation
+
+`ExecutionOptions` is forwarded to:
+
+- `execute_plan(..., options=...)` (plan execution / compilation context)
+- adapter materialization/export methods (`collect` / `to_dicts` / `to_dict` and async variants)
+
+Adapters should treat `ExecutionOptions` fields as **hints**: forward only what your engine understands, ignore unknown hints, and keep the parameter on public signatures for forward compatibility.
+
+### Thread-safety expectations (important)
+
+If you rely on the default async methods (the `asyncio.to_thread` wrappers), your adapter’s sync boundaries may be invoked **concurrently** in multiple worker threads if users run multiple async collections at once.
+
+- If your backend client / connection object is not thread-safe, either:
+  - override async methods to use an async-native client, or
+  - serialize internally (locks) / use per-task clients, and **document** the limitation.
+
 ## Optional: row streaming + true async IO
 
 If your engine can stream rows (cursor-based DB reads, chunked readers, etc.), implement `AdapterRowStreamer` on your adapter. **Both** sync and async entrypoints are required: PlanFrame uses `isinstance(adapter, AdapterRowStreamer)`; an adapter that only defines `stream_dicts` is treated like a non-streaming adapter and will fall back to `to_dicts()` / `ato_dicts()`.
