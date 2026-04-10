@@ -247,6 +247,24 @@ To maximize Pyright success, the public typed API should enforce these rules:
 - `lambda`-based apply
 - backend-native raw expressions in typed methods
 
+## 8.1 Adapter/host annotation ergonomics (widening `Frame[...]`)
+
+In downstream adapters and “host types” (composition wrappers), you often want to expose a precise `Frame[SchemaT, BackendFrameT, BackendExprT]` **internally**, but allow users to annotate it more loosely without repeating the exact type arguments everywhere.
+
+Because `Frame[...]` is a generic with invariant parameters (as in most Python type checkers), the recommended pattern is to use a **deliberate widening alias**:
+
+- `planframe.typing.FrameAny` (an alias for `Frame[Any, Any, Any]`)
+
+Example:
+
+```python
+from planframe.typing import FrameAny
+
+def takes_any_frame(x: FrameAny) -> None: ...
+```
+
+This keeps adapter surfaces ergonomic without changing core `Frame` semantics.
+
 ---
 
 ## 9. The Realistic Implementation Model
