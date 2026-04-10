@@ -126,7 +126,7 @@ So for Pyright-friendly design, there are only three realistic options:
 
 1. **Small static overload sets**
 2. **Generated `.pyi` stubs**
-3. **A Pyright plugin**
+3. **An external resolver tool (Tier 3)**
 
 For MVP, use 1 and 2. Plugin can come later.
 
@@ -300,6 +300,16 @@ For stable pipelines, emit `.pyi` or codegen classes.
 
 ### Tier 3 — Pyright plugin
 Implement full logical `Resolve` over the plan AST.
+
+#### Practical note (Pyright does not support plugins)
+Despite the name “Tier 3 — Pyright plugin” in early drafts, **Pyright does not currently support a general plugin system** (unlike mypy). This means Tier 3 cannot be implemented as an in-process Pyright plugin without upstream Pyright changes.
+
+Instead, Tier 3 should be treated as a **PlanFrame-owned external resolver** that can:
+
+- evaluate `Resolve` over a `PlanNode` tree, and
+- emit artifacts Pyright *can* consume (e.g. generated `.pyi` for stable pipelines, or codegen at explicit boundaries).
+
+See `resolve-tier-3.md` for the feasibility note and an incremental scope proposal.
 
 ---
 
