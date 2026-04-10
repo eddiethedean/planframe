@@ -7,6 +7,8 @@ For everything else, prefer importing from the submodules directly.
 from __future__ import annotations
 
 import importlib
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _dist_version
 from typing import Any
 
 from planframe.dynamic_groupby import DynamicGroupedFrame
@@ -19,18 +21,8 @@ from planframe.plan.join_options import JoinOptions
 from planframe.schema.ir import Schema
 from planframe.selector import ColumnSelector
 
-try:
-    from importlib.metadata import PackageNotFoundError
-    from importlib.metadata import version as _dist_version
-except Exception:  # pragma: no cover
-    # Very old Pythons; PlanFrame requires 3.10+, but keep import safe.
-    PackageNotFoundError = Exception  # type: ignore[assignment]
-    _dist_version = None  # type: ignore[assignment]
-
 
 def _get_version() -> str:
-    if _dist_version is None:  # pragma: no cover
-        return "0+unknown"
     try:
         return _dist_version("planframe")
     except PackageNotFoundError:
