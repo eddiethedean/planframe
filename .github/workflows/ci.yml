@@ -37,7 +37,7 @@ jobs:
             -e packages/planframe-sparkless
 
       - name: Ruff
-        run: .venv/bin/ruff check packages/planframe packages/planframe-polars packages/planframe-pandas packages/planframe-sparkless scripts
+        run: .venv/bin/ruff check packages/planframe packages/planframe-polars packages/planframe-pandas packages/planframe-sparkless scripts tests
 
       - name: ty
         run: .venv/bin/ty check

@@ -7,6 +7,12 @@ All notable changes to this repository are documented here.
 
 ## Unreleased
 
+## planframe-sparkless 0.2.0
+
+### Changed
+
+- **Dependency**: require **`planframe>=1.2.0,<2.0.0`** (aligned with core `execute_plan` / `compile_expr` fixes and **`resolve_dtype`** / **`CompileExprContext`** support).
+
 ## 1.2.0
 
 ### Fixed
