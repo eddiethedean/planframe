@@ -9,6 +9,8 @@ All notable changes to this repository are documented here.
 
 ### Added
 
+- **`planframe.materialize`**: `materialize_columns` / `materialize_into` (and async `amaterialize_*`) as thin, options-preserving boundaries for columnar export and downstream factories—documented in [Creating an adapter](docs/planframe/guides/creating-an-adapter.md) ([issue #107](https://github.com/eddiethedean/planframe/issues/107)).
+
 - **`Expr` operator overloads** aligned with IR construction (`==`, `!=`, `&`, `|`, `~`, plus existing ordered comparisons): typing regression coverage in `tests/pyright/pass/expr_comparisons.py` and documented semantics in [typing-design](docs/planframe/design/typing-design.md) ([issue #106](https://github.com/eddiethedean/planframe/issues/106)).
 
 ## 1.2.0

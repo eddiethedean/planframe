@@ -18,6 +18,12 @@ from planframe.execution_options import ExecutionOptions
 from planframe.frame import Frame
 from planframe.groupby import GroupedFrame
 from planframe.ir_versions import EXPR_IR_VERSION, PLAN_IR_VERSION
+from planframe.materialize import (
+    amaterialize_columns,
+    amaterialize_into,
+    materialize_columns,
+    materialize_into,
+)
 from planframe.plan.join_options import JoinOptions
 from planframe.schema.ir import Schema
 from planframe.selector import ColumnSelector
@@ -59,6 +65,10 @@ __all__ = [
     "execute_plan",
     "execute_plan_async",
     "ExecutionOptions",
+    "materialize_columns",
+    "materialize_into",
+    "amaterialize_columns",
+    "amaterialize_into",
     "expr",
     "spark",
     "pandas",
