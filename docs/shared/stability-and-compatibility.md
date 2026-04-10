@@ -30,6 +30,45 @@ The “public API” is:
 
 Internal modules (anything not referenced by docs or stable imports) may change between releases.
 
+## Typing stability (stubs + generics)
+
+PlanFrame treats **static typing behavior** as part of the public API. This matters because downstream adapters may pin PlanFrame and re-export its types (notably `Frame`).
+
+### What counts as “typing public API”
+
+- **Generated `.pyi` stubs shipped in the wheels**, especially:
+  - `planframe/frame/__init__.pyi` (generated `Frame` surface)
+  - `planframe/typing/_schema_types.pyi`
+- **Public generics used at adapter boundaries**, including:
+  - `Frame[SchemaT, BackendFrameT, BackendExprT]` (and any other exported type parameters on `Frame`)
+  - `Expr[T]` and other exported typing helpers referenced by docs or stable imports
+- **Typing-only constraints that are intentionally enforced**, e.g. “must be a known `Literal[...]`” rules in the typed API (these are validated in CI by the Pyright suite under `tests/pyright/`).
+
+### SemVer policy for typing changes
+
+In the rules below, “breaking” means **a reasonable downstream user’s previously-valid code now fails type checking** with the same settings (Pyright strictness, etc.).
+
+- **Patch releases (\(x.y.Z\))**
+  - Allowed: typing bug fixes that are clearly incorrect behavior (e.g. missing overloads, `Any` leakage fixes) *as long as they don’t commonly break valid code*.
+  - Not allowed: intentional tightening that removes valid programs from the accepted set. If in doubt, treat it as **minor** or document as a breaking change.
+- **Minor releases (\(x.Y.z\))**
+  - Allowed: additive typing improvements (new overloads, new typed methods, better inference) and small tightening when justified.
+  - Required: call out **user-visible typing changes** in the changelog, especially if they can cause new diagnostics for previously-passing code.
+- **Major releases (\(X.y.z\))**
+  - Allowed: breaking typing changes, including changes to `Frame`/`Expr` generic parameters, overload strategy, and stub structure.
+  - Required: migration notes for adapter authors and any widely-used patterns.
+
+### CHANGELOG expectations
+
+When a release changes shipped stubs or any public generic surface:
+
+- include a **“Typing”** bullet (or a dedicated “Typing” section) describing what changed and why
+- for breaking or potentially-breaking changes, include a short **upgrade note** (what to change downstream)
+
+### CI contract: what `generate_typing_stubs.py --check` means
+
+CI runs `python scripts/generate_typing_stubs.py --check`, which verifies that the **committed generated stubs match the generator templates** for this repo version. It does **not** guarantee that stubs will remain byte-for-byte stable across releases—only that changes are intentional and reviewed.
+
 ## Deprecation policy
 
 When changing public API, we aim to:
