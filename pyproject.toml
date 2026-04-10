@@ -16,6 +16,12 @@ classifiers = [
 ]
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/eddiethedean/planframe"
+Repository = "https://github.com/eddiethedean/planframe"
+Documentation = "https://planframe.readthedocs.io/en/latest/"
+Issues = "https://github.com/eddiethedean/planframe/issues"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
