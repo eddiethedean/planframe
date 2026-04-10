@@ -14,6 +14,7 @@ from planframe.execution import execute_plan
 from planframe.execution_options import ExecutionOptions
 from planframe.frame import Frame
 from planframe.groupby import GroupedFrame
+from planframe.ir_versions import EXPR_IR_VERSION, PLAN_IR_VERSION
 from planframe.plan.join_options import JoinOptions
 from planframe.schema.ir import Schema
 from planframe.selector import ColumnSelector
@@ -31,6 +32,8 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "__expr_ir_version__",
+    "__plan_ir_version__",
     "Frame",
     "Schema",
     "GroupedFrame",
@@ -43,3 +46,7 @@ __all__ = [
     "spark",
     "pandas",
 ]
+
+# IR compatibility markers for adapter authors and external tooling.
+__plan_ir_version__: int = PLAN_IR_VERSION
+__expr_ir_version__: int = EXPR_IR_VERSION

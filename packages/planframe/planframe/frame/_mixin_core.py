@@ -10,6 +10,7 @@ from planframe.backend.errors import PlanFrameBackendError
 from planframe.compile_context import PlanCompileContext
 from planframe.execution import execute_plan
 from planframe.expr.api import Expr
+from planframe.ir_versions import PLAN_IR_VERSION
 from planframe.plan.nodes import JoinKeyColumn, JoinKeyExpr, PlanNode, Source
 from planframe.plan.optimize import optimize_plan
 from planframe.schema.ir import Schema
@@ -88,7 +89,7 @@ class FramePlanMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         return cls(
             _data=data,
             _adapter=adapter,
-            _plan=Source(schema_type=schema, ir_version=1),
+            _plan=Source(schema_type=schema, ir_version=PLAN_IR_VERSION),
             _schema=schema_ir,
         )
 
