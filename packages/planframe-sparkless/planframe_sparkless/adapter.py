@@ -562,6 +562,20 @@ class SparklessAdapter(BaseAdapter[SparklessBackendFrame, SparklessBackendExpr])
             raise PlanFrameBackendError("sparkless adapter sample(n=...) is not implemented")
         return df.sample(withReplacement=with_replacement, fraction=frac, seed=seed)
 
+    def resolve_backend_dtype_from_frame(
+        self, df: SparklessBackendFrame, name: str
+    ) -> object | None:
+        schema = getattr(df, "schema", None)
+        if schema is None:
+            return None
+        for field in getattr(schema, "fields", []):
+            if getattr(field, "name", None) == name:
+                dt = getattr(field, "dataType", None)
+                if dt is not None:
+                    return str(dt)
+                return getattr(field, "data_type", None)
+        return None
+
     # ---- Expression compilation + materialization ----
     def compile_expr(
         self,

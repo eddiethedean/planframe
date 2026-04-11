@@ -53,25 +53,40 @@ BackendFrameT = TypeVar("BackendFrameT")
 BackendExprT = TypeVar("BackendExprT")
 
 
-def _compile_ctx_at_input(
+def _compile_ctx_at_step_input(
     adapter: BackendAdapter[BackendFrameT, BackendExprT],
     node: PlanNode,
+    input_df: BackendFrameT,
 ) -> PlanCompileContext[BackendFrameT, BackendExprT]:
-    """Compile expressions as evaluated **on the input rows to** *node* (output of ``node.prev``)."""
+    """Compile expressions as evaluated **on the input rows to** *node* (output of ``node.prev``).
+
+    *input_df* must be the already-evaluated backend frame for ``node.prev`` so dtype recovery can
+    consult native column metadata when the step schema is partial.
+    """
 
     prev = getattr(node, "prev", None)
     if not isinstance(prev, PlanNode):
         raise PlanFrameBackendError("Internal error: compile context requires a plan node with .prev")
-    return PlanCompileContext(adapter, plan_output_schema(prev))
+    return PlanCompileContext(
+        adapter,
+        plan_output_schema(prev),
+        resolve_backend_dtype=lambda n: adapter.resolve_backend_dtype_from_frame(input_df, n),
+    )
 
 
 def _compile_ctx_groupby_source(
-    adapter: BackendAdapter[BackendFrameT, BackendExprT], agg_node: Agg
+    adapter: BackendAdapter[BackendFrameT, BackendExprT],
+    agg_node: Agg,
+    source_df: BackendFrameT,
 ) -> PlanCompileContext[BackendFrameT, BackendExprT]:
     gb = agg_node.prev
     if not isinstance(gb, GroupBy):
         raise PlanFrameBackendError("Agg must follow GroupBy")
-    return PlanCompileContext(adapter, plan_output_schema(gb.prev))
+    return PlanCompileContext(
+        adapter,
+        plan_output_schema(gb.prev),
+        resolve_backend_dtype=lambda n: adapter.resolve_backend_dtype_from_frame(source_df, n),
+    )
 
 
 @dataclass
@@ -107,7 +122,7 @@ def _handle_project(
 ) -> BackendFrameT:
     assert isinstance(node, Project)
     prev = state.evaluate(node.prev)
-    parts = _compile_ctx_at_input(state.adapter, node).compile_project_items(node.items)
+    parts = _compile_ctx_at_step_input(state.adapter, node, prev).compile_project_items(node.items)
     return state.adapter.project(prev, parts)
 
 
@@ -125,10 +140,11 @@ def _handle_with_column(
     state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode
 ) -> BackendFrameT:
     assert isinstance(node, WithColumn)
+    prev = state.evaluate(node.prev)
     return state.adapter.with_column(
-        state.evaluate(node.prev),
+        prev,
         node.name,
-        _compile_ctx_at_input(state.adapter, node).compile_expr(node.expr),
+        _compile_ctx_at_step_input(state.adapter, node, prev).compile_expr(node.expr),
     )
 
 
@@ -148,9 +164,10 @@ def _handle_with_row_count(
 
 def _handle_filter(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode) -> BackendFrameT:
     assert isinstance(node, Filter)
+    prev = state.evaluate(node.prev)
     return state.adapter.filter(
-        state.evaluate(node.prev),
-        _compile_ctx_at_input(state.adapter, node).compile_expr(node.predicate),
+        prev,
+        _compile_ctx_at_step_input(state.adapter, node, prev).compile_expr(node.predicate),
     )
 
 
@@ -162,7 +179,7 @@ def _handle_hint(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode)
 def _handle_sort(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode) -> BackendFrameT:
     assert isinstance(node, Sort)
     prev = state.evaluate(node.prev)
-    compiled = _compile_ctx_at_input(state.adapter, node).compile_sort_keys(node.keys)
+    compiled = _compile_ctx_at_step_input(state.adapter, node, prev).compile_sort_keys(node.keys)
     return state.adapter.sort(
         prev,
         compiled,
@@ -204,11 +221,12 @@ def _handle_agg(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode) 
     assert isinstance(node, Agg)
     if not isinstance(node.prev, GroupBy):
         raise PlanFrameBackendError("Agg must follow GroupBy")
-    gb_ctx = _compile_ctx_groupby_source(state.adapter, node)
+    source_df = state.evaluate(node.prev.prev)
+    gb_ctx = _compile_ctx_groupby_source(state.adapter, node, source_df)
     compiled_keys = gb_ctx.compile_join_keys_tuple(node.prev.keys)
     compiled_aggs = gb_ctx.compile_named_aggs(node.named_aggs)
     return state.adapter.group_by_agg(
-        state.evaluate(node.prev.prev),
+        source_df,
         keys=compiled_keys,
         named_aggs=compiled_aggs,
     )
@@ -218,9 +236,12 @@ def _handle_dynamic_group_by_agg(
     state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode
 ) -> BackendFrameT:
     assert isinstance(node, DynamicGroupByAgg)
-    compiled_aggs = _compile_ctx_at_input(state.adapter, node).compile_named_aggs(node.named_aggs)
+    prev = state.evaluate(node.prev)
+    compiled_aggs = _compile_ctx_at_step_input(state.adapter, node, prev).compile_named_aggs(
+        node.named_aggs
+    )
     return state.adapter.group_by_dynamic_agg(
-        state.evaluate(node.prev),
+        prev,
         index_column=node.index_column,
         every=node.every,
         period=node.period,
@@ -254,8 +275,8 @@ def _handle_fill_null(
     assert isinstance(node, FillNull)
     prev = state.evaluate(node.prev)
     if node.value is not None and isinstance(node.value, Expr):
-        compiled_value: object | BackendExprT = _compile_ctx_at_input(
-            state.adapter, node
+        compiled_value: object | BackendExprT = _compile_ctx_at_step_input(
+            state.adapter, node, prev
         ).compile_expr(node.value)
     else:
         compiled_value = node.value
@@ -282,11 +303,17 @@ def _handle_join(state: _ExecState[BackendFrameT, BackendExprT], node: PlanNode)
     if getattr(right_frame._adapter, "name", None) != state.adapter.name:
         raise PlanFrameBackendError("Cannot join frames from different backends")
     right_df = right_frame._eval(right_frame._plan)
-    left_ctx = _compile_ctx_at_input(state.adapter, node)
+    left_ctx = _compile_ctx_at_step_input(state.adapter, node, left_df)
     right_schema = getattr(right_frame, "_schema", None)
     if right_schema is None:
         raise PlanFrameBackendError("Join node right frame is missing _schema")
-    right_ctx = PlanCompileContext(state.adapter, right_schema)
+    right_ctx = PlanCompileContext(
+        state.adapter,
+        right_schema,
+        resolve_backend_dtype=lambda n: state.adapter.resolve_backend_dtype_from_frame(
+            right_df, n
+        ),
+    )
     if node.left_keys is node.right_keys:
         compiled = left_ctx.compile_join_keys_tuple(node.left_keys)
         lo = ro = compiled

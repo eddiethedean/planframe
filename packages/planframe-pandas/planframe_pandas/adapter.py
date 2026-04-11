@@ -300,6 +300,11 @@ class PandasAdapter(BaseAdapter[PandasBackendFrame, PandasBackendExpr]):
         )
         return pd.DataFrame({out_name: mask})
 
+    def resolve_backend_dtype_from_frame(self, df: pd.DataFrame, name: str) -> object | None:
+        if name not in df.columns:
+            return None
+        return df[name].dtype
+
     def compile_expr(
         self,
         expr: object,

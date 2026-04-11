@@ -4,6 +4,15 @@ This guide summarizes changes after **v1.1.0** of `planframe`, `planframe-polars
 
 If you are jumping from **v1.0.x**, read [Migrating to v1.0.0](migrating-to-1-0.md) first, then return here.
 
+## v1.3.0 (upcoming)
+
+### `CompileExprContext.resolve_backend_dtype` (#113)
+
+- **`CompileExprContext`** may carry **`resolve_backend_dtype`**, set by **`execute_plan`** when it has the live backend frame for the step. **`BaseAdapter.resolve_dtype`** consults it after the step **`Schema`** lookup, so column dtypes can be recovered from native metadata when the PlanFrame schema is partial.
+- Adapters can implement **`BaseAdapter.resolve_backend_dtype_from_frame`**; Polars, pandas, and sparkless provide defaults that introspect each engine’s column types.
+
+**Adapter authors:** optional hooks; existing adapters that only use `ctx.schema` keep the same behavior when the callback is absent.
+
 ## v1.2.0
 
 ### Correctness: expression compilation uses each step’s input schema (#103)

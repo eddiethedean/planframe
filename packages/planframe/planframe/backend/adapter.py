@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Generic, Literal, TypeAlias, TypeVar, cast
 
@@ -30,11 +31,21 @@ AggSpec: TypeAlias = tuple[str, ColumnName] | BackendExprT
 class CompileExprContext:
     """Context passed to :meth:`BaseAdapter.compile_expr` and :meth:`BaseAdapter.resolve_dtype`.
 
-    *schema* is the PlanFrame :class:`~planframe.schema.ir.Schema` for the current plan step
-    (the row shape expressions are compiled against).
+    **Guaranteed when PlanFrame builds the context** (e.g. :func:`~planframe.execution.execute_plan`):
+
+    - *schema* is the PlanFrame :class:`~planframe.schema.ir.Schema` for the **input rows** to the
+      current plan node (the shape :class:`~planframe.expr.api.Expr` nodes are compiled against).
+    - *resolve_backend_dtype* is set when the interpreter has the live backend frame for that step:
+      it is invoked for column names **not** present in *schema* (after :meth:`~planframe.schema.ir.Schema.field_map`
+      lookup). It should return a dtype object meaningful to the adapter (or ``None`` if unknown).
+
+    Callers that construct :class:`CompileExprContext` manually may omit *resolve_backend_dtype*;
+    adapters should fall back to their own rules when both *schema* and the callback are absent or
+    inconclusive.
     """
 
     schema: Schema | None = None
+    resolve_backend_dtype: Callable[[str], object | None] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -784,11 +795,24 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         from backend metadata or a wider known schema.
         """
 
-        if ctx.schema is None:
-            return None
-        fm = ctx.schema.field_map()
-        if name in fm:
-            return fm[name].dtype
+        if ctx.schema is not None:
+            fm = ctx.schema.field_map()
+            if name in fm:
+                return fm[name].dtype
+        if ctx.resolve_backend_dtype is not None:
+            return ctx.resolve_backend_dtype(name)
+        return None
+
+    def resolve_backend_dtype_from_frame(self, df: BackendFrameT, name: str) -> object | None:
+        """Optional hook: dtype for *name* using the live backend frame *df*.
+
+        Used by :func:`~planframe.execution.execute_plan` to populate
+        :attr:`CompileExprContext.resolve_backend_dtype` when the step schema omits a column that
+        still exists on *df*. Default returns ``None``; Polars / pandas / sparkless adapters
+        introspect native schema where possible.
+        """
+
+        _ = df, name
         return None
 
     @abstractmethod

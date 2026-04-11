@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, Generic, TypeVar, cast
 
 from planframe.backend.adapter import (
@@ -30,19 +31,25 @@ BackendExprT = TypeVar("BackendExprT")
 class PlanCompileContext(Generic[BackendFrameT, BackendExprT]):
     """Holds ``(adapter, schema)`` and compiles expressions and join metadata once per context."""
 
-    __slots__ = ("_adapter", "_schema")
+    __slots__ = ("_adapter", "_schema", "_resolve_backend_dtype")
 
     def __init__(
         self,
         adapter: BackendAdapter[BackendFrameT, BackendExprT],
         schema: Schema,
+        *,
+        resolve_backend_dtype: Callable[[str], object | None] | None = None,
     ) -> None:
         self._adapter = adapter
         self._schema = schema
+        self._resolve_backend_dtype = resolve_backend_dtype
 
     def compile_expr(self, expr: object) -> BackendExprT:
         try:
-            ctx = CompileExprContext(schema=self._schema)
+            ctx = CompileExprContext(
+                schema=self._schema,
+                resolve_backend_dtype=self._resolve_backend_dtype,
+            )
             return self._adapter.compile_expr(expr, schema=self._schema, ctx=ctx)
         except Exception as e:  # noqa: BLE001
             raise PlanFrameBackendError(
