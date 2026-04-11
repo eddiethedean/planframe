@@ -14,6 +14,10 @@ All notable changes to this repository are documented here.
 
 ### Documentation
 
+- **Third-party adapter checklist**: *Creating an adapter* adds a maintained **PlanFrame 1.2.x** markdown checklist (`BaseAdapter` abstract vs defaulted methods, `compile_expr` / `resolve_dtype`, columnar `to_dict` vs `planframe.materialize`, sync/async entrypoints); linked from the README and [typing-design](docs/planframe/design/typing-design.md) ([issue #119](https://github.com/eddiethedean/planframe/issues/119)).
+
+- **Typing CI contract**: [CONTRIBUTING.md](CONTRIBUTING.md) documents Pyright pass/fail fixtures, `ty`, and `generate_typing_stubs.py --check`; CI runs the stub parity step explicitly ([issue #118](https://github.com/eddiethedean/planframe/issues/118)).
+
 - **Adapter contract**: documented policy for **unknown column names** during `compile_expr` (permissive compile in shipped adapters; `resolve_dtype` `None` means no hint). See *Creating an adapter* ([issue #114](https://github.com/eddiethedean/planframe/issues/114)).
 - **Discoverability**: `Frame.to_dict` / `ato_dict` / async aliases and `planframe.materialize` cross-link each other; stable docs anchor `#columnar-boundary-materialize` on *Creating an adapter* ([issue #116](https://github.com/eddiethedean/planframe/issues/116)).
 - **Columnar streaming (design)**: optional `AdapterColumnarStreamer` protocol (`planframe.backend.io`) and design note `docs/planframe/design/columnar-streaming.md` for chunked columnar export ([issue #117](https://github.com/eddiethedean/planframe/issues/117)).

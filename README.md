@@ -31,6 +31,7 @@ Key pages:
 
 - **Migrating since v1.1.0** (v1.2.0+ fixes and features): `https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/`
 - **Creating an adapter**: `https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/`
+- **Third-party adapter checklist** (BaseAdapter surface, `compile_expr` / dtypes, columnar `materialize` vs `to_dict`, sync/async terminals): `https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#third-party-adapter-checklist`
 - **Adapter conformance kit** (third-party `BaseAdapter` CI): `https://planframe.readthedocs.io/en/latest/planframe/guides/adapter-conformance/`
 - **Streaming rows**: `https://planframe.readthedocs.io/en/latest/planframe/guides/streaming-rows/`
 - **PySpark-like API (`planframe.spark`)**: `https://planframe.readthedocs.io/en/latest/planframe/guides/pyspark-like-api/`
@@ -134,6 +135,8 @@ Backend-specific frames (example):
 - **Not supported**: arbitrary Python UDFs / `.apply(...)` and schema-dependent compile-time column-name unions (that would require per-schema codegen).
 
 ### Development
+
+Contributor guide: **[CONTRIBUTING.md](CONTRIBUTING.md)** (Pyright fixtures, generated stub parity, `ty`).
 
 Run tests:
 

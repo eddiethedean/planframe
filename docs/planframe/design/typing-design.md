@@ -6,6 +6,8 @@ This document defines a practical typing strategy for `Resolve`, the core mechan
 
 The goal is not to make Python's type system do arbitrary computation. The goal is to design a type system that Pyright can follow reliably across a constrained, explicit API.
 
+**Adapter authors:** runtime dtype and execution behavior live in `BaseAdapter` (`compile_expr`, `resolve_dtype`, materialization). For a per-minor-release integration checklist (sync/async, `execute_plan`, `planframe.materialize`), see [Third-party adapter integration checklist](../guides/creating-an-adapter.md#third-party-adapter-checklist).
+
 ---
 
 ## 1. Problem Statement

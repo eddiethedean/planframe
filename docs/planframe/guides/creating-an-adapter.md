@@ -16,7 +16,58 @@ The adapter API is the abstract base class:
 
 For a **small, published pass/fail suite** you can run in your own CI (recommended for third-party adapters), see [Adapter conformance kit](adapter-conformance.md).
 
-### How plans reach your adapter
+## Third-party adapter integration checklist (PlanFrame 1.2.x) {: #third-party-adapter-checklist }
+
+Use this list when wiring a new engine to PlanFrame. **Revisit it when upgrading PlanFrame minors**—adapter contracts and interpreter behavior can change (see `CHANGELOG.md` and [Migrating since v1.1.0](migrating-since-1-1.md)).
+
+### Design
+
+- [ ] **Frame type**: choose the backend’s native “frame” or lazy plan type (`BackendFrameT`).
+- [ ] **Expression type**: choose the backend’s expression type (`BackendExprT`) or a small wrapper.
+- [ ] **Lazy transforms**: return lazy objects from plan nodes; run backend work only inside `collect` / `to_dicts` / `to_dict` / `write_*` (or documented streaming paths).
+
+### `BaseAdapter`: implement vs override
+
+**You must implement** every `@abstractmethod` on [`BaseAdapter`](https://github.com/eddiethedean/planframe/blob/main/packages/planframe/planframe/backend/adapter.py) (grouped by role):
+
+- [ ] **Expression lowering**: `compile_expr`
+- [ ] **Materialization / export**: `collect`, `to_dicts`, `to_dict` (accept `options: ExecutionOptions | None` on each)
+- [ ] **Core transforms**: `select`, `project`, `drop`, `rename`, `with_column`, `cast`, `with_row_count`, `filter`, `sort`, `unique`, `duplicated`, `join`, `slice`, `head`, `tail`, `concat_vertical`, `concat_horizontal`, `pivot`
+- [ ] **Aggregations / reshaping**: `group_by_agg`, `group_by_dynamic_agg`, `rolling_agg`, `drop_nulls`, `fill_null`, `melt`, `explode`, `unnest`, `posexplode`, `drop_nulls_all`, `sample`
+- [ ] **Sinks** (`write_*`): `write_parquet`, `write_csv`, `write_ndjson`, `write_ipc`, `write_database`, `write_excel`, `write_delta`, `write_avro`
+
+**You may rely on defaults** (override only when needed):
+
+- **`reader` / `writer` / `areader` / `awriter`**: defaults wrap sync `read_*` / `write_*` and thread-pool async; override for custom IO surfaces or true async IO.
+- **`capabilities`**: defaults to empty flags; set conservatively so PlanFrame can fail fast on unsupported IO or declare advisory async behavior (`native_async_materialize`).
+- **`resolve_dtype`**: default merges `ctx.schema` with optional `ctx.resolve_backend_dtype`; override if you need richer dtype recovery for `Col(...)` during `compile_expr`.
+- **`resolve_backend_dtype_from_frame`**: default returns `None`; override so `execute_plan` can populate `CompileExprContext.resolve_backend_dtype` when the step schema omits a column still present on the backend frame.
+- **`acollect` / `ato_dicts` / `ato_dict`**: defaults run the sync methods in `asyncio.to_thread`; override for async-native engines.
+- **`hint`**: default no-op; override if the engine supports plan hints.
+
+### `compile_expr`, `resolve_dtype`, and unknown columns
+
+- [ ] Implement `compile_expr` so all Expr IR PlanFrame emits for your supported API surface lowers to `BackendExprT`.
+- [ ] Decide your policy for **unknown column names** (shipped adapters are **permissive** at compile time; see [Unknown columns during `compile_expr`](#unknown-columns-during-compile_expr)).
+- [ ] If projected step schemas can omit columns that still exist on the evaluated backend frame, implement **`resolve_backend_dtype_from_frame`** and/or **`resolve_dtype`** so dtypes stay accurate when possible.
+
+### Columnar boundaries: `to_dict` vs `planframe.materialize`
+
+- [ ] Implement **`to_dict`** (column-oriented) and **`to_dicts`** (row-oriented) on the adapter; they are distinct execution boundaries.
+- [ ] In wrapper libraries, prefer **`materialize_columns` / `materialize_into`** (and `amaterialize_*`) so imports and **`ExecutionOptions`** forwarding stay aligned with `Frame.to_dict` / `Frame.ato_dict`—see [Columnar boundary helpers](#columnar-boundary-materialize).
+
+### Sync vs async: `execute_plan`, `execute_plan_async`, and Frame `a*` methods
+
+- [ ] **Plan evaluation**: `execute_plan` is synchronous. `execute_plan_async` runs that interpreter in a worker thread—it does not make individual adapter calls async by itself.
+- [ ] **Frame terminals**: sync `collect_backend` / `to_dicts` / `to_dict` vs async `acollect_backend` / `ato_dicts` / `ato_dict` (and aliases like `collect_async`); async paths still build the plan synchronously, then await adapter async materializers.
+- [ ] If you only implement sync `collect` / `to_dicts` / `to_dict`, default **`acollect` / `ato_dicts` / `ato_dict`** give async API users thread-pooled behavior; override when you need native async I/O.
+- [ ] Do not bypass **`execute_plan`** from async entrypoints unless you intentionally opt out of PlanFrame’s execution semantics—see [Async execution contract](#async-execution-contract-third-party-adapters).
+
+### Typing (`Resolve`) and static analysis
+
+- [ ] For how static column types propagate on `Frame` / `Expr`, read [Resolve typing design](../design/typing-design.md) (Pyright-focused). Adapters implement runtime behavior; stubs and `Resolve` power editor/type-checker UX for host packages.
+
+## How plans reach your adapter
 
 Chaining on `Frame` records a **`PlanNode`** tree and updates the derived schema. At materialization (`collect`, `to_dicts`, `to_dict`, `write_*`, …), PlanFrame runs **`execute_plan`**, which walks that tree and invokes the matching **`BaseAdapter`** methods. Expression IR is compiled through **`PlanCompileContext`** (`planframe.compile_context`) so the same rules apply when building plans and when executing them. For a file-level map (mixins, dispatch registry, stub location), see [Core layout](../design/core-layout.md).
 
@@ -43,14 +94,13 @@ dicts=[{'id': 1, 'age': 10}, {'id': 2, 'age': 20}]
 dict={'id': [1, 2], 'age': [10, 20]}
 ```
 
-## Checklist for a real engine adapter
+## Optional: row streaming and I/O skins
 
-- **Frame type**: pick the backend’s “frame” type (e.g. a lazy plan type if it has one)
-- **Expression type**: pick the backend’s expression type (or use a small wrapper object)
-- **Always-lazy**: return lazy objects from transforms; only execute inside `collect`/`to_dicts`/writes
-- **I/O**: implement `write_*` (used by PlanFrame’s `sink_*`/`write_*`) or override `BaseAdapter.writer` with a custom writer implementation
-- **Async I/O (optional)**: override `BaseAdapter.areader` / `BaseAdapter.awriter` for true async IO (defaults wrap sync IO in `asyncio.to_thread`)
-- **Row streaming (optional)**: implement `AdapterRowStreamer` (**both** `stream_dicts` and `astream_dicts` are required for detection) to support `Frame.stream_dicts()` / `Frame.astream_dicts()` without materializing all rows at once
+Beyond the [integration checklist](#third-party-adapter-checklist):
+
+- **I/O**: implement `write_*` (used by PlanFrame’s `sink_*`/`write_*`) or override `BaseAdapter.writer` with a custom writer implementation.
+- **Async I/O (optional)**: override `BaseAdapter.areader` / `BaseAdapter.awriter` for true async IO (defaults wrap sync IO in `asyncio.to_thread`).
+- **Row streaming (optional)**: implement `AdapterRowStreamer` (**both** `stream_dicts` and `astream_dicts` are required for detection) to support `Frame.stream_dicts()` / `Frame.astream_dicts()` without materializing all rows at once—see [Optional: row streaming + true async IO](#optional-row-streaming-true-async-io) below.
 
 ## Unknown columns during `compile_expr`
 
