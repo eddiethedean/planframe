@@ -16,6 +16,7 @@ All notable changes to this repository are documented here.
 
 - **Adapter contract**: documented policy for **unknown column names** during `compile_expr` (permissive compile in shipped adapters; `resolve_dtype` `None` means no hint). See *Creating an adapter* ([issue #114](https://github.com/eddiethedean/planframe/issues/114)).
 - **Discoverability**: `Frame.to_dict` / `ato_dict` / async aliases and `planframe.materialize` cross-link each other; stable docs anchor `#columnar-boundary-materialize` on *Creating an adapter* ([issue #116](https://github.com/eddiethedean/planframe/issues/116)).
+- **Columnar streaming (design)**: optional `AdapterColumnarStreamer` protocol (`planframe.backend.io`) and design note `docs/planframe/design/columnar-streaming.md` for chunked columnar export ([issue #117](https://github.com/eddiethedean/planframe/issues/117)).
 
 ## planframe-sparkless 0.2.0
 
