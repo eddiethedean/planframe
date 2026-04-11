@@ -52,7 +52,7 @@ print(out.to_dicts())
   - `collect_backend()` returns the sparkless backend dataframe object
   - `to_dicts()` / `to_dict()` export rows/columns
   - Async: `acollect()` / `ato_dicts()` / `ato_dict()` (aliases: `collect_async`, `to_dicts_async`, `to_dict_async`)
-- Core **v1.2+**: `execute_plan_async`, `planframe.materialize`, Expr `==` / `&` / … as IR—see [Migrating since v1.1.0](https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/).
+- Core **v1.2.0+** (current minor **v1.3.x**): `execute_plan_async`, `planframe.materialize`, Expr `==` / `&` / … as IR, plus **v1.3.0** adapter hooks—see [Migrating since v1.1.0](https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/). This package requires **`planframe>=1.3.0`** (see `pyproject.toml` on [PyPI](https://pypi.org/project/planframe-sparkless/)).
 
 ### Notes / limitations
 

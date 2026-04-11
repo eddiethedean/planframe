@@ -20,6 +20,8 @@ Versioning policy:
 - `planframe`, `planframe-polars`, and `planframe-pandas` are released together at the **same version**.
 - `planframe-sparkless` is **versioned independently**.
 
+Per-release notes: **[CHANGELOG.md](https://github.com/eddiethedean/planframe/blob/main/CHANGELOG.md)**. Upgrade-focused summaries for **v1.2.0** through **v1.3.0** live in [Migrating since v1.1.0](../planframe/guides/migrating-since-1-1.md).
+
 ## API stability (what is “public API”)
 
 The “public API” is:

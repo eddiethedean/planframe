@@ -1,6 +1,6 @@
 # Migrating to v1.0.0
 
-For upgrades **from v1.1.0 onward** (including **v1.2.0**), see [Migrating since v1.1.0](migrating-since-1-1.md).
+For upgrades **from v1.1.0 onward** (including **v1.2.0** and **v1.3.0**), see [Migrating since v1.1.0](migrating-since-1-1.md).
 
 This guide summarizes the main changes when upgrading to **PlanFrame v1.0.0** (workspace release for `planframe`, `planframe-polars`, and `planframe-pandas`).
 

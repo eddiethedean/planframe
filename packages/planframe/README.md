@@ -9,7 +9,7 @@ Core package for PlanFrame (typed planning layer). Import as `planframe`.
 Documentation (ReadTheDocs):
 
 - Core (adapter authors): `https://planframe.readthedocs.io/en/latest/planframe/`
-- **Migrating since v1.1.0** (v1.2.0+): `https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/`
+- **Migrating since v1.1.0** (v1.2.0+ through **v1.3.0**): `https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/`
 - Design docs: `https://planframe.readthedocs.io/en/latest/planframe/design/`
 - Light API reference: `https://planframe.readthedocs.io/en/latest/planframe/reference/api/`
 - Streaming rows: `https://planframe.readthedocs.io/en/latest/planframe/guides/streaming-rows/`

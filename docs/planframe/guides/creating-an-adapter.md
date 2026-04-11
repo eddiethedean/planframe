@@ -16,7 +16,7 @@ The adapter API is the abstract base class:
 
 For a **small, published pass/fail suite** you can run in your own CI (recommended for third-party adapters), see [Adapter conformance kit](adapter-conformance.md).
 
-## Third-party adapter integration checklist (PlanFrame 1.2.x) {: #third-party-adapter-checklist }
+## Third-party adapter integration checklist (PlanFrame 1.3.x) {: #third-party-adapter-checklist }
 
 Use this list when wiring a new engine to PlanFrame. **Revisit it when upgrading PlanFrame minors**—adapter contracts and interpreter behavior can change (see `CHANGELOG.md` and [Migrating since v1.1.0](migrating-since-1-1.md)).
 

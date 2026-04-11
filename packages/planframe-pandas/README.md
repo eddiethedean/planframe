@@ -34,7 +34,7 @@ rows = pf.select("id").to_dicts()
 
 ### Notes
 
-- **Core v1.2+** (`planframe`): shared helpers include `execute_plan_async`, `planframe.materialize`, Expr operator IR, and Frame `*_async` aliases—see [Migrating since v1.1.0](https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/).
+- **Core v1.2.0+** (`planframe`, current minor **v1.3.x**): shared helpers include `execute_plan_async`, `planframe.materialize`, Expr operator IR, Frame `*_async` aliases, and **v1.3.0** adapter/typing notes—see [Migrating since v1.1.0](https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/).
 - **`PandasFrame`** subclasses core **`planframe.pandas.PandasLikeFrame`**, so you get pandas-flavored helpers (`assign`, `sort_values`, boolean indexing, column `filter`, `astype`, `eval`, `drop_duplicates`, …) on top of the shared `Frame` plan. See the [pandas-like API](https://planframe.readthedocs.io/en/latest/planframe/guides/pandas-like-api/) guide.
 - PlanFrame is **always lazy**: chaining does not touch backend data; execution happens at `collect()` boundaries.
 - `collect()` returns `list[pydantic.BaseModel]`. Use `collect_backend()` for a `pandas.DataFrame`, or `stream_dicts()` / `stream()` to iterate rows (see [Streaming rows](https://planframe.readthedocs.io/en/latest/planframe/guides/streaming-rows/)).

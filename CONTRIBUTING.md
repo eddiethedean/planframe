@@ -44,3 +44,5 @@ pytest -m "not typing"    # skip typing-only tests
 ## Documentation
 
 Docs build with MkDocs (`mkdocs build --strict` in CI). Anchor links in Markdown should resolve (use stable heading ids where needed).
+
+Release notes and version alignment live in the repo-root **[CHANGELOG.md](https://github.com/eddiethedean/planframe/blob/main/CHANGELOG.md)**. End-user and migration guides on ReadTheDocs are built from `docs/` (see **[docs/index.md](https://github.com/eddiethedean/planframe/blob/main/docs/index.md)** for the landing outline).

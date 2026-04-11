@@ -10,7 +10,7 @@ PlanFrame is a typed relational planning layer for Python DataFrames.
 
 **Principle**: PlanFrame is **always lazy**. Every transformation builds a typed plan and evolves schema metadata. **No backend work runs** until you hit an execution boundary like `collect()` / `to_dicts()` / `to_dict()` (or async equivalents).
 
-**Highlights (v1.2+)**: [Migrating since v1.1.0](https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/) (changes after v1.1.0); [API reference](https://planframe.readthedocs.io/en/latest/planframe/reference/api/) (`execute_plan_async`, `planframe.materialize`, …); [Typing design](https://planframe.readthedocs.io/en/latest/planframe/design/typing-design/) (Expr operator overload semantics).
+**Highlights (through v1.3.0)**: [Migrating since v1.1.0](https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/) (v1.2.0–v1.3.0); [API reference](https://planframe.readthedocs.io/en/latest/planframe/reference/api/) (`execute_plan_async`, `planframe.materialize`, …); [Typing design](https://planframe.readthedocs.io/en/latest/planframe/design/typing-design/) (Expr operator overload semantics); [CHANGELOG](https://github.com/eddiethedean/planframe/blob/main/CHANGELOG.md) (per-release notes).
 
 This repository is a mono-repo that ships:
 - **`planframe`**: core package (import as `planframe`; optional skins `planframe.spark` and `planframe.pandas` for PySpark-like and pandas-like ergonomics)
@@ -29,7 +29,7 @@ Documentation is organized **by package**:
 
 Key pages:
 
-- **Migrating since v1.1.0** (v1.2.0+ fixes and features): `https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/`
+- **Migrating since v1.1.0** (v1.2.0+ through **v1.3.0**): `https://planframe.readthedocs.io/en/latest/planframe/guides/migrating-since-1-1/`
 - **Creating an adapter**: `https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/`
 - **Third-party adapter checklist** (BaseAdapter surface, `compile_expr` / dtypes, columnar `materialize` vs `to_dict`, sync/async terminals): `https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#third-party-adapter-checklist`
 - **Adapter conformance kit** (third-party `BaseAdapter` CI): `https://planframe.readthedocs.io/en/latest/planframe/guides/adapter-conformance/`

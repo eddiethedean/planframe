@@ -2,7 +2,7 @@
 
 This track provides a **real execution backend** for the **Spark UI** (`planframe.spark`) by running plans on the [`sparkless`](https://pypi.org/project/sparkless/) engine (no JVM).
 
-For **core** API changes (async materialization, `planframe.materialize`, Expr operators, …), see [Migrating since v1.1.0](../planframe/guides/migrating-since-1-1.md).
+For **core** API changes through **v1.3.0** (async materialization, `planframe.materialize`, Expr operators, adapter hooks, …), see [Migrating since v1.1.0](../planframe/guides/migrating-since-1-1.md). The **`planframe-sparkless`** package pins **`planframe>=1.3.0`**; check [PyPI](https://pypi.org/project/planframe-sparkless/) for the published requirement on each release.
 
 ## Quickstart
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "planframe-sparkless"
-version = "0.2.0"
+version = "0.2.1"
 description = "sparkless backend adapter for PlanFrame (SparkFrame UI + sparkless engine)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,7 +18,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "planframe>=1.2.0,<2.0.0",
+  "planframe>=1.3.0,<2.0.0",
   "sparkless>=4.5",
 ]
 

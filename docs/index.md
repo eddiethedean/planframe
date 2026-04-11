@@ -29,7 +29,8 @@ pip install planframe
 
 ## Start here
 
-- [Migrating since v1.1.0](planframe/guides/migrating-since-1-1.md) (changes in **v1.2.0** and later)
+- [CHANGELOG.md](https://github.com/eddiethedean/planframe/blob/main/CHANGELOG.md) (authoritative per-release notes, including **v1.3.0**)
+- [Migrating since v1.1.0](planframe/guides/migrating-since-1-1.md) (behavior and API changes from **v1.2.0** through **v1.3.0**)
 - [PlanFrame (core)](planframe/index.md)
 - [planframe-polars](planframe_polars/index.md)
 - [planframe-pandas](planframe_pandas/index.md)
@@ -41,8 +42,7 @@ pip install planframe
 
 ## What’s new (high-level)
 
-- [Migrating since v1.1.0](planframe/guides/migrating-since-1-1.md) — v1.2.0+ behavior and API notes (async plan execution, `planframe.materialize`, Expr operators, …)
-- [CHANGELOG.md](https://github.com/eddiethedean/planframe/blob/main/CHANGELOG.md) (authoritative per-release list)
+For **v1.3.0** and earlier releases, read [CHANGELOG.md](https://github.com/eddiethedean/planframe/blob/main/CHANGELOG.md). Upgrade how-tos and versioned API notes live in [Migrating since v1.1.0](planframe/guides/migrating-since-1-1.md).
 
 ## Adding a new adapter
 

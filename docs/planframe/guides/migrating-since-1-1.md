@@ -2,9 +2,11 @@
 
 This guide summarizes changes after **v1.1.0** of `planframe`, `planframe-polars`, and `planframe-pandas` (released together). Upgrade those packages to the **same** new version.
 
+Sections are ordered from newest to older minors: start with **v1.3.0** when upgrading to the current line, and read **v1.2.0** if you are stepping through from an earlier minor.
+
 If you are jumping from **v1.0.x**, read [Migrating to v1.0.0](migrating-to-1-0.md) first, then return here.
 
-## v1.3.0 (upcoming)
+## v1.3.0
 
 ### `CompileExprContext.resolve_backend_dtype` (#113)
 
