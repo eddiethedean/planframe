@@ -18,6 +18,11 @@ If you are jumping from **v1.0.x**, read [Migrating to v1.0.0](migrating-to-1-0.
 - **Documentation**: [Creating an adapter — Unknown columns during `compile_expr`](creating-an-adapter.md#unknown-columns-during-compile_expr) describes the **permissive** policy for shipped adapters (`resolve_dtype` returning `None` is a missing hint, not a compile-time error; engines typically fail at execution if the column is absent).
 - **Tests**: `tests/test_issue_114_compile_expr_unknown_column_policy.py` locks in that policy for Polars and pandas.
 
+### Async materialization: thread pool vs native async (#115)
+
+- **`AdapterCapabilities.native_async_materialize`**: advisory flag (default `False`). Set `True` when async materializers are overridden for native `async` I/O; PlanFrame does not branch on it today.
+- **Docs**: [Creating an adapter — Default async behavior](creating-an-adapter.md#default-async-behavior-asyncioto_thread) and [Declaring native async materialization](creating-an-adapter.md#declaring-native-async-materialization-advisory).
+
 ## v1.2.0
 
 ### Correctness: expression compilation uses each step’s input schema (#103)

@@ -55,6 +55,9 @@ class AdapterCapabilities:
     Adapters should expose these conservatively (False unless truly supported) so
     frontend layers can decide whether to offer a method as exact parity,
     typed-parity, or explicitly unsupported.
+
+    **Advisory flags:** ``native_async_materialize`` is for host UX/docs only unless a specific
+    API documents otherwise; PlanFrame does not branch on it today.
     """
 
     # ---- Plan node capabilities (transform-time) ----
@@ -81,6 +84,12 @@ class AdapterCapabilities:
 
     # Whether `storage_options=` is accepted on IO methods that expose it.
     storage_options: bool = False
+
+    # ---- Materialization / async (advisory) ----
+    #
+    # Host libraries may read this to explain UX (thread pool vs native async). PlanFrame does
+    # not branch behavior on this flag unless explicitly documented for a specific API.
+    native_async_materialize: bool = False
 
 
 @dataclass(frozen=True, slots=True)

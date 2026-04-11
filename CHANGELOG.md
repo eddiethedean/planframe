@@ -10,6 +10,7 @@ All notable changes to this repository are documented here.
 ### Added
 
 - **`CompileExprContext.resolve_backend_dtype`** and **`BaseAdapter.resolve_backend_dtype_from_frame`**: `execute_plan` wires backend-native dtype recovery when the step schema omits a column that still exists on the evaluated frame, so adapters can avoid guessed dtypes during `compile_expr` ([issue #113](https://github.com/eddiethedean/planframe/issues/113)).
+- **`AdapterCapabilities.native_async_materialize`**: advisory flag (default `False`) so hosts can distinguish default `asyncio.to_thread`-backed async materializers from adapters that override `acollect` / `ato_dicts` / `ato_dict` with native async I/O. Documented in *Creating an adapter* ([issue #115](https://github.com/eddiethedean/planframe/issues/115)).
 
 ### Documentation
 
