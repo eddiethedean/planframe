@@ -13,6 +13,11 @@ If you are jumping from **v1.0.x**, read [Migrating to v1.0.0](migrating-to-1-0.
 
 **Adapter authors:** optional hooks; existing adapters that only use `ctx.schema` keep the same behavior when the callback is absent.
 
+### Unknown columns during `compile_expr` (#114)
+
+- **Documentation**: [Creating an adapter — Unknown columns during `compile_expr`](creating-an-adapter.md#unknown-columns-during-compile_expr) describes the **permissive** policy for shipped adapters (`resolve_dtype` returning `None` is a missing hint, not a compile-time error; engines typically fail at execution if the column is absent).
+- **Tests**: `tests/test_issue_114_compile_expr_unknown_column_policy.py` locks in that policy for Polars and pandas.
+
 ## v1.2.0
 
 ### Correctness: expression compilation uses each step’s input schema (#103)

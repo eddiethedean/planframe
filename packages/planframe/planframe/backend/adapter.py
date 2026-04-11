@@ -793,6 +793,10 @@ class BaseAdapter(ABC, Generic[BackendFrameT, BackendExprT]):
         Invoked when lowering :class:`~planframe.expr.api.Col` during :meth:`compile_expr`.
         Override when *ctx.schema* is partial (e.g. projected) and dtypes must be recovered
         from backend metadata or a wider known schema.
+
+        ``None`` means no dtype hint. Shipped adapters treat that as non-fatal and may still
+        compile a column reference; see *Creating an adapter* (Unknown columns during
+        ``compile_expr``) in the PlanFrame docs.
         """
 
         if ctx.schema is not None:

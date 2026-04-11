@@ -52,6 +52,20 @@ dict={'id': [1, 2], 'age': [10, 20]}
 - **Async I/O (optional)**: override `BaseAdapter.areader` / `BaseAdapter.awriter` for true async IO (defaults wrap sync IO in `asyncio.to_thread`)
 - **Row streaming (optional)**: implement `AdapterRowStreamer` (**both** `stream_dicts` and `astream_dicts` are required for detection) to support `Frame.stream_dicts()` / `Frame.astream_dicts()` without materializing all rows at once
 
+## Unknown columns during `compile_expr`
+
+PlanFrame’s own `Frame` builder keeps expression IR aligned with each plan step’s input schema, so a normal user plan should not reference a column that is absent from that step’s schema. Custom embedders or experimental paths can still hand adapters IR that disagrees with `CompileExprContext.schema`.
+
+**Policy (shipped adapters: Polars, pandas, sparkless):**
+
+1. **`BaseAdapter.resolve_dtype(name, ctx=...)`** is an optional *hint* hook. A return value of **`None`** means “no dtype information”—**not** “this column is invalid.” The adapter may still lower `Col(name)` to a backend column reference.
+2. **`compile_expr`** is **permissive**: unknown names are not required to raise at compile time. The backend expression typically refers to the column by name; if the column does not exist on the frame, the engine reports the error at **execution** (`collect`, `filter` evaluation, etc.).
+3. When **`execute_plan`** runs, **`CompileExprContext.resolve_backend_dtype`** may supply dtypes for names missing from the step schema (see [Migrating since v1.1.0](migrating-since-1-1.md) / issue #113). If that callback also returns `None`, the same permissive rule applies.
+
+**Third-party adapters** may choose a **stricter** policy (e.g. raise `PlanFrameBackendError` from `compile_expr` when `resolve_dtype` and `resolve_backend_dtype` both yield `None` and the name is not in `ctx.schema`) if that matches their engine—document that choice clearly.
+
+**Debugging:** If a `filter(...).select(...)`-style chain misbehaves, compare the failing step’s **input** schema (what `compile_expr` used) to the columns actually present on the backend frame after prior steps; mismatches usually mean plan/schema drift, not silent adapter guessing.
+
 ## Execution boundaries and `ExecutionOptions`
 
 Materialization and row export happen only at execution boundaries. On `BaseAdapter`, these methods take an optional **`options: ExecutionOptions | None`** (`planframe.execution_options`):
