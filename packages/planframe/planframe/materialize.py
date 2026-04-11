@@ -7,6 +7,10 @@ directly. See the `Creating an adapter — Columnar boundary
 <https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#columnar-boundary-materialize>`__
 section.
 
+For **chunked** columnar export (optional adapter protocol, not wired here yet), see the
+`Columnar streaming` design note in the PlanFrame docs and `AdapterColumnarStreamer` in
+`planframe.backend.io`.
+
 PlanFrame does not construct Pydantic/dataclass models here; supply a *factory* when needed.
 """
 

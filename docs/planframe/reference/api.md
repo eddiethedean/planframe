@@ -54,6 +54,12 @@ Typed mixins (import from `planframe.spark` / `planframe.pandas`, or `from planf
 
 ::: planframe.materialize
 
+## `planframe.backend.io.AdapterColumnarStreamer`
+
+Optional protocol (spike) for chunked columnar batches — see [Columnar streaming (design)](../design/columnar-streaming.md).
+
+::: planframe.backend.io.AdapterColumnarStreamer
+
 ## `planframe.compile_context.PlanCompileContext`
 
 Internal helper shared by `Frame` and `execute_plan` for compiling expression IR and related structures. Adapter authors rarely import it directly; see [Core layout](../design/core-layout.md).

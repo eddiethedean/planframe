@@ -313,3 +313,40 @@ class AdapterRowStreamer(Protocol[BackendFrameT]):
     def astream_dicts(
         self, df: BackendFrameT, *, options: ExecutionOptions | None = None
     ) -> AsyncIterator[dict[str, object]]: ...
+
+
+@runtime_checkable
+class AdapterColumnarStreamer(Protocol[BackendFrameT]):
+    """Optional adapter surface for **chunked columnar** export (design spike for 1.3+).
+
+    Each chunk is a columnar mapping ``dict[column_name, list[values]]`` where every value
+    list has the **same length** (rows in that chunk). Chunk boundaries are adapter-defined
+    (e.g. engine batch size). Column names should be consistent across chunks for a given
+    materialization.
+
+    This is **not** the same as :class:`AdapterRowStreamer`, which streams **rows**
+    (``dict[str, object]`` per row) and is integrated with ``Frame.stream_dicts`` /
+    ``Frame.astream_dicts``. Columnar chunking is for hosts that want to build Arrow tables,
+    batched numpy/Pandas loads, etc., without holding a full ``dict[str, list[object]]`` in
+    memory.
+
+    **Integration status:** PlanFrame core does **not** yet call this protocol from
+    :func:`planframe.materialize.materialize_columns` or ``Frame.to_dict``. Adapters may
+    implement it so hosts can ``isinstance(adapter, AdapterColumnarStreamer)`` and call
+    the iterators after ``collect`` / ``acollect``, forwarding the same
+    :class:`~planframe.execution_options.ExecutionOptions` you would pass to ``to_dict``.
+    Use ``streaming`` / ``engine_streaming`` hints the same way as for other materializers.
+
+    **Contract:** if you claim support, implement **both** :meth:`iter_columnar_chunks` and
+    :meth:`aiter_columnar_chunks` (mirroring :class:`AdapterRowStreamer`).
+
+    See the PlanFrame design note *Columnar streaming* (``docs/planframe/design/columnar-streaming.md``).
+    """
+
+    def iter_columnar_chunks(
+        self, df: BackendFrameT, *, options: ExecutionOptions | None = None
+    ) -> Iterator[dict[str, list[object]]]: ...
+
+    def aiter_columnar_chunks(
+        self, df: BackendFrameT, *, options: ExecutionOptions | None = None
+    ) -> AsyncIterator[dict[str, list[object]]]: ...

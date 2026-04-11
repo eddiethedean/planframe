@@ -12,6 +12,6 @@ PlanFrame core builds a typed plan and delegates execution to a backend via `Bas
 - Learn the row-export APIs: [Streaming rows](guides/streaming-rows.md)
 - Wrapping `Frame` in a host type: [Embedding `Frame` (composition)](guides/embedding-frame.md)
 - Optional **API skins** (typed mixins on `Frame`, no extra backend deps): [PySpark-like API](guides/pyspark-like-api.md), [pandas-like API](guides/pandas-like-api.md)
-- Browse the design docs under **Design** in the nav (including [Core layout](design/core-layout.md) for how `Frame`, compilation, and `execute_plan` fit together)
+- Browse the design docs under **Design** in the nav (including [Core layout](design/core-layout.md) for how `Frame`, compilation, and `execute_plan` fit together, and [Columnar streaming](design/columnar-streaming.md) for chunked columnar export)
 - See adapters catalog: [Adapters](../adapters/index.md)
 

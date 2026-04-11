@@ -108,6 +108,8 @@ PlanFrame stays **generic**: it does not build models—adapters or host librari
 
 Example (Polars-backed frame): [`examples/materialize_boundary_minimal.py`](examples/materialize_boundary_minimal.py) (run from repo root with `PYTHONPATH=packages/planframe`, see the script docstring).
 
+**Large results / chunked columnar export:** full in-memory `dict[str, list[object]]` is not always viable. See the design note [Columnar streaming (chunked export)](../design/columnar-streaming.md) and optional `AdapterColumnarStreamer` in `planframe.backend.io` (spike; not yet called from `materialize_columns`).
+
 ## Async execution contract (third-party adapters)
 
 PlanFrame’s **lazy chaining is always synchronous**: building a `Frame` never does I/O and never awaits. Async support exists only at **materialization boundaries**.

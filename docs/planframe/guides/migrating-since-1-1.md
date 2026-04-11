@@ -28,6 +28,11 @@ If you are jumping from **v1.0.x**, read [Migrating to v1.0.0](migrating-to-1-0.
 - **`Frame` docstrings** for `to_dict` / `to_dicts` / `ato_dict` / `ato_dicts` / `to_dict_async` / `to_dicts_async` link to **`planframe.materialize`** and the [Columnar boundary](creating-an-adapter.md#columnar-boundary-materialize) section (stable anchor).
 - **`planframe.materialize`** module docstring links back to `Frame` methods.
 
+### Chunked columnar export (design spike) (#117)
+
+- **`AdapterColumnarStreamer`** (`planframe.backend.io`): optional protocol sketch for chunked `dict[str, list[object]]` batches; not yet invoked from `materialize_columns` / `Frame.to_dict`.
+- **Design:** [Columnar streaming (chunked export)](../design/columnar-streaming.md).
+
 ## v1.2.0
 
 ### Correctness: expression compilation uses each step’s input schema (#103)
