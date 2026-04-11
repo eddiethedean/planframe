@@ -7,6 +7,10 @@ All notable changes to this repository are documented here.
 
 ## Unreleased
 
+### Added
+
+- **`CompileExprContext.resolve_backend_dtype`** and **`BaseAdapter.resolve_backend_dtype_from_frame`**: `execute_plan` wires backend-native dtype recovery when the step schema omits a column that still exists on the evaluated frame, so adapters can avoid guessed dtypes during `compile_expr` ([issue #113](https://github.com/eddiethedean/planframe/issues/113)).
+
 ## planframe-sparkless 0.2.0
 
 ### Changed

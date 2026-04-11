@@ -255,6 +255,15 @@ class PolarsAdapter(BaseAdapter[PolarsBackendFrame, pl.Expr]):
         mask = df.select(mask_expr.alias(out_name))[out_name]
         return pl.DataFrame({out_name: mask})
 
+    def resolve_backend_dtype_from_frame(
+        self, df: PolarsBackendFrame, name: str
+    ) -> object | None:
+        sch = df.collect_schema() if isinstance(df, pl.LazyFrame) else df.schema
+        try:
+            return sch[name]
+        except Exception:
+            return None
+
     def compile_expr(
         self,
         expr: object,
