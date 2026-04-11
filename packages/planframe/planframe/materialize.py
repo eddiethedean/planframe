@@ -1,7 +1,12 @@
 """Adapter-friendly materialization boundaries (columnar export + optional factory).
 
-Use these helpers when building adapters or host wrappers so ``Frame → columns`` and
-:class:`~planframe.execution_options.ExecutionOptions` forwarding stay consistent.
+These mirror :meth:`planframe.frame.Frame.to_dict` / :meth:`~planframe.frame.Frame.ato_dict` with
+the same :class:`~planframe.execution_options.ExecutionOptions` contract — use them when you want
+a **stable import** (`from planframe.materialize import ...`) instead of calling ``Frame`` methods
+directly. See the `Creating an adapter — Columnar boundary
+<https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#columnar-boundary-materialize>`__
+section.
+
 PlanFrame does not construct Pydantic/dataclass models here; supply a *factory* when needed.
 """
 
@@ -23,7 +28,7 @@ def materialize_columns(
 ) -> dict[str, list[object]]:
     """Return columnar data for *frame* (``dict[column_name, column_values]``).
 
-    Delegates to :meth:`planframe.frame.Frame.to_dict` and forwards *options* unchanged.
+    Thin wrapper around :meth:`planframe.frame.Frame.to_dict` — *options* are forwarded unchanged.
     """
 
     return frame.to_dict(options=options)
@@ -49,7 +54,7 @@ async def amaterialize_columns(
     *,
     options: ExecutionOptions | None = None,
 ) -> dict[str, list[object]]:
-    """Async columnar materialization (``Frame.ato_dict`` / ``to_dict_async``)."""
+    """Async columnar materialization (same as :meth:`~planframe.frame.Frame.ato_dict`)."""
 
     return await frame.ato_dict(options=options)
 

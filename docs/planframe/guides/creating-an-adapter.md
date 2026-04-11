@@ -86,7 +86,15 @@ Materialization and row export happen only at execution boundaries. On `BaseAdap
 
 `Frame.collect_backend`, `Frame.to_dicts`, `Frame.to_dict`, and the async counterparts accept the same `ExecutionOptions` and pass them through to the adapter.
 
-### Columnar boundary helpers (`planframe.materialize`)
+### Columnar boundary helpers (`planframe.materialize`) {: #columnar-boundary-materialize }
+
+End-users often reach **`Frame.to_dict`** / **`Frame.ato_dict`** first; adapter and wrapper packages are encouraged to use **`planframe.materialize`** so imports stay stable and **`ExecutionOptions`** forwarding matches the `Frame` methods below.
+
+```text
+Columnar export (options forwarded end-to-end)
+  sync:  Frame.to_dict()  ←──  materialize_columns(frame)
+  async: Frame.ato_dict() ←──  amaterialize_columns(frame)
+```
 
 For a **stable import** at the “lazy `Frame` → columnar dict” step (without pulling in Pydantic or other integrations in adapter code), use:
 
