@@ -23,6 +23,11 @@ If you are jumping from **v1.0.x**, read [Migrating to v1.0.0](migrating-to-1-0.
 - **`AdapterCapabilities.native_async_materialize`**: advisory flag (default `False`). Set `True` when async materializers are overridden for native `async` I/O; PlanFrame does not branch on it today.
 - **Docs**: [Creating an adapter — Default async behavior](creating-an-adapter.md#default-async-behavior-asyncioto_thread) and [Declaring native async materialization](creating-an-adapter.md#declaring-native-async-materialization-advisory).
 
+### Columnar boundary discoverability (#116)
+
+- **`Frame` docstrings** for `to_dict` / `to_dicts` / `ato_dict` / `ato_dicts` / `to_dict_async` / `to_dicts_async` link to **`planframe.materialize`** and the [Columnar boundary](creating-an-adapter.md#columnar-boundary-materialize) section (stable anchor).
+- **`planframe.materialize`** module docstring links back to `Frame` methods.
+
 ## v1.2.0
 
 ### Correctness: expression compilation uses each step’s input schema (#103)
@@ -57,7 +62,7 @@ Thin helpers for the columnar boundary: **`materialize_columns`**, **`materializ
 
 Use them when adapters or host libraries want a **single import** for `Frame → dict[str, list[object]]` before applying Pydantic, dataclasses, or other factories.
 
-See [Creating an adapter — Columnar boundary helpers](creating-an-adapter.md#columnar-boundary-helpers-planframematerialize).
+See [Creating an adapter — Columnar boundary helpers](creating-an-adapter.md#columnar-boundary-materialize).
 
 ## See also
 

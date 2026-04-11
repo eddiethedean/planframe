@@ -219,6 +219,13 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         options: ExecutionOptions | None = None,
     ) -> list[dict[str, object]]:
+        """Row-oriented export (one dict per row).
+
+        **See also:** :mod:`planframe.materialize` — row export helpers and the columnar boundary
+        are documented in the `adapter guide
+        <https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#columnar-boundary-materialize>`__.
+        """
+
         try:
             planned = self._eval(self._plan)
             return self._adapter.to_dicts(planned, options=options)
@@ -232,6 +239,14 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         options: ExecutionOptions | None = None,
     ) -> dict[str, list[object]]:
+        """Columnar export: ``dict[column_name, list[values]]``.
+
+        **See also:** :func:`~planframe.materialize.materialize_columns` delegates here with the same
+        ``options=`` contract — prefer that import in adapters and host wrappers. Guide:
+        `Columnar boundary (planframe.materialize)
+        <https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#columnar-boundary-materialize>`__.
+        """
+
         try:
             planned = self._eval(self._plan)
             return self._adapter.to_dict(planned, options=options)
@@ -292,6 +307,12 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         options: ExecutionOptions | None = None,
     ) -> list[dict[str, object]]:
+        """Async row-oriented export.
+
+        **See also:** `Columnar boundary (async)
+        <https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#columnar-boundary-materialize>`__.
+        """
+
         try:
             planned = self._eval(self._plan)
             return await self._adapter.ato_dicts(planned, options=options)
@@ -305,6 +326,13 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         options: ExecutionOptions | None = None,
     ) -> dict[str, list[object]]:
+        """Async columnar export (same shape as :meth:`to_dict`).
+
+        **See also:** :func:`~planframe.materialize.amaterialize_columns` delegates here. Guide:
+        `Columnar boundary (planframe.materialize)
+        <https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#columnar-boundary-materialize>`__.
+        """
+
         try:
             planned = self._eval(self._plan)
             return await self._adapter.ato_dict(planned, options=options)
@@ -337,7 +365,11 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         options: ExecutionOptions | None = None,
     ) -> list[dict[str, object]]:
-        """Alias for :meth:`ato_dicts`."""
+        """Alias for :meth:`ato_dicts`.
+
+        **See also:** :mod:`planframe.materialize` async helpers — `adapter guide
+        <https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#columnar-boundary-materialize>`__.
+        """
 
         return await self.ato_dicts(options=options)
 
@@ -346,7 +378,11 @@ class FrameIOMixin(Generic[SchemaT, BackendFrameT, BackendExprT]):
         *,
         options: ExecutionOptions | None = None,
     ) -> dict[str, list[object]]:
-        """Alias for :meth:`ato_dict`."""
+        """Alias for :meth:`ato_dict`.
+
+        **See also:** :func:`~planframe.materialize.amaterialize_columns` — `adapter guide
+        <https://planframe.readthedocs.io/en/latest/planframe/guides/creating-an-adapter/#columnar-boundary-materialize>`__.
+        """
 
         return await self.ato_dict(options=options)
 

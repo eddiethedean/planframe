@@ -24,6 +24,7 @@ plugins:
             show_source: false
 
 markdown_extensions:
+  - attr_list
   - admonition
   - pymdownx.details
   - pymdownx.superfences
