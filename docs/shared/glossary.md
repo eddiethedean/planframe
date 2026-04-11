@@ -1,6 +1,7 @@
 # Glossary
 
 - **Adapter**: A backend implementation of `BaseAdapter` that executes PlanFrame plans.
+- **AdapterCapabilities**: Capability flags on `BaseAdapter.capabilities` (plan nodes, IO surfaces, and advisory **`native_async_materialize`** for async materialization UX). See [Creating an adapter](../planframe/guides/creating-an-adapter.md).
 - **Plan / PlanNode**: The lazy IR PlanFrame builds when you chain `Frame` operations.
 - **Expression / Expr**: The backend-agnostic expression IR compiled by adapters.
 - **ExecutionOptions**: Optional hints (`streaming`, `engine_streaming`, …) passed at materialization boundaries (`collect`, `to_dicts`, `to_dict`, and async equivalents).

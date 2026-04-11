@@ -124,6 +124,26 @@ All materialization paths evaluate the plan the same way:
 - **Async-native backends**: override `acollect` and usually also `ato_dicts` / `ato_dict` to avoid blocking a worker thread.
   - Keep `acollect` focused on I/O / engine execution; plan translation should already be completed before it’s called.
 
+### Default async behavior: `asyncio.to_thread`
+
+| Location | What runs |
+| --- | --- |
+| `BaseAdapter.acollect` / `ato_dicts` / `ato_dict` | Defaults wrap the matching sync method (`collect`, `to_dicts`, `to_dict`) in `asyncio.to_thread`. The synchronous backend work does **not** run on the event-loop thread. |
+| `execute_plan_async` | Runs the synchronous `execute_plan` interpreter in a worker thread (`asyncio.to_thread`), so awaiting it avoids blocking the loop while **walking** the plan, but each adapter call inside the interpreter remains **sync** from Python’s perspective. |
+
+**Combining calls:** awaiting `execute_plan_async(...)` and then `await adapter.acollect(...)` may use **multiple** thread hops when the engine is fully synchronous. That still keeps the event loop responsive; it is **not** end-to-end async I/O unless your adapter overrides the async materializers.
+
+### Declaring native async materialization (advisory)
+
+Set **`AdapterCapabilities.native_async_materialize`** to **`True`** only when your adapter **overrides** `acollect` / `ato_dicts` / `ato_dict` so the primary backend work uses **native** `async`/`await` (HTTP clients, asyncio database drivers, …) instead of `BaseAdapter`’s default `asyncio.to_thread` around sync methods.
+
+| Value | Meaning for host libraries |
+| --- | --- |
+| `False` (default) | Matches `BaseAdapter` defaults: async entrypoints may offload sync engine calls to a thread pool. |
+| `True` | The adapter claims async materialization does **not** rely on those default thread-pooled wrappers for the main backend path. |
+
+**Contract:** PlanFrame’s `Frame` layer does **not** read this flag to change behavior today—it is **advisory** for documentation, UI, or diagnostics. Shipped adapters (Polars, pandas, sparkless) keep the default `False`.
+
 ### `ExecutionOptions` propagation
 
 `ExecutionOptions` is forwarded to:
