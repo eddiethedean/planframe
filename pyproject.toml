@@ -53,7 +53,14 @@ docs = [
 [tool.hatch.build.targets.wheel]
 # Root is a workspace/meta package; nothing to ship.
 packages = []
-include = ["README.md", "LICENSE", "pyproject.toml", "CHANGELOG.md", "SECURITY.md"]
+include = [
+  "README.md",
+  "LICENSE",
+  "pyproject.toml",
+  "CHANGELOG.md",
+  "SECURITY.md",
+  "CONTRIBUTING.md",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

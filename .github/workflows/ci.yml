@@ -42,6 +42,9 @@ jobs:
       - name: ty
         run: .venv/bin/ty check
 
+      - name: Generated typing stubs (parity check)
+        run: .venv/bin/python scripts/generate_typing_stubs.py --check
+
       - name: Pytest
         run: .venv/bin/pytest -q
 

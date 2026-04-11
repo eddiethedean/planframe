@@ -33,6 +33,11 @@ If you are jumping from **v1.0.x**, read [Migrating to v1.0.0](migrating-to-1-0.
 - **`AdapterColumnarStreamer`** (`planframe.backend.io`): optional protocol sketch for chunked `dict[str, list[object]]` batches; not yet invoked from `materialize_columns` / `Frame.to_dict`.
 - **Design:** [Columnar streaming (chunked export)](../design/columnar-streaming.md).
 
+### Typing CI: Expr stubs + generated Frame stubs (#118)
+
+- **[CONTRIBUTING.md](https://github.com/eddiethedean/planframe/blob/main/CONTRIBUTING.md)** describes the Pyright / `ty` / stub parity workflow; CI runs `scripts/generate_typing_stubs.py --check`.
+- **`tests/pyright/pass/expr_ir_public_contract.py`**: core-only `planframe.expr` contract (no Polars frame).
+
 ## v1.2.0
 
 ### Correctness: expression compilation uses each step’s input schema (#103)
